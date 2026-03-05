@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
         name: name.trim(), venue: venue.trim(), type, status,
         guests: Number(guests),
         budget: Number(budget),
-        date:   new Date(date),
+        date:   new Date(`${date.slice(0,10)}T12:00:00`),
         client: { connect: { id: Number(clientId) } }
       }
     })
@@ -72,7 +72,7 @@ exports.update = async (req, res) => {
         name: name.trim(), venue: venue.trim(), type, status,
         guests: Number(guests),
         budget: Number(budget),
-        date:   new Date(date),
+        date:   new Date(`${date.slice(0,10)}T12:00:00`),
         client: { connect: { id: Number(clientId) } }
       }
     })

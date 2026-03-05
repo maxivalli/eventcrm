@@ -35,8 +35,13 @@ const formatTimeAgo = (str) => {
   return new Date(str).toLocaleDateString('es-AR')
 }
 
-const calcTotal = (items) =>
-  (items || []).reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
+const calcTotal = (quote) => {
+  const itemsTotal = (quote.items || []).reduce((acc, item) => acc + item.quantity * item.unitPrice, 0)
+  if (quote.kind === 'Catering') {
+    return (quote.covers || 0) * (quote.pricePerCover || 0) + itemsTotal
+  }
+  return itemsTotal
+}
 
 function Badge({ label, color }) {
   return (
@@ -74,23 +79,29 @@ function Skeleton({ height = 20, width = '100%', style = {} }) {
 }
 
 export default function Dashboard() {
-  const [data, setData]     = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [clientsRes, eventsRes, quotesRes, suppliersRes] = await Promise.all([
+        const [clientsRes, eventsRes, quotesRes, suppliersRes, spPendingRes, allPaymentsRes, allSpRes] = await Promise.all([
           api.get('/api/clients'),
           api.get('/api/events'),
           api.get('/api/quotes'),
           api.get('/api/suppliers'),
+          api.get('/api/supplier-payments/pending-total'),
+          api.get('/api/payments/all'),
+          api.get('/api/supplier-payments/all'),
         ])
         setData({
-          clients:   clientsRes.data,
-          events:    eventsRes.data,
-          quotes:    quotesRes.data,
-          suppliers: suppliersRes.data,
+          clients:          clientsRes.data,
+          events:           eventsRes.data,
+          quotes:           quotesRes.data,
+          suppliers:        suppliersRes.data,
+          pendingTotal:     spPendingRes.data.total,
+          allPayments:      allPaymentsRes.data,
+          allSpPayments:    allSpRes.data,
         })
       } catch (e) {
         console.error(e)
@@ -101,7 +112,6 @@ export default function Dashboard() {
     fetchAll()
   }, [])
 
-  // --- KPIs calculados ---
   const kpis = data ? [
     {
       label: 'Clientes activos',
@@ -122,22 +132,21 @@ export default function Dashboard() {
       value: formatCurrency(
         data.quotes
           .filter(q => q.status === 'Aprobado')
-          .reduce((acc, q) => acc + calcTotal(q.items), 0)
+          .reduce((acc, q) => acc + calcTotal(q), 0)
       ),
       sub:   `${data.quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`,
       icon:  '◇',
       color: '#22c55e',
     },
     {
-      label: 'Proveedores activos',
-      value: data.suppliers.filter(s => s.status === 'Activo').length,
-      sub:   `${data.suppliers.length} proveedores en total`,
-      icon:  '◎',
-      color: '#8b5cf6',
+      label: 'Pagos pendientes',
+      value: formatCurrency(data.pendingTotal || 0),
+      sub:   'Total a pagar a proveedores',
+      icon:  '◐',
+      color: '#ef4444',
     },
   ] : []
 
-  // --- Próximos eventos (no finalizados, ordenados por fecha) ---
   const upcomingEvents = data
     ? [...data.events]
         .filter(e => e.status !== 'Finalizado')
@@ -145,22 +154,24 @@ export default function Dashboard() {
         .slice(0, 4)
     : []
 
-  // --- Cotizaciones recientes ---
   const recentQuotes = data
     ? [...data.quotes]
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 4)
     : []
 
-  // --- Actividad reciente (últimos clientes, eventos y proveedores creados) ---
+  const fmtARS = (n) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n)
+
   const recentActivity = data
     ? [
-        ...data.clients.map(c => ({ text: `Cliente agregado: ${c.name}`, time: c.createdAt, icon: '◉' })),
-        ...data.events.map(e  => ({ text: `Evento creado: ${e.name}`,    time: e.createdAt, icon: '◆' })),
-        ...data.quotes.map(q  => ({ text: `Cotización para: ${q.event?.name || '—'}`, time: q.createdAt, icon: '◇' })),
+        ...data.clients.map(c      => ({ text: `Cliente agregado: ${c.name}`,                                     time: c.createdAt, icon: '◉', type: 'default' })),
+        ...data.events.map(e       => ({ text: `Evento creado: ${e.name}`,                                        time: e.createdAt, icon: '◆', type: 'default' })),
+        ...data.quotes.map(q       => ({ text: `Cotización para: ${q.event?.name || '—'}`,                        time: q.createdAt, icon: '◇', type: 'default' })),
+        ...data.suppliers.map(s    => ({ text: `Proveedor agregado: ${s.name}`,                                   time: s.createdAt, icon: '◎', type: 'default' })),
+        ...(data.allPayments  || []).map(p  => ({ text: `Cobro registrado: ${p.event?.name || '—'}`, amount: fmtARS(p.amount), time: p.createdAt, icon: '◑', type: 'income' })),
+        ...(data.allSpPayments|| []).map(p  => ({ text: `Pago a ${p.supplier?.name || '—'}`, amount: fmtARS(p.amount), status: p.status, time: p.createdAt, icon: '◐', type: 'payment' })),
       ]
         .sort((a, b) => new Date(b.time) - new Date(a.time))
-        .slice(0, 5)
     : []
 
   return (
@@ -172,7 +183,6 @@ export default function Dashboard() {
         }
       `}</style>
 
-      {/* Encabezado */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: '#e8e8f0' }}>
           Bienvenido 👋
@@ -266,14 +276,14 @@ export default function Dashboard() {
               </div>
               <div style={{ fontSize: 11, color: '#4a4a6a' }}>{q.event?.client?.name || '—'}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e', marginTop: 3 }}>
-                {formatCurrency(calcTotal(q.items))}
+                {formatCurrency(calcTotal(q))}
               </div>
             </div>
           ))}
         </div>
 
         {/* Actividad reciente */}
-        <div style={{ background: '#12121e', border: '1px solid #1e1e30', borderRadius: 16, padding: 24 }}>
+        <div style={{ background: '#12121e', border: '1px solid #1e1e30', borderRadius: 16, padding: 24, maxHeight: 520, overflowY: 'auto' }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: '#c9a84c', marginBottom: 18 }}>
             Actividad reciente
           </div>
@@ -298,8 +308,23 @@ export default function Dashboard() {
                 border: '1px solid #1e1e30', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', fontSize: 14, color: '#c9a84c', flexShrink: 0,
               }}>{a.icon}</div>
-              <div>
-                <div style={{ fontSize: 12, color: '#c8c8d8', lineHeight: 1.4 }}>{a.text}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: '#c8c8d8', lineHeight: 1.4 }}>
+                  {a.text}
+                  {a.type === 'income' && (
+                    <span style={{ fontWeight: 700, color: '#22c55e', marginLeft: 6 }}>{a.amount}</span>
+                  )}
+                  {a.type === 'payment' && (
+                    <>
+                      <span style={{ marginLeft: 6, color: a.status === 'Pagado' ? '#22c55e' : '#f59e0b', fontWeight: 500 }}>{a.amount}</span>
+                      <span style={{
+                        marginLeft: 6, fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 600,
+                        background: a.status === 'Pagado' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
+                        color: a.status === 'Pagado' ? '#22c55e' : '#f59e0b',
+                      }}>{a.status}</span>
+                    </>
+                  )}
+                </div>
                 <div style={{ fontSize: 10, color: '#3a3a5a', marginTop: 3 }}>{formatTimeAgo(a.time)}</div>
               </div>
             </div>

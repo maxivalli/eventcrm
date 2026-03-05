@@ -20,34 +20,34 @@ model Client {
 }
 
 model Event {
-  id        Int      @id @default(autoincrement())
-  name      String
-  date      DateTime
-  venue     String
-  type      String
-  status    String   @default("Propuesta")
-  guests    Int
-  budget    Float
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId  Int
-  quotes    Quote[]
-  createdAt DateTime @default(now())
+  id               Int               @id @default(autoincrement())
+  name             String
+  date             DateTime
+  venue            String
+  type             String
+  status           String            @default("Propuesta")
+  guests           Int
+  budget           Float
+  client           Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId         Int
+  quotes           Quote[]
+  payments         Payment[]
+  supplierPayments SupplierPayment[]
+  createdAt        DateTime          @default(now())
 }
 
 model Quote {
-  id        Int         @id @default(autoincrement())
-  kind      String      @default("General")   // "General" | "Catering"
-  date      DateTime    @default(now())
-  status    String      @default("Pendiente")
-  event     Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId   Int
-  // Campos exclusivos de Catering (null en cotizaciones Generales)
-  menu      String?
-  covers    Int?
+  id            Int         @id @default(autoincrement())
+  kind          String      @default("General")
+  date          DateTime    @default(now())
+  status        String      @default("Pendiente")
+  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       Int
+  menu          String?
+  covers        Int?
   pricePerCover Float?
-  // Ítems: servicios generales O extras de catering (barra, torta, etc.)
-  items     QuoteItem[]
-  createdAt DateTime    @default(now())
+  items         QuoteItem[]
+  createdAt     DateTime    @default(now())
 }
 
 model QuoteItem {
@@ -59,14 +59,39 @@ model QuoteItem {
   quoteId     Int
 }
 
-model Supplier {
+model Payment {
   id        Int      @id @default(autoincrement())
-  name      String
-  category  String
-  contact   String
-  phone     String
-  email     String   @unique
-  rating    Int      @default(3)
-  status    String   @default("Activo")
+  amount    Float
+  date      DateTime @default(now())
+  note      String?
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   Int
   createdAt DateTime @default(now())
+}
+
+model SupplierPayment {
+  id         Int      @id @default(autoincrement())
+  amount     Float
+  date       DateTime @default(now())
+  note       String?
+  method     String   @default("Efectivo")
+  status     String   @default("Pendiente")
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId Int
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    Int
+  createdAt  DateTime @default(now())
+}
+
+model Supplier {
+  id               Int               @id @default(autoincrement())
+  name             String
+  category         String
+  contact          String
+  phone            String
+  email            String            @unique
+  rating           Int               @default(3)
+  status           String            @default("Activo")
+  supplierPayments SupplierPayment[]
+  createdAt        DateTime          @default(now())
 }

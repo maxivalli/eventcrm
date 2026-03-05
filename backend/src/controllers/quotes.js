@@ -53,7 +53,7 @@ exports.create = async (req, res) => {
       data: {
         kind,
         status: status || 'Pendiente',
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(`${date.slice(0,10)}T12:00:00`) : new Date(),
         event: { connect: { id: Number(eventId) } },
         menu:          kind === 'Catering' ? (menu?.trim() || null) : null,
         covers:        kind === 'Catering' ? Number(covers)         : null,
@@ -104,7 +104,7 @@ exports.update = async (req, res) => {
       data: {
         kind,
         status: status || 'Pendiente',
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(`${date.slice(0,10)}T12:00:00`) : new Date(),
         event: { connect: { id: Number(eventId) } },
         menu:          kind === 'Catering' ? (menu?.trim() || null) : null,
         covers:        kind === 'Catering' ? Number(covers)         : null,

@@ -42,7 +42,7 @@ exports.create = async (req, res) => {
         contact: contact.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
-        birthdate: birthdate ? new Date(birthdate) : null,
+        birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null,
         status,
       }
     })
@@ -70,7 +70,7 @@ exports.update = async (req, res) => {
         contact: contact.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
-        birthdate: birthdate ? new Date(birthdate) : null,
+        birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null,
         status,
       }
     })

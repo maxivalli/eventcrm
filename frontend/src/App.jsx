@@ -6,6 +6,8 @@ import Events from './pages/Events'
 import Quotes from './pages/Quotes'
 import Suppliers from './pages/Suppliers'
 import Budget from './pages/Budget'
+import Payments from './pages/Payments'
+import SupplierPayments from './pages/SupplierPayments'
 
 export default function App() {
   return (
@@ -13,12 +15,14 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard"  element={<Dashboard />} />
-          <Route path="clients"    element={<Clients />} />
-          <Route path="events"     element={<Events />} />
-          <Route path="quotes"     element={<Quotes />} />
-          <Route path="suppliers"  element={<Suppliers />} />
-          <Route path="budget"     element={<Budget />} />
+          <Route path="dashboard"         element={<Dashboard />} />
+          <Route path="clients"           element={<Clients />} />
+          <Route path="events"            element={<Events />} />
+          <Route path="quotes"            element={<Quotes />} />
+          <Route path="suppliers"         element={<Suppliers />} />
+          <Route path="budget"            element={<Budget />} />
+          <Route path="payments"          element={<Payments />} />
+          <Route path="supplier-payments" element={<SupplierPayments />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -2,12 +2,14 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useState } from 'react'
 
 const tabs = [
-  { path: '/dashboard',  label: 'Dashboard',     icon: '◈' },
-  { path: '/clients',    label: 'Clientes',       icon: '◉' },
-  { path: '/events',     label: 'Eventos',        icon: '◆' },
-  { path: '/quotes',     label: 'Cotizaciones',   icon: '◇' },
-  { path: '/budget',     label: 'Presupuestos',   icon: '◻' },
-  { path: '/suppliers',  label: 'Proveedores',    icon: '◎' },
+  { path: '/dashboard',         label: 'Dashboard',          icon: '◈' },
+  { path: '/clients',           label: 'Clientes',           icon: '◉' },
+  { path: '/events',            label: 'Eventos',            icon: '◆' },
+  { path: '/quotes',            label: 'Cotizaciones',       icon: '◇' },
+  { path: '/payments',          label: 'Cobros',             icon: '◑' },
+  { path: '/supplier-payments', label: 'Pagos',              icon: '◐' },
+  { path: '/budget',            label: 'Presupuestos',       icon: '◻' },
+  { path: '/suppliers',         label: 'Proveedores',        icon: '◎' },
 ]
 
 export default function Layout() {
@@ -16,7 +18,6 @@ export default function Layout() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
-      {/* Sidebar */}
       <aside style={{
         width: open ? 240 : 72,
         transition: 'width 0.3s',
@@ -30,7 +31,6 @@ export default function Layout() {
         overflow: 'hidden',
       }}>
 
-        {/* Logo */}
         <div style={{ padding: '24px 16px', borderBottom: '1px solid #1e1e30', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12, flexShrink: 0,
@@ -46,7 +46,6 @@ export default function Layout() {
           )}
         </div>
 
-        {/* Nav */}
         <nav style={{ padding: '16px 8px', flex: 1 }}>
           {tabs.map(tab => (
             <NavLink key={tab.path} to={tab.path} style={({ isActive }) => ({
@@ -63,7 +62,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Toggle */}
         <div style={{ padding: 12 }}>
           <button onClick={() => setOpen(!open)} style={{
             width: '100%', padding: 10,
@@ -76,7 +74,6 @@ export default function Layout() {
 
       </aside>
 
-      {/* Contenido principal */}
       <main style={{
         marginLeft: open ? 240 : 72,
         transition: 'margin-left 0.3s',
