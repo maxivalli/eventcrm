@@ -5,6 +5,7 @@ import Clients from './pages/Clients'
 import Events from './pages/Events'
 import Quotes from './pages/Quotes'
 import Suppliers from './pages/Suppliers'
+import Budget from './pages/Budget'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="events"     element={<Events />} />
           <Route path="quotes"     element={<Quotes />} />
           <Route path="suppliers"  element={<Suppliers />} />
+          <Route path="budget"     element={<Budget />} />
         </Route>
       </Routes>
     </BrowserRouter>

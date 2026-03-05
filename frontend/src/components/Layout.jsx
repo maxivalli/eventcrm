@@ -6,6 +6,7 @@ const tabs = [
   { path: '/clients',    label: 'Clientes',       icon: '◉' },
   { path: '/events',     label: 'Eventos',        icon: '◆' },
   { path: '/quotes',     label: 'Cotizaciones',   icon: '◇' },
+  { path: '/budget',     label: 'Presupuestos',   icon: '◻' },
   { path: '/suppliers',  label: 'Proveedores',    icon: '◎' },
 ]
 
@@ -67,7 +68,7 @@ export default function Layout() {
           <button onClick={() => setOpen(!open)} style={{
             width: '100%', padding: 10,
             border: '1px solid #1e1e30', borderRadius: 8,
-            background: 'transparent', color: '#3a3a5a',
+            background: 'transparent', color: '#3a3a5a', cursor: 'pointer',
           }}>
             {open ? '◀' : '▶'}
           </button>

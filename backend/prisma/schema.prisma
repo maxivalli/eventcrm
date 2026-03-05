@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Client {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
   contact   String
-  email     String   @unique
+  email     String    @unique
   phone     String
-  type      String
-  status    String   @default("Activo")
+  birthdate DateTime?
+  status    String    @default("Activo")
   events    Event[]
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model Event {
@@ -28,7 +28,7 @@ model Event {
   status    String   @default("Propuesta")
   guests    Int
   budget    Float
-  client    Client   @relation(fields: [clientId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId  Int
   quotes    Quote[]
   createdAt DateTime @default(now())
@@ -36,10 +36,16 @@ model Event {
 
 model Quote {
   id        Int         @id @default(autoincrement())
+  kind      String      @default("General")   // "General" | "Catering"
   date      DateTime    @default(now())
   status    String      @default("Pendiente")
-  event     Event       @relation(fields: [eventId], references: [id])
+  event     Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId   Int
+  // Campos exclusivos de Catering (null en cotizaciones Generales)
+  menu      String?
+  covers    Int?
+  pricePerCover Float?
+  // Ítems: servicios generales O extras de catering (barra, torta, etc.)
   items     QuoteItem[]
   createdAt DateTime    @default(now())
 }
@@ -49,7 +55,7 @@ model QuoteItem {
   description String
   quantity    Int
   unitPrice   Float
-  quote       Quote  @relation(fields: [quoteId], references: [id])
+  quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   quoteId     Int
 }
 

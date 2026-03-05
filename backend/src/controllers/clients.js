@@ -29,27 +29,56 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, contact, email, phone, type, status } = req.body
+    const { name, contact, email, phone, birthdate, status } = req.body
+
+    if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
+    if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
+    if (!contact?.trim()) return res.status(400).json({ error: 'El contacto es requerido' })
+    if (!phone?.trim())   return res.status(400).json({ error: 'El teléfono es requerido' })
+
     const client = await prisma.client.create({
-      data: { name, contact, email, phone, type, status }
+      data: {
+        name: name.trim(),
+        contact: contact.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        birthdate: birthdate ? new Date(birthdate) : null,
+        status,
+      }
     })
     res.status(201).json(client)
   } catch (e) {
     console.error('Error create client:', e)
+    if (e.code === 'P2002') return res.status(400).json({ error: 'Ya existe un cliente con ese email' })
     res.status(500).json({ error: e.message })
   }
 }
 
 exports.update = async (req, res) => {
   try {
-    const { name, contact, email, phone, type, status } = req.body
+    const { name, contact, email, phone, birthdate, status } = req.body
+
+    if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
+    if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
+    if (!contact?.trim()) return res.status(400).json({ error: 'El contacto es requerido' })
+    if (!phone?.trim())   return res.status(400).json({ error: 'El teléfono es requerido' })
+
     const client = await prisma.client.update({
       where: { id: Number(req.params.id) },
-      data: { name, contact, email, phone, type, status }
+      data: {
+        name: name.trim(),
+        contact: contact.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        birthdate: birthdate ? new Date(birthdate) : null,
+        status,
+      }
     })
     res.json(client)
   } catch (e) {
     console.error('Error update client:', e)
+    if (e.code === 'P2002') return res.status(400).json({ error: 'Ya existe un cliente con ese email' })
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Cliente no encontrado' })
     res.status(500).json({ error: e.message })
   }
 }
@@ -60,6 +89,7 @@ exports.remove = async (req, res) => {
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete client:', e)
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Cliente no encontrado' })
     res.status(500).json({ error: e.message })
   }
 }
