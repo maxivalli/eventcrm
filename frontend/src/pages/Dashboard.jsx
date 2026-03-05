@@ -90,23 +90,31 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [clientsRes, eventsRes, quotesRes, suppliersRes, spPendingRes, allPaymentsRes, allSpRes] = await Promise.all([
+        const [clientsRes, eventsRes, quotesRes, suppliersRes] = await Promise.all([
           api.get('/api/clients'),
           api.get('/api/events'),
           api.get('/api/quotes'),
           api.get('/api/suppliers'),
-          api.get('/api/supplier-payments/pending-total'),
-          api.get('/api/payments/all'),
-          api.get('/api/supplier-payments/all'),
         ])
+
+        const safeGet = async (url) => {
+          try { return (await api.get(url)).data } catch { return null }
+        }
+
+        const [spPending, allPayments, allSpPayments] = await Promise.all([
+          safeGet('/api/supplier-payments/pending-total'),
+          safeGet('/api/payments/all'),
+          safeGet('/api/supplier-payments/all'),
+        ])
+
         setData({
-          clients:          clientsRes.data,
-          events:           eventsRes.data,
-          quotes:           quotesRes.data,
-          suppliers:        suppliersRes.data,
-          pendingTotal:     spPendingRes.data.total,
-          allPayments:      allPaymentsRes.data,
-          allSpPayments:    allSpRes.data,
+          clients:       clientsRes.data,
+          events:        eventsRes.data,
+          quotes:        quotesRes.data,
+          suppliers:     suppliersRes.data,
+          pendingTotal:  spPending?.total || 0,
+          allPayments:   allPayments || [],
+          allSpPayments: allSpPayments || [],
         })
       } catch (e) {
         console.error(e)
