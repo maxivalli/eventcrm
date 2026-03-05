@@ -37,10 +37,10 @@ export default function Layout() {
             background: 'linear-gradient(135deg, #c9a84c, #e8c97a)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 900, color: '#09090f', fontSize: 18,
-          }}>E</div>
+          }}>H</div>
           {open && (
             <div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 900, color: '#e8c97a' }}>EventCRM</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 900, color: '#e8c97a' }}>Haus-CRM</div>
               <div style={{ fontSize: 10, color: '#4a4a6a', letterSpacing: 2, textTransform: 'uppercase' }}>Producción</div>
             </div>
           )}
