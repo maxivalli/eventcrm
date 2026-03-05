@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import {
+  UserCheck, CalendarClock, TrendingUp, AlertCircle,
+  UserPlus, CalendarPlus, FilePlus, Truck,
+  ArrowDownCircle, ArrowUpCircle, Package
+} from 'lucide-react'
 
 // --- Helpers ---
 const statusColors = {
@@ -58,7 +63,7 @@ function KpiCard({ label, value, sub, icon, color }) {
       background: '#12121e', border: '1px solid #1e1e30',
       borderRadius: 16, padding: '20px 22px', position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ position: 'absolute', top: 14, right: 16, fontSize: 32, opacity: 0.08, color }}>{icon}</div>
+      <div style={{ position: 'absolute', top: 14, right: 16, opacity: 0.08, color }}>{icon}</div>
       <div style={{ fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: 28, fontWeight: 700, color, fontFamily: "'Playfair Display', serif", marginBottom: 4 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#3a3a5a' }}>{sub}</div>
@@ -117,14 +122,14 @@ export default function Dashboard() {
       label: 'Clientes activos',
       value: data.clients.filter(c => c.status === 'Activo').length,
       sub:   `${data.clients.length} clientes en total`,
-      icon:  '◉',
+      icon:  <UserCheck size={28} strokeWidth={1.5} />,
       color: '#c9a84c',
     },
     {
       label: 'Eventos en curso',
       value: data.events.filter(e => e.status !== 'Finalizado').length,
       sub:   `${data.events.length} eventos en total`,
-      icon:  '◆',
+      icon:  <CalendarClock size={28} strokeWidth={1.5} />,
       color: '#3b82f6',
     },
     {
@@ -135,14 +140,14 @@ export default function Dashboard() {
           .reduce((acc, q) => acc + calcTotal(q), 0)
       ),
       sub:   `${data.quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`,
-      icon:  '◇',
+      icon:  <TrendingUp size={28} strokeWidth={1.5} />,
       color: '#22c55e',
     },
     {
       label: 'Pagos pendientes',
       value: formatCurrency(data.pendingTotal || 0),
       sub:   'Total a pagar a proveedores',
-      icon:  '◐',
+      icon:  <AlertCircle size={28} strokeWidth={1.5} />,
       color: '#ef4444',
     },
   ] : []
@@ -164,12 +169,12 @@ export default function Dashboard() {
 
   const recentActivity = data
     ? [
-        ...data.clients.map(c      => ({ text: `Cliente agregado: ${c.name}`,                                     time: c.createdAt, icon: '◉', type: 'default' })),
-        ...data.events.map(e       => ({ text: `Evento creado: ${e.name}`,                                        time: e.createdAt, icon: '◆', type: 'default' })),
-        ...data.quotes.map(q       => ({ text: `Cotización para: ${q.event?.name || '—'}`,                        time: q.createdAt, icon: '◇', type: 'default' })),
-        ...data.suppliers.map(s    => ({ text: `Proveedor agregado: ${s.name}`,                                   time: s.createdAt, icon: '◎', type: 'default' })),
-        ...(data.allPayments  || []).map(p  => ({ text: `Cobro registrado: ${p.event?.name || '—'}`, amount: fmtARS(p.amount), time: p.createdAt, icon: '◑', type: 'income' })),
-        ...(data.allSpPayments|| []).map(p  => ({ text: `Pago a ${p.supplier?.name || '—'}`, amount: fmtARS(p.amount), status: p.status, time: p.createdAt, icon: '◐', type: 'payment' })),
+        ...data.clients.map(c      => ({ text: `Cliente agregado: ${c.name}`,                                     time: c.createdAt, icon: <UserPlus size={15} strokeWidth={1.75} />, type: 'default' })),
+        ...data.events.map(e       => ({ text: `Evento creado: ${e.name}`,                                        time: e.createdAt, icon: <CalendarPlus size={15} strokeWidth={1.75} />, type: 'default' })),
+        ...data.quotes.map(q       => ({ text: `Cotización para: ${q.event?.name || '—'}`,                        time: q.createdAt, icon: <FilePlus size={15} strokeWidth={1.75} />, type: 'default' })),
+        ...data.suppliers.map(s    => ({ text: `Proveedor agregado: ${s.name}`,                                   time: s.createdAt, icon: <Package size={15} strokeWidth={1.75} />, type: 'default' })),
+        ...(data.allPayments  || []).map(p  => ({ text: `Cobro registrado: ${p.event?.name || '—'}`, amount: fmtARS(p.amount), time: p.createdAt, icon: <ArrowDownCircle size={15} strokeWidth={1.75} />, type: 'income' })),
+        ...(data.allSpPayments|| []).map(p  => ({ text: `Pago a ${p.supplier?.name || '—'}`, amount: fmtARS(p.amount), status: p.status, time: p.createdAt, icon: <ArrowUpCircle size={15} strokeWidth={1.75} />, type: 'payment' })),
       ]
         .sort((a, b) => new Date(b.time) - new Date(a.time))
     : []

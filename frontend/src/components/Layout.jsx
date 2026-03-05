@@ -1,15 +1,19 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useState } from 'react'
+import {
+  LayoutDashboard, Users, CalendarDays, FileText,
+  HandCoins, Wallet, PieChart, Truck, ChevronLeft, ChevronRight
+} from 'lucide-react'
 
 const tabs = [
-  { path: '/dashboard',         label: 'Dashboard',          icon: '◈' },
-  { path: '/clients',           label: 'Clientes',           icon: '◉' },
-  { path: '/events',            label: 'Eventos',            icon: '◆' },
-  { path: '/quotes',            label: 'Cotizaciones',       icon: '◇' },
-  { path: '/payments',          label: 'Cobros',             icon: '◑' },
-  { path: '/supplier-payments', label: 'Pagos',              icon: '◐' },
-  { path: '/budget',            label: 'Presupuestos',       icon: '◻' },
-  { path: '/suppliers',         label: 'Proveedores',        icon: '◎' },
+  { path: '/dashboard',         label: 'Dashboard',      Icon: LayoutDashboard },
+  { path: '/clients',           label: 'Clientes',        Icon: Users },
+  { path: '/events',            label: 'Eventos',         Icon: CalendarDays },
+  { path: '/quotes',            label: 'Cotizaciones',    Icon: FileText },
+  { path: '/payments',          label: 'Cobros',          Icon: HandCoins },
+  { path: '/supplier-payments', label: 'Pagos',           Icon: Wallet },
+  { path: '/budget',            label: 'Presupuestos',    Icon: PieChart },
+  { path: '/suppliers',         label: 'Proveedores',     Icon: Truck },
 ]
 
 export default function Layout() {
@@ -47,17 +51,18 @@ export default function Layout() {
         </div>
 
         <nav style={{ padding: '16px 8px', flex: 1 }}>
-          {tabs.map(tab => (
-            <NavLink key={tab.path} to={tab.path} style={({ isActive }) => ({
+          {tabs.map(({ path, label, Icon }) => (
+            <NavLink key={path} to={path} style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '11px 12px', borderRadius: 10, marginBottom: 4,
               color: isActive ? '#e8c97a' : '#5a5a7a',
               background: isActive ? 'rgba(201,168,76,0.12)' : 'transparent',
               borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
               transition: 'all 0.2s',
+              textDecoration: 'none',
             })}>
-              <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{tab.icon}</span>
-              {open && <span style={{ fontSize: 13, fontWeight: 500 }}>{tab.label}</span>}
+              <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+              {open && <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -67,8 +72,9 @@ export default function Layout() {
             width: '100%', padding: 10,
             border: '1px solid #1e1e30', borderRadius: 8,
             background: 'transparent', color: '#3a3a5a', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {open ? '◀' : '▶'}
+            {open ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
         </div>
 
