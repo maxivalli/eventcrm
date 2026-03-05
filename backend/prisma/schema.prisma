@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        Int      @id @default(autoincrement())
+  name      String
+  contact   String
+  email     String   @unique
+  phone     String
+  type      String
+  status    String   @default("Activo")
+  events    Event[]
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        Int      @id @default(autoincrement())
+  name      String
+  date      DateTime
+  venue     String
+  type      String
+  status    String   @default("Propuesta")
+  guests    Int
+  budget    Float
+  client    Client   @relation(fields: [clientId], references: [id])
+  clientId  Int
+  quotes    Quote[]
+  createdAt DateTime @default(now())
+}
+
+model Quote {
+  id        Int         @id @default(autoincrement())
+  date      DateTime    @default(now())
+  status    String      @default("Pendiente")
+  event     Event       @relation(fields: [eventId], references: [id])
+  eventId   Int
+  items     QuoteItem[]
+  createdAt DateTime    @default(now())
+}
+
+model QuoteItem {
+  id          Int    @id @default(autoincrement())
+  description String
+  quantity    Int
+  unitPrice   Float
+  quote       Quote  @relation(fields: [quoteId], references: [id])
+  quoteId     Int
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String
+  contact   String
+  phone     String
+  email     String   @unique
+  rating    Int      @default(3)
+  status    String   @default("Activo")
+  createdAt DateTime @default(now())
+}
