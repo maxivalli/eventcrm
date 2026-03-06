@@ -169,19 +169,23 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
                 borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14,
               }}>
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 1fr',
+                  display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
                   background: col.faint, padding: '10px 16px',
                   fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase',
                 }}>
-                  <span>Cubiertos</span>
-                  <span style={{ textAlign: 'right' }}>Cantidad</span>
+                  <span>Descripción</span>
+                  <span style={{ textAlign: 'center' }}>Cant.</span>
+                  <span style={{ textAlign: 'right' }}>Precio unit.</span>
+                  <span style={{ textAlign: 'right' }}>Subtotal</span>
                 </div>
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 1fr',
+                  display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
                   padding: '14px 16px', borderTop: `1px solid ${col.border}`,
                 }}>
                   <span style={{ fontSize: 13, color: col.text }}>Servicio de catering por persona</span>
-                  <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{q.covers} personas</span>
+                  <span style={{ fontSize: 12, color: col.muted, textAlign: 'center' }}>{q.covers}</span>
+                  <span style={{ fontSize: 12, color: col.muted, textAlign: 'right' }}>{formatCurrency(q.pricePerCover)}</span>
+                  <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{formatCurrency((q.covers || 0) * (q.pricePerCover || 0))}</span>
                 </div>
               </div>
 
@@ -189,22 +193,40 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
               {q.items.length > 0 && (
                 <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
                   <div style={{
+                    display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
                     background: col.faint, padding: '10px 16px',
                     fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase',
-                  }}>Servicios adicionales</div>
+                  }}>
+                    <span>Servicios adicionales</span>
+                    <span style={{ textAlign: 'center' }}>Cant.</span>
+                    <span style={{ textAlign: 'right' }}>Precio unit.</span>
+                    <span style={{ textAlign: 'right' }}>Subtotal</span>
+                  </div>
                   {q.items.map((item, i) => (
                     <div key={item.id} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
                       padding: '11px 16px', borderTop: `1px solid ${col.border}`,
+                      alignItems: 'center',
                       background: i % 2 === 0 ? 'transparent' : col.faint + '80',
                     }}>
                       <span style={{ fontSize: 13, color: col.text }}>{item.description}</span>
-                      <span style={{ fontSize: 12, color: col.muted }}>x{item.quantity}</span>
+                      <span style={{ fontSize: 12, color: col.muted, textAlign: 'center' }}>{item.quantity}</span>
+                      <span style={{ fontSize: 12, color: col.muted, textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</span>
+                      <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.quantity * item.unitPrice)}</span>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* Total catering */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 16px', borderRadius: 8,
+                background: col.faint, border: `1px solid ${col.border}`,
+              }}>
+                <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Total catering</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#f97316' }}>{formatCurrency(calcQuoteTotal(q))}</span>
+              </div>
             </div>
           ))}
         </div>
