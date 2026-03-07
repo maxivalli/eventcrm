@@ -9,32 +9,30 @@ const formatDateLong = (str) =>
   new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
 
 const calcQuoteTotal = (q) => {
-  const items = (q.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
+  const items   = (q.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
   const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
   return catering + items
 }
 
-// ── Preview component (used both on screen and as PDF source) ────────────────
+// ── Preview component ────────────────────────────────────────────────────────
 function BudgetPreview({ client, event, quotes, emissionDate }) {
   const generalQuotes = quotes.filter(q => q.kind === 'General')
   const cateringQuotes = quotes.filter(q => q.kind === 'Catering')
-  const grandTotal = quotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
+  const grandTotal    = quotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
 
   const col = {
-    gold:    '#b8972a',
+    gold:      '#b8972a',
     goldLight: '#d4ae4a',
-    dark:    '#0e0e18',
-    card:    '#13131f',
-    border:  '#1e1e2e',
-    text:    '#e2e2ee',
-    muted:   '#6a6a8a',
-    faint:   '#1a1a2a',
+    dark:      '#0e0e18',
+    card:      '#13131f',
+    border:    '#1e1e2e',
+    text:      '#e2e2ee',
+    muted:     '#6a6a8a',
+    faint:     '#1a1a2a',
   }
 
   const sectionTitle = (label, color = col.gold) => (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
       <div style={{ height: 1, flex: 1, background: color + '40' }} />
       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color }}>{label}</span>
       <div style={{ height: 1, flex: 1, background: color + '40' }} />
@@ -49,20 +47,13 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
       padding: '48px 52px',
       maxWidth: 760,
       margin: '0 auto',
-      minHeight: 900,
     }}>
 
       {/* ── Header ── */}
       <div style={{ marginBottom: 40, paddingBottom: 32, borderBottom: `1px solid ${col.border}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{
-              fontFamily: "'Georgia', serif",
-              fontSize: 26, fontWeight: 700,
-              color: col.goldLight,
-              letterSpacing: 1,
-              marginBottom: 4,
-            }}>
+            <div style={{ fontFamily: "'Georgia', serif", fontSize: 26, fontWeight: 700, color: col.goldLight, letterSpacing: 1, marginBottom: 4 }}>
               HAUS
             </div>
             <div style={{ fontSize: 11, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>
@@ -89,9 +80,9 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
           <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Evento</div>
           <div style={{ fontSize: 17, fontWeight: 700, color: col.text, marginBottom: 10 }}>{event.name}</div>
           {[
-            { label: 'Fecha',      value: formatDateLong(event.date) },
-            { label: 'Venue',      value: event.venue },
-            { label: 'Invitados',  value: `${event.guests} personas` },
+            { label: 'Fecha',     value: formatDateLong(event.date)    },
+            { label: 'Venue',     value: event.venue                   },
+            { label: 'Invitados', value: `${event.guests} personas`    },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 11, color: col.muted }}>{r.label}</span>
@@ -106,8 +97,7 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
         <div style={{ marginBottom: 36 }}>
           {sectionTitle('Servicios incluidos')}
           {generalQuotes.map(q => (
-            <div key={q.id} style={{ marginBottom: 24 }}>
-              {/* Items table */}
+            <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
               <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}` }}>
                 <div style={{
                   display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
@@ -137,7 +127,7 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
                   padding: '12px 16px', borderTop: `1px solid ${col.border}`,
                   background: col.faint,
                 }}>
-                  <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Total servicios</span>
+                  <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Subtotal servicios</span>
                   <span style={{ fontSize: 16, fontWeight: 700, color: col.goldLight }}>{formatCurrency(calcQuoteTotal(q))}</span>
                 </div>
               </div>
@@ -151,9 +141,8 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
         <div style={{ marginBottom: 36 }}>
           {sectionTitle('Catering', '#f97316')}
           {cateringQuotes.map(q => (
-            <div key={q.id} style={{ marginBottom: 24 }}>
+            <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
 
-              {/* Menú */}
               {q.menu && (
                 <div style={{
                   background: col.faint, borderRadius: 8, padding: '16px 20px',
@@ -164,10 +153,7 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
                 </div>
               )}
 
-              {/* Cubiertos */}
-              <div style={{
-                borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14,
-              }}>
+              <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
                 <div style={{
                   display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
                   background: col.faint, padding: '10px 16px',
@@ -189,7 +175,6 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
                 </div>
               </div>
 
-              {/* Extras */}
               {q.items.length > 0 && (
                 <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
                   <div style={{
@@ -218,13 +203,12 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
                 </div>
               )}
 
-              {/* Total catering */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', borderRadius: 8,
                 background: col.faint, border: `1px solid ${col.border}`,
               }}>
-                <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Total catering</span>
+                <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Subtotal catering</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#f97316' }}>{formatCurrency(calcQuoteTotal(q))}</span>
               </div>
             </div>
@@ -232,8 +216,52 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
         </div>
       )}
 
-      {/* ── Nota final para cliente ── */}
+      {/* ── Total general ── */}
       <div style={{
+        pageBreakInside: 'avoid',
+        marginBottom: 32,
+        borderRadius: 12,
+        overflow: 'hidden',
+        border: `1px solid ${col.gold}40`,
+      }}>
+        {/* Desglose por sección */}
+        {generalQuotes.length > 0 && cateringQuotes.length > 0 && (
+          <div style={{ background: col.faint, padding: '14px 22px', borderBottom: `1px solid ${col.border}` }}>
+            {generalQuotes.map(q => (
+              <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: col.muted }}>Servicios</span>
+                <span style={{ fontSize: 12, color: col.text }}>{formatCurrency(calcQuoteTotal(q))}</span>
+              </div>
+            ))}
+            {cateringQuotes.map(q => (
+              <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: col.muted }}>Catering</span>
+                <span style={{ fontSize: 12, color: col.text }}>{formatCurrency(calcQuoteTotal(q))}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Total */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '18px 22px',
+          background: `linear-gradient(135deg, ${col.gold}18, ${col.gold}08)`,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+              Total general
+            </div>
+            <div style={{ fontSize: 11, color: col.muted }}>Incluye todos los servicios</div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: col.goldLight }}>
+            {formatCurrency(grandTotal)}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Nota final ── */}
+      <div style={{
+        pageBreakInside: 'avoid',
         background: col.faint, borderRadius: 10, padding: '18px 22px',
         border: `1px solid ${col.border}`, marginBottom: 36,
         fontSize: 12, color: col.muted, lineHeight: 1.7, fontStyle: 'italic',
@@ -242,7 +270,11 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ borderTop: `1px solid ${col.border}`, paddingTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{
+        pageBreakInside: 'avoid',
+        borderTop: `1px solid ${col.border}`, paddingTop: 20,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
         <div style={{ fontSize: 11, color: col.muted }}>HAUS — Organización y producción de eventos</div>
         <div style={{ fontSize: 11, color: col.muted }}>{formatDateLong(emissionDate)}</div>
       </div>
@@ -254,14 +286,13 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
 // ── Página principal ─────────────────────────────────────────────────────────
 export default function Budget() {
   const toast = useToast()
-  const [clients, setClients]   = useState([])
-  const [events, setEvents]     = useState([])
-  const [quotes, setQuotes]     = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [clients,    setClients]    = useState([])
+  const [events,     setEvents]     = useState([])
+  const [quotes,     setQuotes]     = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [generating, setGenerating] = useState(false)
-
-  const [clientId, setClientId] = useState('')
-  const [eventId,  setEventId]  = useState('')
+  const [clientId,   setClientId]   = useState('')
+  const [eventId,    setEventId]    = useState('')
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -283,37 +314,31 @@ export default function Budget() {
     fetchAll()
   }, [])
 
-  const clientEvents = clientId
-    ? events.filter(ev => String(ev.client?.id) === clientId)
-    : []
-
-  const selectedClient = clients.find(c => String(c.id) === clientId)
-  const selectedEvent  = events.find(e => String(e.id) === eventId)
-  const eventQuotes    = eventId
-    ? quotes.filter(q => String(q.eventId) === eventId)
-    : []
-
-  const hasData = selectedClient && selectedEvent && eventQuotes.length > 0
+  const clientEvents    = clientId ? events.filter(ev => String(ev.client?.id) === clientId) : []
+  const selectedClient  = clients.find(c => String(c.id) === clientId)
+  const selectedEvent   = events.find(e => String(e.id) === eventId)
+  const eventQuotes     = eventId ? quotes.filter(q => String(q.eventId) === eventId) : []
+  const hasData         = selectedClient && selectedEvent && eventQuotes.length > 0
 
   const handleGeneratePDF = async () => {
     if (!hasData) return
     setGenerating(true)
     try {
-      // Carga jsPDF dinámicamente desde CDN
+      // Cargar librerías si no están
       if (!window.jspdf) {
         await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
+          const s = document.createElement('script')
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+          s.onload = resolve; s.onerror = reject
+          document.head.appendChild(s)
         })
+      }
+      if (!window.html2canvas) {
         await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
+          const s = document.createElement('script')
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+          s.onload = resolve; s.onerror = reject
+          document.head.appendChild(s)
         })
       }
 
@@ -321,42 +346,38 @@ export default function Budget() {
       const element   = document.getElementById('budget-preview')
 
       const canvas = await window.html2canvas(element, {
-        scale: 2,
-        useCORS: true,
+        scale:           2,
+        useCORS:         true,
         backgroundColor: '#0e0e18',
-        logging: false,
+        logging:         false,
+        windowWidth:     element.scrollWidth,
+        windowHeight:    element.scrollHeight,
       })
 
-      const imgData = canvas.toDataURL('image/png')
-      const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pdfW    = pdf.internal.pageSize.getWidth()
-      const pdfH    = pdf.internal.pageSize.getHeight()
-      const ratio   = canvas.width / canvas.height
-      const imgH    = pdfW / ratio
+      const pdf      = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pdfW     = pdf.internal.pageSize.getWidth()
+      const pdfH     = pdf.internal.pageSize.getHeight()
+      const imgW     = canvas.width
+      const imgH     = canvas.height
+      const ratio    = pdfW / imgW        // px → mm
+      const totalMM  = imgH * ratio       // alto total en mm
 
-      let y = 0
-      if (imgH <= pdfH) {
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfW, imgH)
-      } else {
-        // Multi-página si el contenido es largo
-        let remaining = imgH
-        while (remaining > 0) {
-          const sliceH = Math.min(pdfH, remaining)
-          const srcY   = ((imgH - remaining) / imgH) * canvas.height
-          const srcH   = (sliceH / imgH) * canvas.height
+      const pageCount = Math.ceil(totalMM / pdfH)
 
-          const sliceCanvas = document.createElement('canvas')
-          sliceCanvas.width  = canvas.width
-          sliceCanvas.height = srcH
-          const ctx = sliceCanvas.getContext('2d')
-          ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+      for (let page = 0; page < pageCount; page++) {
+        if (page > 0) pdf.addPage()
 
-          if (y > 0) pdf.addPage()
-          pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, sliceH)
+        // Recortamos el canvas para esta página
+        const srcY    = Math.round((page * pdfH) / ratio)
+        const srcH    = Math.round(Math.min(pdfH / ratio, imgH - srcY))
+        const sliceH  = srcH * ratio   // alto en mm de este slice
 
-          remaining -= pdfH
-          y += pdfH
-        }
+        const slice   = document.createElement('canvas')
+        slice.width   = imgW
+        slice.height  = srcH
+        slice.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH)
+
+        pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pdfW, sliceH)
       }
 
       const fileName = `Presupuesto_${selectedClient.name.replace(/\s+/g, '_')}_${selectedEvent.name.replace(/\s+/g, '_')}.pdf`
@@ -442,7 +463,7 @@ export default function Budget() {
         </div>
       </div>
 
-      {/* Estado del evento seleccionado */}
+      {/* Aviso sin cotizaciones */}
       {eventId && eventQuotes.length === 0 && (
         <div style={{
           background: '#12121e', border: '1px solid #2a1a0a', borderRadius: 12,
@@ -458,10 +479,7 @@ export default function Budget() {
           <div style={{ fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
             Vista previa
           </div>
-          <div style={{
-            border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden',
-            boxShadow: '0 8px 48px rgba(0,0,0,0.4)',
-          }}>
+          <div style={{ border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 48px rgba(0,0,0,0.4)' }}>
             <BudgetPreview
               client={selectedClient}
               event={selectedEvent}
@@ -474,10 +492,7 @@ export default function Budget() {
 
       {/* Estado vacío */}
       {!eventId && (
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          height: 300, color: '#2a2a40', gap: 12,
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: '#2a2a40', gap: 12 }}>
           <div style={{ fontSize: 48 }}>◇</div>
           <div style={{ fontSize: 14 }}>Seleccioná un cliente y evento para ver la vista previa</div>
         </div>

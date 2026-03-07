@@ -4,7 +4,10 @@ exports.getAll = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { date: 'asc' },
-      include: { client: { select: { id: true, name: true } } }
+      include: {
+        client: { select: { id: true, name: true } },
+        _count: { select: { files: true } }
+      }
     })
     res.json(events)
   } catch (e) {
@@ -84,7 +87,6 @@ exports.update = async (req, res) => {
   }
 }
 
-// Con CASCADE en DB, borrar el evento borra sus cotizaciones e ítems automáticamente
 exports.remove = async (req, res) => {
   try {
     await prisma.event.delete({ where: { id: Number(req.params.id) } })

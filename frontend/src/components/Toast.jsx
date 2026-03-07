@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback } from 'react'
+import { useState, createContext, useContext, useCallback } from 'react'
 
 const ToastCtx = createContext(null)
 
@@ -19,11 +19,12 @@ export function ToastProvider({ children }) {
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {toasts.map(t => (
           <div key={t.id} style={{
-            background: '#12121e', border: `1px solid ${colors[t.type]}40`,
+            background: 'var(--bg-surface)',
+            border: `1px solid ${colors[t.type]}40`,
             borderLeft: `3px solid ${colors[t.type]}`,
             borderRadius: 10, padding: '12px 18px',
-            color: '#e8e8f0', fontSize: 13,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+            color: 'var(--text-primary)', fontSize: 13,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
             maxWidth: 340, animation: 'slideIn 0.2s ease',
           }}>
             {t.message}

@@ -1,12 +1,98 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ─── TEMA OSCURO (por defecto) ─── */
+:root,
+[data-theme="dark"] {
+  --bg-base:       #09090f;   /* fondo de toda la app */
+  --bg-surface:    #12121e;   /* cards, sidebar, modales */
+  --bg-sunken:     #0d0d18;   /* inputs, filas alternas */
+  --bg-hover:      #16162a;   /* hover en filas */
+
+  --border:        #1e1e30;   /* bordes generales */
+  --border-strong: #2a2a40;   /* bordes de modales */
+  --border-row:    #1a1a28;   /* separadores de filas */
+
+  --text-primary:  #e8e8f0;   /* texto principal */
+  --text-secondary:#c8c8d8;   /* texto secundario */
+  --text-muted:    #5a5a7a;   /* texto apagado */
+  --text-faint:    #3a3a5a;   /* texto muy apagado */
+  --text-label:    #4a4a6a;   /* labels y cabeceras */
+
+  --gold:          #c9a84c;
+  --gold-light:    #e8c97a;
+  --gold-bg:       rgba(201,168,76,0.12);
+  --gold-border:   rgba(201,168,76,0.15);
+  --gold-glow:     rgba(201,168,76,0.06);
+
+  --chart-tooltip-bg:     #12121e;
+  --chart-tooltip-border: #2a2a40;
+  --chart-tooltip-color:  #c8c8d8;
+
+  --scrollbar-thumb: #2a2a40;
+  --scrollbar-track: transparent;
+}
+
+/* ─── TEMA CLARO ─── */
+[data-theme="light"] {
+  --bg-base:       #f4f4f8;
+  --bg-surface:    #ffffff;
+  --bg-sunken:     #f0f0f6;
+  --bg-hover:      #eaeaf4;
+
+  --border:        #dddde8;
+  --border-strong: #c8c8d8;
+  --border-row:    #eaeaf0;
+
+  --text-primary:  #1a1a2e;
+  --text-secondary:#2e2e4e;
+  --text-muted:    #6a6a8a;
+  --text-faint:    #9a9ab8;
+  --text-label:    #7a7a9a;
+
+  --gold:          #b8922e;
+  --gold-light:    #d4a83a;
+  --gold-bg:       rgba(184,146,46,0.10);
+  --gold-border:   rgba(184,146,46,0.20);
+  --gold-glow:     rgba(184,146,46,0.06);
+
+  --chart-tooltip-bg:     #ffffff;
+  --chart-tooltip-border: #c8c8d8;
+  --chart-tooltip-color:  #2e2e4e;
+
+  --scrollbar-thumb: #c8c8d8;
+  --scrollbar-track: transparent;
+}
+
+/* ─── BASE ─── */
+html { transition: background 0.25s, color 0.25s; }
+
 body {
-  background: #09090f;
-  color: #e8e8f0;
+  background: var(--bg-base);
+  color: var(--text-primary);
   font-family: 'DM Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.25s, color 0.25s;
 }
 
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; }
-input, textarea, select { font-family: inherit; }
+input, textarea, select {
+  font-family: inherit;
+  color-scheme: dark;
+}
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  color-scheme: light;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 99px; }
+
+/* Animación skeleton */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

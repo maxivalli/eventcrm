@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+}
+
 model Client {
   id        Int       @id @default(autoincrement())
   name      String
@@ -34,6 +42,8 @@ model Event {
   payments         Payment[]
   supplierPayments SupplierPayment[]
   createdAt        DateTime          @default(now())
+  checklist ChecklistItem[]
+  files EventFile[]
 }
 
 model Quote {
@@ -94,4 +104,25 @@ model Supplier {
   status           String            @default("Activo")
   supplierPayments SupplierPayment[]
   createdAt        DateTime          @default(now())
+}
+
+model ChecklistItem {
+  id        Int      @id @default(autoincrement())
+  title     String
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   Int
+  createdAt DateTime @default(now())
+}
+
+model EventFile {
+  id           Int      @id @default(autoincrement())
+  name         String
+  url          String
+  publicId     String
+  resourceType String   @default("raw")
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      Int
+  createdAt    DateTime @default(now())
 }
