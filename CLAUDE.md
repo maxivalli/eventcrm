@@ -1,8 +1,8 @@
-# CLAUDE.md — EventCRM (Haus-CRM)
+# CLAUDE.md — Haus-CRM
 
 ## Descripción del proyecto
 
-CRM para gestión de eventos de producción ("Haus"). Aplicación fullstack con autenticación JWT, separada en dos servicios independientes: `backend/` y `frontend/`.
+CRM para gestión integral de eventos de producción (empresa "Haus"). Aplicación fullstack con autenticación JWT, separada en dos servicios independientes: `backend/` y `frontend/`. Incluye integración con WhatsApp vía Evolution API para mensajes automáticos y manuales a clientes.
 
 ---
 
@@ -14,14 +14,20 @@ eventcrm-main/
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── migrations/
+│   ├── data/
+│   │   └── templates.json        # Plantillas de WhatsApp persistidas en disco
 │   └── src/
-│       ├── index.js              # Entry point, registra rutas y middlewares
+│       ├── index.js              # Entry point, registra rutas, middlewares y cron
 │       ├── prisma.js             # Singleton PrismaClient
 │       ├── seed.js               # Crea usuario admin por defecto
 │       ├── cloudinary.js         # Config Cloudinary para uploads
 │       ├── upload.js             # Multer + Cloudinary storage
 │       ├── controllers/          # Lógica de negocio (un archivo por entidad)
 │       ├── routes/               # Definición de rutas (un archivo por entidad)
+│       ├── services/
+│       │   ├── evolution.js      # Cliente HTTP para Evolution API (WhatsApp)
+│       │   ├── templates.js      # CRUD de plantillas de mensajes (JSON en disco)
+│       │   └── cron.js           # Cron job diario 09:00 — mensajes automáticos
 │       └── middleware/
 │           └── auth.js           # JWT verify middleware
 └── frontend/         # React 19 + Vite 7 + React Router 7
@@ -49,9 +55,11 @@ eventcrm-main/
             ├── Payments.jsx
             ├── SupplierPayments.jsx
             ├── Budget.jsx
-            ├── Catering.jsx     # Gestión de insumos de catering por evento
-            ├── Recetario.jsx    # CRUD de platos con ingredientes
-            └── Users.jsx
+            ├── Catering.jsx
+            ├── Recetario.jsx
+            ├── Contacts.jsx      # Agenda de contactos independiente
+            ├── Users.jsx
+            └── WhatsApp.jsx      # Configuración y envío de mensajes WhatsApp
 ```
 
 ---
@@ -64,6 +72,7 @@ eventcrm-main/
 - **ORM**: Prisma 5 con PostgreSQL (`pg`)
 - **Auth**: JWT (`jsonwebtoken`) + bcrypt (`bcryptjs`)
 - **Uploads**: Multer + Cloudinary v1
+- **WhatsApp**: Evolution API v1.8.7 (via HTTP)
 - **Dev**: Nodemon
 
 ### Frontend
@@ -82,22 +91,23 @@ eventcrm-main/
 | Modelo | Relaciones clave |
 |---|---|
 | `User` | Independiente (gestión de acceso) |
-| `Client` | tiene muchos `Event` |
+| `Client` | tiene muchos `Event`; campos: `birthdate` (para cron de cumpleaños) |
 | `Event` | pertenece a `Client`; tiene `Quote[]`, `Payment[]`, `SupplierPayment[]`, `ChecklistItem[]`, `EventFile[]`, `CateringItem[]`, `EventMenuSection[]` |
-| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`, `QuoteDish[]`; campos: `kind`, `status`, `menu`, `covers`, `pricePerCover` |
-| `QuoteItem` | pertenece a `Quote`; campos: `description`, `quantity`, `unitPrice` |
-| `QuoteDish` | pertenece a `Quote` y a `Dish`; campos: `nota` |
+| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`, `QuoteDish[]` |
+| `QuoteItem` | pertenece a `Quote` |
+| `QuoteDish` | pertenece a `Quote` y a `Dish` |
 | `Payment` | pertenece a `Event` (cobros al cliente) |
-| `Supplier` | tiene `SupplierPayment[]`, `CateringItem[]`; campos: `category`, `rating`, `status`, `alias` |
-| `SupplierPayment` | pertenece a `Supplier` y a `Event`; campos: `method`, `status` |
-| `ChecklistItem` | pertenece a `Event`; campos: `title`, `done`, `order` |
-| `EventFile` | pertenece a `Event`; campos: `name`, `url`, `publicId`, `resourceType` |
-| `CateringItem` | pertenece a `Event` y opcionalmente a `Supplier`; campos: `categoria`, `descripcion`, `cantidad`, `unidad`, `precioUnitario`, `proveedorLibre`, `nota` |
-| `Dish` | tiene `DishIngredient[]`, `EventMenuItem[]`, `QuoteDish[]`; campos: `name`, `seccion`, `descripcion` |
-| `DishIngredient` | pertenece a `Dish`; campos: `nombre`, `cantidad` (por persona), `unidad`, `categoria` |
-| `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]`; campos: `nombre`, `orden` |
-| `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish`; campos: `nota` |
-| `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` (JSON string) |
+| `Supplier` | tiene `SupplierPayment[]`, `CateringItem[]` |
+| `SupplierPayment` | pertenece a `Supplier` y a `Event` |
+| `ChecklistItem` | pertenece a `Event` |
+| `EventFile` | pertenece a `Event` |
+| `CateringItem` | pertenece a `Event` y opcionalmente a `Supplier` |
+| `Dish` | tiene `DishIngredient[]`, `EventMenuItem[]`, `QuoteDish[]` |
+| `DishIngredient` | pertenece a `Dish`; campos: `cantidad` (por persona), `unidad`, `categoria` |
+| `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]` |
+| `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish` |
+| `Contact` | Independiente — agenda de contactos separada de clientes |
+| `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` |
 
 ---
 
@@ -107,17 +117,20 @@ eventcrm-main/
 ```
 DATABASE_URL=postgresql://user:password@host:5432/dbname
 JWT_SECRET=tu_secreto_jwt
-CORS_ORIGIN=http://localhost:5173          # o URL del frontend en prod
+CORS_ORIGIN=http://localhost:5173
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-ANTHROPIC_API_KEY=...                      # Para sugerencia de ingredientes con IA
-PORT=3001                                  # opcional, default 3001
+ANTHROPIC_API_KEY=...                # Para sugerencia de ingredientes con IA
+EVOLUTION_API_URL=https://...        # URL pública de Evolution API
+EVOLUTION_API_KEY=...                # Global API Key de Evolution API
+EVOLUTION_INSTANCE=haus-crm          # Nombre de la instancia (default: haus-crm)
+PORT=3001
 ```
 
 ### Frontend (`frontend/.env`)
 ```
-VITE_API_URL=http://localhost:3001         # o URL del backend en prod
+VITE_API_URL=http://localhost:3001
 ```
 
 ---
@@ -134,23 +147,23 @@ npm run dev          # nodemon src/index.js
 cd frontend
 npm install
 npm run dev          # vite dev server en :5173
-npm run build        # build para producción
-npm run lint         # eslint
+npm run build
+npm run lint
 
 # Base de datos
 cd backend
-npx prisma generate                # generar cliente
-npx prisma migrate dev             # aplicar migraciones en desarrollo
-npx prisma migrate deploy          # aplicar en producción
-node src/seed.js                   # crear usuario admin (admin@eventcrm.com / admin123)
-npx prisma studio                  # GUI para explorar DB
+npx prisma generate
+npx prisma migrate dev
+npx prisma migrate deploy
+node src/seed.js     # crear usuario admin (admin@eventcrm.com / admin123)
+npx prisma studio
 ```
 
 ---
 
 ## Rutas de la API
 
-Todas las rutas (excepto auth) requieren `Authorization: Bearer <token>`.
+Todas las rutas (excepto `/api/auth`) requieren `Authorization: Bearer <token>`.
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -171,27 +184,89 @@ Todas las rutas (excepto auth) requieren `Authorization: Bearer <token>`.
 | DELETE | `/api/event-files/:id` | Eliminar archivo |
 | GET/POST | `/api/users` | Usuarios del sistema |
 | PUT/DELETE | `/api/users/:id` | Editar / eliminar usuario |
-| GET/POST/PUT/DELETE | `/api/catering` | Insumos de catering por evento |
+| GET/POST/PUT/DELETE | `/api/catering` | Insumos de catering |
 | GET/POST/PUT/DELETE | `/api/dishes` | Platos del recetario |
-| GET/POST/PUT/DELETE | `/api/menu` | Secciones e ítems del menú por evento |
-| GET | `/api/activity` | Log de actividad (`?limit=N`, max 200) |
-| POST | `/api/ai/suggest-ingredients` | Sugerir ingredientes de un plato con IA (Claude Haiku) |
+| GET/POST/PUT/DELETE | `/api/menu` | Menú por evento |
+| GET/POST/PUT/DELETE | `/api/contacts` | Agenda de contactos |
+| DELETE | `/api/contacts/all` | Eliminar todos los contactos |
+| GET | `/api/activity` | Log de actividad |
+| POST | `/api/ai/suggest-ingredients` | Sugerir ingredientes con IA |
+| GET | `/api/whatsapp/status` | Estado de la instancia WhatsApp |
+| GET | `/api/whatsapp/qr` | Obtener QR para vincular |
+| POST | `/api/whatsapp/instance` | Crear instancia Evolution API |
+| GET | `/api/whatsapp/templates` | Listar plantillas de mensajes |
+| PUT | `/api/whatsapp/templates/:id` | Actualizar plantilla |
+| GET | `/api/whatsapp/templates/preview` | Preview renderizado de plantilla |
+| POST | `/api/whatsapp/send/event/:eventId` | Enviar mensaje a cliente de un evento |
+| POST | `/api/whatsapp/send/client/:clientId` | Enviar mensaje a un cliente |
+| POST | `/api/whatsapp/jobs/:jobId/run` | Ejecutar cron job manualmente |
 
 **Health check**: `GET /health` → `{ status: "ok" }`
+
+---
+
+## Integración WhatsApp (Evolution API)
+
+### Servicios (`src/services/`)
+
+**`evolution.js`** — cliente HTTP para Evolution API v1.8.7:
+- `sendText(phone, text)` — envía mensaje. Normaliza teléfonos argentinos automáticamente.
+- `getInstanceStatus()` — estado de conexión. Devuelve `{ instance: { state } }` en v1.8.7.
+- `getQRCode()` — QR para vincular. El base64 está en `data.base64` en v1.8.7.
+- `createInstance()` — crea la instancia en Evolution API.
+- `normalizePhone(phone)` — convierte a formato `549XXXXXXXXXX`.
+
+**`templates.js`** — plantillas persistidas en `data/templates.json`:
+- IDs fijos: `reminder`, `thanks`, `birthday`
+- Variables disponibles: `{{nombre}}`, `{{evento}}`, `{{lugar}}`, `{{fecha}}`
+- El archivo JSON tiene prioridad sobre los defaults del código.
+- Si se editan desde la UI, se persisten en disco automáticamente.
+
+**`cron.js`** — cron job diario a las 09:00:
+- `jobDayBefore()` — eventos confirmados mañana → plantilla `reminder`
+- `jobDayAfter()` — eventos de ayer confirmados/realizados → plantilla `thanks`
+- `jobBirthday()` — clientes con cumpleaños en 30 días → plantilla `birthday`
+- Solo arranca si `EVOLUTION_API_URL` y `EVOLUTION_API_KEY` están configuradas.
+- Se puede disparar manualmente con `POST /api/whatsapp/jobs/:jobId/run`.
+
+### Formato de mensajes (v1.8.7)
+```js
+// Body correcto para v1.8.7
+{ number: '549XXXXXXXXXX', textMessage: { text: 'mensaje' } }
+// NO usar: { number, text }
+```
+
+### Estado de conexión (v1.8.7)
+```js
+// La respuesta de /instance/connectionState/:instance es:
+{ instance: { instanceName: '...', state: 'open' } }
+// El estado conectado es state === 'open'
+```
+
+---
+
+## Agenda de contactos (`Contact`)
+
+Entidad independiente, separada de `Client`. No tiene relación con eventos.
+
+- Importación masiva desde archivos `.vcf` / `.vcard` con parser propio.
+- Detección de duplicados por email, teléfono (solo dígitos) y nombre.
+- Selección múltiple con checkboxes + barra flotante para eliminar seleccionados.
+- El checkbox del header selecciona/deselecciona solo los contactos visibles en el filtro.
+- La selección se limpia automáticamente al cambiar el término de búsqueda.
 
 ---
 
 ## Patrones de código establecidos
 
 ### Backend — Controllers
-Todos los controllers siguen este patrón. Mantenerlo siempre:
 ```js
 exports.create = async (req, res) => {
   try {
     // 1. Desestructurar body
-    // 2. Validaciones con early return y mensaje en español
+    // 2. Validaciones con early return en español
     // 3. Operación Prisma
-    // 4. Responder con res.status(201).json(result)
+    // 4. res.status(201).json(result)
   } catch (e) {
     console.error('Error [acción] [entidad]:', e)
     if (e.code === 'P2025') return res.status(404).json({ error: 'No encontrado' })
@@ -200,75 +275,26 @@ exports.create = async (req, res) => {
 }
 ```
 
-Errores Prisma comunes:
-- `P2025` → Registro no encontrado (404)
-- `P2002` → Violación de unique constraint (400)
-
-Fechas: siempre normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)` para evitar problemas de timezone.
-
-### Backend — Rutas
-```js
-const router = require('express').Router()
-const ctrl = require('../controllers/entidad')
-router.get('/', ctrl.getAll)
-router.post('/', ctrl.create)
-router.get('/:id', ctrl.getOne)
-router.put('/:id', ctrl.update)
-router.delete('/:id', ctrl.remove)
-module.exports = router
-```
-
-Registrar en `src/index.js` como:
-```js
-app.use('/api/nueva-entidad', authMiddleware, nuevaRuta)
-```
-
-### Frontend — Páginas
-Cada página es autónoma y sigue este patrón:
-```jsx
-import { useState, useEffect } from 'react'
-import api from '../api/axios'
-import { useToast } from '../components/Toast'
-import ConfirmDialog from '../components/ConfirmDialog'
-
-export default function MiPagina() {
-  const { showToast } = useToast()
-  const [data, setData] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => { fetchData() }, [])
-
-  const fetchData = async () => {
-    try {
-      const res = await api.get('/api/entidad')
-      setData(res.data)
-    } catch { showToast('Error al cargar datos', 'error') }
-    finally { setLoading(false) }
-  }
-  // ...
-}
-```
+Fechas: siempre normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)`.
 
 ### Frontend — Estilos
-- **Sin Tailwind, sin CSS modules**. Usar inline styles + variables CSS.
-- Variables disponibles: `var(--bg-base)`, `var(--bg-surface)`, `var(--bg-sunken)`, `var(--border)`, `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`, `var(--text-label)`, `var(--gold)`, `var(--gold-light)`, `var(--gold-bg)`
-- Siempre usar variables CSS para que el tema dark/light funcione automáticamente.
-- Fuente base: `'DM Sans', sans-serif`; títulos elegantes: `'Playfair Display', serif`
+- Sin Tailwind, sin CSS modules. Usar inline styles + variables CSS.
+- Variables: `var(--bg-base)`, `var(--bg-surface)`, `var(--bg-sunken)`, `var(--border)`, `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`, `var(--text-label)`, `var(--gold)`, `var(--gold-light)`, `var(--gold-bg)`
+- Fuente base: `'DM Sans', sans-serif`; títulos: `'Playfair Display', serif`
+- Iconos: siempre usar Lucide React. No usar emojis como iconos de UI.
 
-### Frontend — Formateo de datos
+### Frontend — Formateo
 ```js
-// Moneda en ARS
 const fmt = (n) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0)
 
-// Fecha en español
 const fmtDate = (str) =>
   new Date(str).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
 ```
 
 ---
 
-## Estados de las entidades (valores permitidos)
+## Estados de las entidades
 
 ```js
 // Event.status
@@ -292,89 +318,39 @@ const fmtDate = (str) =>
 // SupplierPayment.status
 ["Pendiente", "Pagado", "Cancelado"]
 
-// DishIngredient.categoria
-["Carnes", "Fiambres", "Lácteos", "Verduras", "Frutas", "Almacén", "Bebidas", "Panificados", "Otros"]
-
-// ActivityLog.action
-["create", "update", "delete", "status", "payment", "file", "checklist"]
-
-// ActivityLog.entity
-["client", "event", "quote", "supplier", "payment", "supplierPayment", "file", "checklist", "dish"]
+// WhatsApp template triggers
+["day_before", "day_after", "birthday_30days"]
 ```
-
----
-
-## Integración con IA (Anthropic)
-
-El endpoint `POST /api/ai/suggest-ingredients` usa **Claude Haiku** para generar ingredientes por persona dado un plato del recetario.
-
-- Requiere `ANTHROPIC_API_KEY` en el `.env` del backend.
-- Llama directamente a `https://api.anthropic.com/v1/messages`.
-- Devuelve `{ ingredients: DishIngredient[] }`.
-- El frontend lo usa en `Recetario.jsx` al crear/editar un plato con el botón "Sugerir con IA".
-
----
-
-## Log de actividad
-
-El módulo `src/utils/activity.js` exporta una función `log()` que persiste acciones en `ActivityLog`. Se llama **fire-and-forget** (no bloquea la respuesta) desde los controllers.
-
-```js
-const { log } = require('../utils/activity')
-
-log({
-  action: 'create',       // tipo de acción
-  entity: 'event',        // entidad afectada
-  entityId: event.id,
-  label: event.name,      // descripción legible
-  detail: 'Propuesta',    // detalle secundario (opcional)
-  meta: { clientId }      // datos extra en objeto (opcional, se serializa a JSON)
-})
-```
-
-El Dashboard consulta `GET /api/activity` para mostrar el feed de actividad reciente.
-
----
-
-## Autenticación
-
-- El backend genera un JWT firmado con `JWT_SECRET` al hacer login.
-- El frontend lo guarda en `localStorage` bajo la key `"token"` (y `"user"` para datos del usuario).
-- `api/axios.js` inyecta el token automáticamente en cada request.
-- Si el backend responde 401, el interceptor limpia localStorage y redirige a `/login`.
-- El middleware `src/middleware/auth.js` valida el token en todas las rutas protegidas.
-
----
-
-## Usuarios por defecto (seed)
-
-```
-Email:    admin@eventcrm.com
-Password: admin123
-```
-
-Ejecutar `node src/seed.js` para crearlo. Usa `upsert` para ser idempotente.
-
----
-
-## Despliegue (Railway)
-
-- El frontend tiene `frontend/railway.toml` configurado.
-- Backend: el script `start` en `package.json` corre `prisma generate && prisma migrate deploy && seed && node src/index.js`.
-- Variables de entorno configuradas en Railway para cada servicio.
-- CORS: el backend acepta el origen configurado en `CORS_ORIGIN`.
 
 ---
 
 ## Convenciones importantes
 
-1. **Idioma**: Todo el código, mensajes de error y UI están en **español**.
-2. **Módulos**: Backend usa CommonJS (`require`/`module.exports`). Frontend usa ESM (`import`/`export`).
-3. **Cascada**: Las relaciones en Prisma usan `onDelete: Cascade`, por lo que eliminar un `Event` elimina sus `Quote`, `Payment`, `SupplierPayment`, `ChecklistItem`, `EventFile`, `CateringItem` y `EventMenuSection` automáticamente.
-4. **IDs**: Siempre convertir a `Number()` al usar IDs de params (`req.params.id`).
-5. **Validaciones**: Hacer en controller (backend) y en el formulario (frontend) con mensajes claros.
-6. **Cloudinary**: Los archivos subidos se almacenan en Cloudinary. Al eliminar un `EventFile`, también eliminar el asset de Cloudinary usando `publicId`.
-7. **Toast**: Usar `useToast()` para feedback de acciones. Nunca usar `alert()`.
-8. **ConfirmDialog**: Usar para confirmar eliminaciones. Nunca eliminar directamente sin confirmación.
-9. **ActivityLog**: Registrar acciones relevantes (create, update, delete, status, payment) usando `log()` de `src/utils/activity.js`. Llamar fire-and-forget, nunca `await`.
-10. **Supplier.alias**: Campo opcional para nombre corto del proveedor. Mostrarlo en la UI cuando esté disponible.
+1. **Idioma**: Todo el código, mensajes y UI en **español**.
+2. **Módulos**: Backend CommonJS (`require`). Frontend ESM (`import`).
+3. **Cascada**: `onDelete: Cascade` en todas las relaciones Prisma.
+4. **IDs**: Siempre `Number(req.params.id)` al usar params.
+5. **Toast**: `useToast()` para feedback. Nunca `alert()`.
+6. **ConfirmDialog**: Para toda eliminación. Nunca eliminar sin confirmación.
+7. **ActivityLog**: Fire-and-forget con `log()`. Nunca `await log()`.
+8. **Iconos**: Lucide React en toda la UI. No emojis como iconos.
+9. **WhatsApp body v1.8.7**: Usar `textMessage: { text }`, no `text` directo.
+10. **Teléfonos**: Normalizar a `549XXXXXXXXXX` antes de enviar a Evolution API.
+
+---
+
+## Despliegue (Railway)
+
+Tres servicios en Railway:
+- **Backend** — Node.js. Script `start`: `prisma generate && prisma migrate deploy && node src/seed.js; node src/index.js`
+- **Frontend** — Vite build. Config en `frontend/railway.toml`. Variable `VITE_API_URL`.
+- **Evolution API** — Docker image `atendai/evolution-api:v1.8.7`. Variables: `SERVER_URL`, `AUTHENTICATION_API_KEY`, `AUTHENTICATION_TYPE=apikey`, `DATABASE_ENABLED=true`, `DATABASE_PROVIDER=sqlite`.
+
+---
+
+## Usuario por defecto
+
+```
+Email:    admin@eventcrm.com
+Password: admin123
+```
