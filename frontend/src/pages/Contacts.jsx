@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { X, Upload, Phone, Mail, Trash2, BookUser, MessageCircle } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -154,7 +155,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--gold)' }}>
               Importar desde VCF
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 4 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}><X size={18} /></button>
           </div>
           {step === 'preview' && (
             <div style={{ display: 'flex', gap: 20 }}>
@@ -185,7 +186,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
                 onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-strong)'; handleFile(e.dataTransfer.files[0]) }}
                 style={{ border: '2px dashed var(--border-strong)', borderRadius: 14, padding: '48px 24px', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
               >
-                <div style={{ fontSize: 40, marginBottom: 14 }}>📇</div>
+                <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><Upload size={36} color="var(--text-faint)" /></div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
                   Arrastrá tu archivo VCF aquí
                 </div>
@@ -259,8 +260,8 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
                           {dup && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', fontWeight: 600, flexShrink: 0 }}>Duplicado</span>}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 12 }}>
-                          {c.phone && <span>📞 {c.phone}</span>}
-                          {c.email && <span>✉ {c.email}</span>}
+                          {c.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={10} /> {c.phone}</span>}
+                          {c.email && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={10} /> {c.email}</span>}
                         </div>
                       </div>
                     </div>
@@ -473,7 +474,7 @@ export default function Contacts() {
             onClick={() => setShowVcf(true)}
             style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-muted)', fontSize: 13, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            📇 Importar VCF
+            <Upload size={14} /> Importar VCF
           </button>
           <button
             onClick={() => setModal('new')}
@@ -497,7 +498,7 @@ export default function Contacts() {
       {/* Lista */}
       {filtered.length === 0 ? (
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '60px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 14 }}>📇</div>
+          <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}><BookUser size={32} color="var(--text-faint)" /></div>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
             {search ? 'Sin resultados' : 'Agenda vacía'}
           </div>
@@ -570,9 +571,9 @@ export default function Contacts() {
                     <button
                       onClick={() => openWhatsApp(c.phone)}
                       title="WhatsApp"
-                      style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(37,211,102,0.3)', background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                      style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid rgba(37,211,102,0.3)', background: 'rgba(37,211,102,0.08)', color: '#25d366', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}
                     >
-                      WA
+                      <MessageCircle size={12} />
                     </button>
                   </>
                 ) : (
@@ -588,9 +589,9 @@ export default function Contacts() {
                     <button
                       onClick={() => window.open(`mailto:${c.email}`, '_blank')}
                       title="Enviar email"
-                      style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#3b82f6', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                      style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#3b82f6', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}
                     >
-                      ✉
+                      <Mail size={12} />
                     </button>
                   </>
                 ) : (
@@ -608,9 +609,9 @@ export default function Contacts() {
                 </button>
                 <button
                   onClick={() => setConfirmDelete(c)}
-                  style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}
+                  style={{ padding: '5px 7px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, background: 'transparent', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                 >
-                  ✕
+                  <X size={13} />
                 </button>
               </div>
             </div>
@@ -637,9 +638,9 @@ export default function Contacts() {
           </button>
           <button
             onClick={() => setConfirmDeleteSel(true)}
-            style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            🗑 Eliminar {checkedCount}
+            <Trash2 size={14} /> Eliminar {checkedCount}
           </button>
         </div>
       )}
