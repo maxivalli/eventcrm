@@ -8,9 +8,10 @@ const prisma    = require('../prisma')
 exports.getStatus = async (req, res) => {
   try {
     const status = await evolution.getInstanceStatus()
+    console.log('[WhatsApp status raw]', JSON.stringify(status))
     res.json({ ok: true, status })
   } catch (e) {
-    // Si la instancia no existe todavía, devolvemos disconnected sin tirar error
+    console.log('[WhatsApp status error]', e.message)
     res.json({ ok: false, status: { state: 'disconnected' }, error: e.message })
   }
 }
