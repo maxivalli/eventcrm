@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Wifi, WifiOff, RefreshCw, QrCode, PlusCircle, Bell, Heart, Cake, Eye, Edit2, Play, Send, MessageSquare, CheckCircle, XCircle, ChevronRight } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 
@@ -11,9 +12,9 @@ const TRIGGER_LABELS = {
 }
 
 const TRIGGER_ICONS = {
-  day_before:      '🔔',
-  day_after:       '🙏',
-  birthday_30days: '🎂',
+  day_before:      Bell,
+  day_after:       Heart,
+  birthday_30days: Cake,
 }
 
 const JOB_IDS = {
@@ -124,9 +125,11 @@ function ConnectionTab() {
             width: 48, height: 48, borderRadius: 14,
             background: connected ? 'rgba(34,197,94,0.1)' : 'rgba(100,100,120,0.1)',
             border: `1px solid ${connected ? 'rgba(34,197,94,0.3)' : 'rgba(100,100,120,0.2)'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {connected ? '✅' : '📵'}
+            {connected
+              ? <Wifi size={22} color="#22c55e" />
+              : <WifiOff size={22} color="var(--text-faint)" />}
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -141,13 +144,17 @@ function ConnectionTab() {
             </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button onClick={fetchStatus} style={btn()}>↻ Actualizar</button>
+            <button onClick={fetchStatus} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 6 }}>
+              <RefreshCw size={13} /> Actualizar
+            </button>
             {!connected && (
               <>
-                <button onClick={handleCreate} disabled={creating} style={btn()}>
-                  {creating ? 'Creando...' : '+ Crear instancia'}
+                <button onClick={handleCreate} disabled={creating} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <PlusCircle size={13} /> {creating ? 'Creando...' : 'Crear instancia'}
                 </button>
-                <button onClick={handleGetQR} style={btn('primary')}>Ver QR</button>
+                <button onClick={handleGetQR} style={{ ...btn('primary'), display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <QrCode size={13} /> Ver QR
+                </button>
               </>
             )}
           </div>
@@ -252,7 +259,13 @@ function TemplatesTab() {
         <div key={tpl.id} style={{ ...card, border: `1px solid ${editing === tpl.id ? 'rgba(201,168,76,0.4)' : 'var(--border)'}` }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: editing === tpl.id ? 16 : 0 }}>
-            <span style={{ fontSize: 22 }}>{TRIGGER_ICONS[tpl.trigger]}</span>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+              background: 'var(--bg-sunken)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {(() => { const Icon = TRIGGER_ICONS[tpl.trigger]; return <Icon size={18} color="var(--gold)" /> })()}
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{tpl.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-label)', marginTop: 2 }}>{TRIGGER_LABELS[tpl.trigger]}</div>
@@ -261,11 +274,12 @@ function TemplatesTab() {
             <div style={{ display: 'flex', gap: 6 }}>
               {editing !== tpl.id && (
                 <>
-                  <button onClick={() => handlePreview(tpl.id)} style={btn()}>👁 Preview</button>
-                  <button onClick={() => handleToggle(tpl)} style={btn(tpl.active ? 'danger' : 'green')}>
+                  <button onClick={() => handlePreview(tpl.id)} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 5 }}><Eye size={13} /> Preview</button>
+                  <button onClick={() => handleToggle(tpl)} style={{ ...btn(tpl.active ? 'danger' : 'green'), display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {tpl.active ? <XCircle size={13} /> : <CheckCircle size={13} />}
                     {tpl.active ? 'Desactivar' : 'Activar'}
                   </button>
-                  <button onClick={() => startEdit(tpl)} style={btn('primary')}>Editar</button>
+                  <button onClick={() => startEdit(tpl)} style={{ ...btn('primary'), display: 'flex', alignItems: 'center', gap: 5 }}><Edit2 size={13} /> Editar</button>
                 </>
               )}
             </div>
@@ -330,12 +344,9 @@ function TemplatesTab() {
           {editing !== tpl.id && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>Ejecutar manualmente (para probar)</span>
-              <button
-                onClick={() => handleRunJob(tpl.trigger)}
-                disabled={running === tpl.trigger}
-                style={btn()}
-              >
-                {running === tpl.trigger ? 'Ejecutando...' : '▶ Ejecutar ahora'}
+              <button onClick={() => handleRunJob(tpl.trigger)} disabled={running === tpl.trigger}
+                style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Play size={12} /> {running === tpl.trigger ? 'Ejecutando...' : 'Ejecutar ahora'}
               </button>
             </div>
           )}
@@ -416,8 +427,8 @@ function SendTab() {
               </optgroup>
             </select>
             {selectedEvent && (
-              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
-                📞 {selectedEvent.client?.phone || <span style={{ color: '#ef4444' }}>Sin teléfono cargado</span>}
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <MessageSquare size={11} /> {selectedEvent.client?.phone || <span style={{ color: '#ef4444' }}>Sin teléfono cargado</span>}
               </div>
             )}
           </div>
@@ -439,7 +450,7 @@ function SendTab() {
               <select value={templateId} onChange={e => setTemplateId(e.target.value)} style={sel}>
                 <option value=''>— Seleccioná una plantilla —</option>
                 {Object.values(templates).map(t => (
-                  <option key={t.id} value={t.id}>{TRIGGER_ICONS[t.trigger]} {t.name}</option>
+                  <option key={t.id} value={t.id}>{TRIGGER_LABELS[t.trigger]} — {t.name}</option>
                 ))}
               </select>
             </div>
@@ -467,8 +478,8 @@ function SendTab() {
             </div>
           )}
 
-          <button onClick={handleSend} disabled={sending} style={{ ...btn('primary'), padding: '11px 0', width: '100%', opacity: sending ? 0.7 : 1 }}>
-            {sending ? 'Enviando...' : '📤 Enviar mensaje'}
+          <button onClick={handleSend} disabled={sending} style={{ ...btn('primary'), padding: '11px 0', width: '100%', opacity: sending ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Send size={14} /> {sending ? 'Enviando...' : 'Enviar mensaje'}
           </button>
         </div>
       </div>
@@ -479,9 +490,9 @@ function SendTab() {
 // ── Página principal ──────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'connection', label: '🔌 Conexión' },
-  { id: 'templates',  label: '📝 Plantillas' },
-  { id: 'send',       label: '📤 Envío manual' },
+  { id: 'connection', label: 'Conexión',     Icon: Wifi },
+  { id: 'templates',  label: 'Plantillas',   Icon: MessageSquare },
+  { id: 'send',       label: 'Envío manual', Icon: Send },
 ]
 
 export default function WhatsApp() {
@@ -489,7 +500,6 @@ export default function WhatsApp() {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>
           WhatsApp
@@ -499,20 +509,19 @@ export default function WhatsApp() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+        {TABS.map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setTab(id)} style={{
             padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-            background: tab === t.id ? 'linear-gradient(135deg, var(--gold), var(--gold-light))' : 'transparent',
-            color: tab === t.id ? '#09090f' : 'var(--text-muted)',
+            background: tab === id ? 'linear-gradient(135deg, var(--gold), var(--gold-light))' : 'transparent',
+            color: tab === id ? '#09090f' : 'var(--text-muted)',
+            display: 'flex', alignItems: 'center', gap: 7,
           }}>
-            {t.label}
+            <Icon size={14} /> {label}
           </button>
         ))}
       </div>
 
-      {/* Contenido */}
       {tab === 'connection' && <ConnectionTab />}
       {tab === 'templates'  && <TemplatesTab />}
       {tab === 'send'       && <SendTab />}
