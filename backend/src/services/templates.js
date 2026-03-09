@@ -10,21 +10,21 @@ const DEFAULTS = {
     name:    'Recordatorio día anterior',
     trigger: 'day_before',
     active:  true,
-    text:    '¡Hola {{nombre}}! 🎉 Te recordamos que mañana es tu evento *{{evento}}* en {{lugar}}. ¡Estamos listos para que sea una noche inolvidable! Ante cualquier consulta, no dudes en escribirnos.',
+    text:    '¡Hola {{nombre}}! 🎉 Te recordamos que mañana es tu evento *{{evento}}* en {{lugar}}. ¡Estamos listos para que sea una noche inolvidable! Ante cualquier consulta, no dudes en escribirnos.\n\n_Haus - Organización y producción de eventos_',
   },
   thanks: {
     id:      'thanks',
     name:    'Agradecimiento post evento',
     trigger: 'day_after',
     active:  true,
-    text:    'Hola {{nombre}}, fue un placer haberte acompañado en *{{evento}}* 🙏 Esperamos que haya sido una experiencia especial. ¡Gracias por elegirnos y hasta la próxima!',
+    text:    'Hola {{nombre}}, fue un placer haberte acompañado en *{{evento}}* 🙏 Esperamos que haya sido una experiencia especial. ¡Gracias por elegirnos y hasta la próxima!\n\n_Haus - Organización y producción de eventos_',
   },
   birthday: {
     id:      'birthday',
     name:    'Propuesta de cumpleaños',
     trigger: 'birthday_30days',
     active:  true,
-    text:    '¡Hola {{nombre}}! 🎂 Nos enteramos que tu cumpleaños se acerca y nos encantaría ayudarte a celebrarlo como se merece. ¿Te gustaría que armemos algo especial juntos? ¡Escribinos y lo organizamos!',
+    text:    '¡Hola {{nombre}}! 🎂 Tu cumpleaños se acerca y nos encantaría ayudarte a celebrarlo como se merece. ¿Te gustaría que armemos algo especial juntos? ¡Escribinos y lo organizamos!\n\n_Haus - Organización y producción de eventos_',
   },
 }
 
