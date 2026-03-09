@@ -3,7 +3,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const SECCIONES_SUGERIDAS = ['Entrada fría', 'Trasnoche', 'Plato principal', 'Guarnición', 'Postre', 'Torta', 'Bebidas', 'Otros']
+const SECCIONES_SUGERIDAS = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 
 const CATEGORIA_COLORS = {
   'Carnes':      '#ef4444',
@@ -18,15 +18,25 @@ const CATEGORIA_COLORS = {
 }
 
 const SECCION_COLORS = {
-  'Entrada fría':     '#3b82f6',
-  'Trasnoche': '#f97316',
-  'Plato principal':  '#8b5cf6',
-  'Guarnición':       '#22c55e',
-  'Postre':           '#ec4899',
-  'Torta':            '#f59e0b',
-  'Bebidas':          '#06b6d4',
-  'Otros':            '#6b7280',
+  'Entrada fría':    '#3b82f6',
+  'Plato principal': '#8b5cf6',
+  'Guarnición':      '#22c55e',
+  'Bebidas':         '#06b6d4',
+  'Postre':          '#ec4899',
+  'Trasnoche':       '#f97316',
+  'Otros':           '#6b7280',
 }
+
+const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const sortSections = (sections) =>
+  [...sections].sort((a, b) => {
+    const ia = SECCION_ORDER.indexOf(a.nombre)
+    const ib = SECCION_ORDER.indexOf(b.nombre)
+    if (ia === -1 && ib === -1) return 0
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
 
 const fmtDate = (str) => new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -400,7 +410,7 @@ export default function CateringPage() {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {sections.map(section => (
+                  {sortSections(sections).map(section => (
                     <div key={section.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                       <div style={{ padding: '11px 16px', background: `${SECCION_COLORS[section.nombre] || '#6b7280'}10`, borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -463,7 +473,7 @@ export default function CateringPage() {
             {sections.length > 0 && (
               <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 700, marginBottom: 10 }}>Resumen del menú</div>
-                {sections.map(s => (
+                {sortSections(sections).map(s => (
                   <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[s.nombre] || '#6b7280' }} />

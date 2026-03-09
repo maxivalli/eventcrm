@@ -8,9 +8,10 @@ import EventFiles from "../components/EventFiles";
 import { useNavigate } from "react-router-dom";
 
 const statusColors = {
-  Confirmado: "#22c55e",
-  Propuesta:  "#f59e0b",
-  Finalizado: "#8b5cf6",
+  Confirmado:       "#22c55e",
+  Propuesta:        "#f59e0b",
+  "En producción":  "#3b82f6",
+  Finalizado:       "#8b5cf6",
 };
 const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
@@ -32,7 +33,7 @@ const typeColors = {
   Cultural:    "#8b5cf6",
   Social:      "#ec4899",
 };
-const ESTADOS = ["Todos", "Propuesta", "Confirmado", "Finalizado"];
+const ESTADOS = ["Todos", "Propuesta", "Confirmado", "En producción", "Finalizado"];
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
@@ -287,7 +288,7 @@ function EventForm({ initial, clients, onSave, onClose }) {
           <div>
             <label style={lbl}>Estado</label>
             <select style={inp()} value={form.status} onChange={e => set("status", e.target.value)}>
-              {["Propuesta", "Confirmado", "Finalizado"].map(s => <option key={s}>{s}</option>)}
+              {["Propuesta", "Confirmado", "En producción", "Finalizado"].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -574,7 +575,7 @@ function EventDetail({ event, onClose, onEdit }) {
 
             {/* Checklist */}
             <section>
-              <Checklist eventId={event.id} />
+              <Checklist eventId={event.id} event={event} />
             </section>
 
             {/* Archivos */}
@@ -719,7 +720,7 @@ export default function Events() {
                   outline: "none", appearance: "none", textAlign: "center",
                 }}
               >
-                {["Propuesta","Confirmado","Finalizado"].map(s => <option key={s} value={s}>{s}</option>)}
+                {["Propuesta","Confirmado","En producción","Finalizado"].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={e => { e.stopPropagation(); openEdit(ev) }} style={{ padding: "5px 10px", border: "1px solid var(--border)", borderRadius: 6, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>Editar</button>

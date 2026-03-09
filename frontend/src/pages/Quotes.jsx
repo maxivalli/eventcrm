@@ -18,6 +18,17 @@ const SECCION_COLORS = {
   'Otros':           '#6b7280',
 }
 
+const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const sortSections = (sections) =>
+  [...sections].sort((a, b) => {
+    const ia = SECCION_ORDER.indexOf(a.nombre)
+    const ib = SECCION_ORDER.indexOf(b.nombre)
+    if (ia === -1 && ib === -1) return 0
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
+
 const formatCurrency = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 const formatDate     = (str) => new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -238,7 +249,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
                     <span style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>Menú cargado</span>
                     <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{menuSections.reduce((a, s) => a + s.items.length, 0)} platos · {menuSections.length} secciones</span>
                   </div>
-                  {menuSections.map((section, si) => (
+                  {sortSections(menuSections).map((section, si) => (
                     <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
@@ -333,7 +344,7 @@ function QuoteDetail({ quote, onClose, onEdit }) {
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menú</div>
                 <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-                  {menuSections.map((section, si) => (
+                  {sortSections(menuSections).map((section, si) => (
                     <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
