@@ -55,8 +55,10 @@ const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', s
 
 function QuoteForm({ initial, events, clients, onSave, onClose }) {
   const initialClientId = initial ? String(events.find(ev => ev.id === initial.eventId)?.client?.id ?? '') : ''
+  // Usar siempre la fecha del evento actualizado, no la fecha guardada en la cotización
+  const initialEventDate = initial ? (events.find(ev => ev.id === initial.eventId)?.date?.slice(0, 10) ?? initial.date?.slice(0, 10)) : ''
   const [form, setForm] = useState(initial
-    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initial.date?.slice(0, 10), items: initial.items || [] }
+    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initialEventDate, items: initial.items || [] }
     : emptyGeneral
   )
   const [errors, setErrors] = useState({})
@@ -332,7 +334,14 @@ export default function Quotes() {
   }
 
   const openDetail = q => { setSelected(q); setModal('detail') }
-  const openEdit   = q => { setSelected(q); setModal('edit') }
+  const openEdit   = async q => {
+    try { const res = await api.get('/api/events'); setEvents(res.data) } catch {}
+    setSelected(q); setModal('edit')
+  }
+  const openNew = async () => {
+    try { const res = await api.get('/api/events'); setEvents(res.data) } catch {}
+    setModal('new')
+  }
 
   const fbtn = (active, color) => ({
     padding: '6px 14px', borderRadius: 20, border: '1px solid', fontSize: 12, cursor: 'pointer', transition: 'all 0.2s',
@@ -350,7 +359,7 @@ export default function Quotes() {
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Cotizaciones</div>
           <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} cotizaciones encontradas</div>
         </div>
-        <button onClick={() => setModal('new')} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nueva cotización</button>
+        <button onClick={openNew} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nueva cotización</button>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
