@@ -32,7 +32,7 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, clientId, date, venue, type, status, guests, budget } = req.body
+    const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
 
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
@@ -47,6 +47,7 @@ exports.create = async (req, res) => {
         guests: Number(guests),
         budget: Number(budget),
         date:   new Date(`${date.slice(0,10)}T12:00:00`),
+        time:   time || null,
         client: { connect: { id: Number(clientId) } }
       }
     })
@@ -60,7 +61,7 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, clientId, date, venue, type, status, guests, budget } = req.body
+    const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
 
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
@@ -76,6 +77,7 @@ exports.update = async (req, res) => {
         guests: Number(guests),
         budget: Number(budget),
         date:   new Date(`${date.slice(0,10)}T12:00:00`),
+        time:   time || null,
         client: { connect: { id: Number(clientId) } }
       }
     })

@@ -31,6 +31,7 @@ model Event {
   id               Int               @id @default(autoincrement())
   name             String
   date             DateTime
+  time             String?
   venue            String
   type             String
   status           String            @default("Propuesta")
@@ -42,8 +43,10 @@ model Event {
   payments         Payment[]
   supplierPayments SupplierPayment[]
   createdAt        DateTime          @default(now())
-  checklist ChecklistItem[]
-  files EventFile[]
+  checklist      ChecklistItem[]
+  files          EventFile[]
+  cateringItems  CateringItem[]
+  menuSections   EventMenuSection[]
 }
 
 model Quote {
@@ -104,6 +107,7 @@ model Supplier {
   status           String            @default("Activo")
   alias            String?
   supplierPayments SupplierPayment[]
+  cateringItems    CateringItem[]
   createdAt        DateTime          @default(now())
 }
 
@@ -126,4 +130,64 @@ model EventFile {
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId      Int
   createdAt    DateTime @default(now())
+}
+
+model CateringItem {
+  id             Int       @id @default(autoincrement())
+  eventId        Int
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  categoria      String
+  descripcion    String
+  cantidad       Float
+  unidad         String    @default("unidad")
+  precioUnitario Float     @default(0)
+  proveedorId    Int?
+  proveedor      Supplier? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  proveedorLibre String?
+  nota           String?
+  createdAt      DateTime  @default(now())
+}
+
+// ── Recetario ──────────────────────────────────────────────
+
+model Dish {
+  id          Int              @id @default(autoincrement())
+  name        String
+  seccion     String           // "Entrada fría", "Plato principal", etc.
+  descripcion String?
+  ingredients DishIngredient[]
+  menuItems   EventMenuItem[]
+  createdAt   DateTime         @default(now())
+}
+
+model DishIngredient {
+  id           Int    @id @default(autoincrement())
+  dish         Dish   @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  dishId       Int
+  nombre       String
+  cantidad     Float  // cantidad por persona
+  unidad       String @default("g")
+  categoria    String @default("Otros") // "Carnes", "Lácteos", "Verduras", "Bebidas", etc.
+}
+
+// ── Menú por evento ───────────────────────────────────────
+
+model EventMenuSection {
+  id        Int             @id @default(autoincrement())
+  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   Int
+  nombre    String          // "Entrada fría", "Plato principal", etc.
+  orden     Int             @default(0)
+  items     EventMenuItem[]
+  createdAt DateTime        @default(now())
+}
+
+model EventMenuItem {
+  id        Int              @id @default(autoincrement())
+  section   EventMenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId Int
+  dish      Dish             @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  dishId    Int
+  nota      String?
+  createdAt DateTime         @default(now())
 }

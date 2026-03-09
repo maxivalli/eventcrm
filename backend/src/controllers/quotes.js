@@ -127,6 +127,21 @@ exports.update = async (req, res) => {
   }
 }
 
+exports.patchStatus = async (req, res) => {
+  try {
+    const { status } = req.body
+    if (!status) return res.status(400).json({ error: 'El estado es requerido' })
+    const quote = await prisma.quote.update({
+      where: { id: Number(req.params.id) },
+      data:  { status },
+    })
+    res.json(quote)
+  } catch (e) {
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Cotización no encontrada' })
+    res.status(500).json({ error: e.message })
+  }
+}
+
 exports.remove = async (req, res) => {
   try {
     const id = Number(req.params.id)

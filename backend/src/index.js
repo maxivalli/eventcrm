@@ -11,8 +11,11 @@ const paymentRoutes = require("./routes/payments");
 const supplierPaymentRoutes = require("./routes/supplierPayments");
 const authMiddleware = require("./middleware/auth");
 const userRoutes = require("./routes/users");
-const checklistRoutes = require('./routes/checklist')
-const eventFileRoutes = require('./routes/eventFiles')
+const checklistRoutes  = require('./routes/checklist')
+const eventFileRoutes  = require('./routes/eventFiles')
+const cateringRoutes   = require('./routes/catering')
+const dishRoutes       = require('./routes/dishes')
+const eventMenuRoutes  = require('./routes/eventMenu')
 
 const app = express();
 
@@ -37,8 +40,11 @@ app.use("/api/suppliers", authMiddleware, supplierRoutes);
 app.use("/api/payments", authMiddleware, paymentRoutes);
 app.use("/api/supplier-payments", authMiddleware, supplierPaymentRoutes);
 app.use("/api/users", authMiddleware, userRoutes);
-app.use('/api/checklist', authMiddleware, checklistRoutes)
+app.use('/api/checklist',    authMiddleware, checklistRoutes)
 app.use('/api/event-files', authMiddleware, eventFileRoutes)
+app.use('/api/catering',    authMiddleware, cateringRoutes)
+app.use('/api/dishes',      authMiddleware, dishRoutes)
+app.use('/api/menu',        authMiddleware, eventMenuRoutes)
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () =>

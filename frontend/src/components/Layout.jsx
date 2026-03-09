@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Users, CalendarDays, FileText,
   HandCoins, Wallet, PieChart, Truck, ChevronLeft, ChevronRight,
-  LogOut, Sun, Moon, UserCog,
+  LogOut, Sun, Moon, UserCog, UtensilsCrossed, ChefHat,
 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 
@@ -13,6 +13,8 @@ const tabs = [
   { path: '/events',            label: 'Eventos',         Icon: CalendarDays },
   { path: '/quotes',            label: 'Cotizaciones',    Icon: FileText },
   { path: '/budget',            label: 'Presupuestos',    Icon: PieChart },
+  { path: '/catering',          label: 'Catering',        Icon: UtensilsCrossed },
+  { path: '/recetario',         label: 'Recetario',       Icon: ChefHat },
   { path: '/payments',          label: 'Cobros',          Icon: HandCoins },
   { path: '/supplier-payments', label: 'Pagos',           Icon: Wallet },
   { path: '/suppliers',         label: 'Proveedores',     Icon: Truck },

@@ -1,10 +1,11 @@
 const router = require('express').Router()
 const controller = require('../controllers/quotes')
 
-router.get('/',     controller.getAll)
-router.get('/:id',  controller.getOne)
-router.post('/',    controller.create)
-router.put('/:id',  controller.update)
-router.delete('/:id', controller.remove)
+router.get('/',            controller.getAll)
+router.get('/:id',         controller.getOne)
+router.post('/',           controller.create)
+router.put('/:id',         controller.update)
+router.patch('/:id/status',controller.patchStatus)
+router.delete('/:id',      controller.remove)
 
 module.exports = router

@@ -5,25 +5,24 @@ import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Checklist from "../components/Checklist";
 import EventFiles from "../components/EventFiles";
+import { useNavigate } from "react-router-dom";
 
 const statusColors = {
   Confirmado: "#22c55e",
-  "En producción": "#3b82f6",
-  Propuesta: "#f59e0b",
+  Propuesta:  "#f59e0b",
   Finalizado: "#8b5cf6",
 };
 const quoteStatusColors = {
-  Aprobado: "#22c55e",
+  Aprobado:  "#22c55e",
   Pendiente: "#f59e0b",
   Rechazado: "#ef4444",
-  "Revisión": "#3b82f6",
 };
 const typeColors = {
   Corporativo: "#3b82f6",
-  Cultural: "#8b5cf6",
-  Social: "#ec4899",
+  Cultural:    "#8b5cf6",
+  Social:      "#ec4899",
 };
-const ESTADOS = ["Todos", "Confirmado", "En producción", "Propuesta", "Finalizado"];
+const ESTADOS = ["Todos", "Propuesta", "Confirmado", "Finalizado"];
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
@@ -202,11 +201,11 @@ function DatePicker({ value, onChange, hasError }) {
   );
 }
 
-const emptyForm = { name: "", clientId: "", date: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "" };
+const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "" };
 
 function EventForm({ initial, clients, onSave, onClose }) {
   const [form, setForm] = useState(
-    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10) } : emptyForm
+    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "" } : emptyForm
   );
   const [errors, setErrors] = useState({});
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })) };
@@ -261,6 +260,15 @@ function EventForm({ initial, clients, onSave, onClose }) {
             {errors.date && <div style={err}>{errors.date}</div>}
           </div>
           <div>
+            <label style={lbl}>Hora del evento</label>
+            <input
+              type="time"
+              style={inp()}
+              value={form.time}
+              onChange={e => set("time", e.target.value)}
+            />
+          </div>
+          <div>
             <label style={lbl}>Tipo</label>
             <select style={inp()} value={form.type} onChange={e => set("type", e.target.value)}>
               {["Corporativo", "Cultural", "Social"].map(t => <option key={t}>{t}</option>)}
@@ -269,7 +277,7 @@ function EventForm({ initial, clients, onSave, onClose }) {
           <div>
             <label style={lbl}>Estado</label>
             <select style={inp()} value={form.status} onChange={e => set("status", e.target.value)}>
-              {["Propuesta", "Confirmado", "En producción", "Finalizado"].map(s => <option key={s}>{s}</option>)}
+              {["Propuesta", "Confirmado", "Finalizado"].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -293,11 +301,14 @@ function EventForm({ initial, clients, onSave, onClose }) {
 }
 
 function EventDetail({ event, onClose, onEdit }) {
+  const navigate = useNavigate();
   const [quotes, setQuotes]   = useState([]);
   const [payments, setPayments] = useState([]);
   const [spPayments, setSpPayments] = useState([]);
   const [summary, setSummary] = useState({ totalQuotes: 0, totalPaid: 0, balance: 0 });
   const [spSummary, setSpSummary] = useState({ totalPaid: 0, totalPending: 0 });
+  const [cateringTotal, setCateringTotal] = useState(null);
+  const [menuSections, setMenuSections]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -312,6 +323,11 @@ function EventDetail({ event, onClose, onEdit }) {
       setSpPayments(spRes.data.payments || []);
       setSpSummary({ totalPaid: spRes.data.totalPaid || 0, totalPending: spRes.data.totalPending || 0 });
     }).catch(console.error).finally(() => setLoading(false));
+
+    // Menú de catering por separado para que un fallo no rompa el resto del modal
+    api.get(`/api/menu/event/${event.id}`)
+      .then(res => setMenuSections(res.data || []))
+      .catch(() => setMenuSections([]));
   }, [event.id]);
 
   const calcQuoteTotal = q => {
@@ -367,6 +383,7 @@ function EventDetail({ event, onClose, onEdit }) {
               <div style={SL}>Datos del evento</div>
               <Card>
                 <Row label="Fecha"          value={fmtDate(event.date)} />
+                <Row label="Hora"           value={event.time || "—"} />
                 <Row label="Venue"          value={event.venue} />
                 <Row label="Invitados"      value={`${event.guests} personas`} />
                 <Row label="Pres. estimado" value={fmt(event.budget)} last />
@@ -453,24 +470,20 @@ function EventDetail({ event, onClose, onEdit }) {
                 </div>
               )}
             </section>
-          </div>
 
-          {/* ── Columna derecha ── */}
-          <div style={{ overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 26 }}>
-
-            {/* Balance visual */}
+            {/* Balance del evento */}
             {!loading && (
-              <section>
+              <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
                 <div style={SL}>Balance del evento</div>
                 <div style={{ background: "var(--bg-sunken)", borderRadius: 14, border: "1px solid var(--border)", padding: "20px 22px" }}>
 
                   {/* Tarjetas de resumen */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
                     {[
-                      { label: "Ingresos aprobados", value: summary.totalQuotes,      color: "var(--gold)" },
-                      { label: "Cobrado al cliente",  value: summary.totalPaid,        color: "#22c55e" },
-                      { label: "Pagado proveedores",  value: spSummary.totalPaid,      color: "#ef4444" },
-                      { label: "Pend. proveedores",   value: spSummary.totalPending,   color: "#f59e0b" },
+                      { label: "Ingresos aprobados", value: summary.totalQuotes,    color: "var(--gold)" },
+                      { label: "Cobrado al cliente",  value: summary.totalPaid,      color: "#22c55e" },
+                      { label: "Pagado proveedores",  value: spSummary.totalPaid,    color: "#ef4444" },
+                      { label: "Pend. proveedores",   value: spSummary.totalPending, color: "#f59e0b" },
                     ].map(item => (
                       <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}25`, borderRadius: 10, padding: "12px 14px" }}>
                         <div style={{ fontSize: 10, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 5 }}>{item.label}</div>
@@ -481,9 +494,9 @@ function EventDetail({ event, onClose, onEdit }) {
 
                   {/* Barras */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes}    max={balanceMax} color="var(--gold)" />
-                    <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}      max={balanceMax} color="#22c55e" />
-                    <BalanceBar label="Total proveedores"   value={totalProveedores}        max={balanceMax} color="#ef4444" />
+                    <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes} max={balanceMax} color="var(--gold)" />
+                    <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}   max={balanceMax} color="#22c55e" />
+                    <BalanceBar label="Total proveedores"   value={totalProveedores}     max={balanceMax} color="#ef4444" />
                   </div>
 
                   {/* Utilidad */}
@@ -504,6 +517,50 @@ function EventDetail({ event, onClose, onEdit }) {
                 </div>
               </section>
             )}
+          </div>
+
+          {/* ── Columna derecha ── */}
+          <div style={{ overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 26 }}>
+
+            {/* Catering — resumen */}
+            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={SL}>Menú de catering</div>
+                <button
+                  onClick={() => { onClose(); navigate("/catering"); }}
+                  style={{ padding: "4px 12px", border: "1px solid var(--border)", borderRadius: 20, background: "transparent", color: "var(--text-muted)", fontSize: 11, cursor: "pointer" }}
+                >
+                  Gestionar →
+                </button>
+              </div>
+              {!loading && (
+                menuSections.length === 0
+                  ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin menú cargado. Hacé click en Gestionar para armarlo.</div>
+                  : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {menuSections.map(sec => (
+                        <div key={sec.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                          <div style={{ padding: "8px 14px", borderBottom: sec.items.length > 0 ? "1px solid var(--border-row)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{sec.nombre}</span>
+                            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{sec.items.length} plato{sec.items.length !== 1 ? "s" : ""}</span>
+                          </div>
+                          {sec.items.map((item, i) => (
+                            <div key={item.id} style={{ padding: "7px 14px", borderBottom: i < sec.items.length - 1 ? "1px solid var(--border-row)" : "none" }}>
+                              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{item.dish.name}</div>
+                              {item.dish.descripcion && (
+                                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>{item.dish.descripcion}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      <div style={{ fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>
+                        {menuSections.reduce((t, s) => t + s.items.length, 0)} platos · {event.guests} invitados
+                      </div>
+                    </div>
+                  )
+              )}
+            </section>
 
             {/* Checklist */}
             <section>
@@ -574,6 +631,13 @@ export default function Events() {
     finally { setConfirmDelete(null); }
   };
 
+  const handleStatusChange = async (ev, newStatus) => {
+    try {
+      await api.put(`/api/events/${ev.id}`, { ...ev, clientId: ev.clientId, status: newStatus });
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, status: newStatus } : e));
+    } catch { toast("Error al cambiar el estado"); }
+  };
+
   const openDetail = ev => { setSelected(ev); setModal("detail"); };
   const openEdit   = ev => { setSelected(ev); setModal("edit");   };
 
@@ -632,7 +696,21 @@ export default function Events() {
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{fmtDate(ev.date)}</div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{ev.venue}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#22c55e" }}>{fmt(ev.budget)}</div>
-              <Badge label={ev.status} color={statusColors[ev.status] || "var(--text-muted)"} />
+              <select
+                value={ev.status}
+                onClick={e => e.stopPropagation()}
+                onChange={e => handleStatusChange(ev, e.target.value)}
+                style={{
+                  background: `${statusColors[ev.status]}18`,
+                  color: statusColors[ev.status] || "var(--text-muted)",
+                  border: `1px solid ${statusColors[ev.status]}40`,
+                  borderRadius: 20, padding: "4px 10px",
+                  fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  outline: "none", appearance: "none", textAlign: "center",
+                }}
+              >
+                {["Propuesta","Confirmado","Finalizado"].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={e => { e.stopPropagation(); openEdit(ev) }} style={{ padding: "5px 10px", border: "1px solid var(--border)", borderRadius: 6, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>Editar</button>
                 <button onClick={e => { e.stopPropagation(); setConfirmDelete(ev) }} style={{ padding: "5px 10px", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, background: "transparent", color: "#ef4444", fontSize: 12, cursor: "pointer" }}>Eliminar</button>

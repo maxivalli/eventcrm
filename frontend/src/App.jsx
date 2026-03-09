@@ -11,6 +11,8 @@ import Budget from "./pages/Budget";
 import Payments from "./pages/Payments";
 import SupplierPayments from "./pages/SupplierPayments";
 import Users from "./pages/Users";
+import CateringPage from "./pages/Catering";
+import Recetario from "./pages/Recetario";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -102,6 +104,8 @@ export default function App() {
           <Route path="budget" element={<Budget />} />
           <Route path="payments" element={<Payments />} />
           <Route path="supplier-payments" element={<SupplierPayments />} />
+          <Route path="catering" element={<CateringPage />} />
+          <Route path="recetario" element={<Recetario />} />
         </Route>
       </Routes>
     </BrowserRouter>

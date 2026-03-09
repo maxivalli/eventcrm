@@ -3,9 +3,9 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const statusColors = { 'Aprobado': '#22c55e', 'En revisión': '#3b82f6', 'Pendiente': '#f59e0b', 'Rechazado': '#ef4444' }
+const statusColors = { 'Aprobado': '#22c55e', 'Pendiente': '#f59e0b', 'Rechazado': '#ef4444' }
 const kindColors   = { 'General': '#8b5cf6', 'Catering': '#f97316' }
-const ESTADOS = ['Todos', 'Aprobado', 'En revisión', 'Pendiente', 'Rechazado']
+const ESTADOS = ['Todos', 'Aprobado', 'Pendiente', 'Rechazado']
 const KINDS   = ['Todos', 'General', 'Catering']
 
 const formatCurrency = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -150,7 +150,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
           <div>
             <label style={lbl}>Estado</label>
             <select style={inp()} value={form.status} onChange={e => set('status', e.target.value)}>
-              {['Pendiente', 'En revisión', 'Aprobado', 'Rechazado'].map(s => <option key={s}>{s}</option>)}
+              {['Pendiente', 'Aprobado', 'Rechazado'].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
         </div>
@@ -333,6 +333,13 @@ export default function Quotes() {
     finally { setConfirmDelete(null) }
   }
 
+  const handleStatusChange = async (q, newStatus) => {
+    try {
+      await api.patch(`/api/quotes/${q.id}/status`, { status: newStatus })
+      setQuotes(prev => prev.map(x => x.id === q.id ? { ...x, status: newStatus } : x))
+    } catch { toast('Error al cambiar el estado') }
+  }
+
   const openDetail = q => { setSelected(q); setModal('detail') }
   const openEdit   = async q => {
     try { const res = await api.get('/api/events'); setEvents(res.data) } catch {}
@@ -391,7 +398,21 @@ export default function Quotes() {
               <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{q.event?.client?.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(q.date)}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(calcTotal(q))}</div>
-              <Badge label={q.status} color={statusColors[q.status] || '#5a5a7a'} />
+              <select
+                value={q.status}
+                onClick={e => e.stopPropagation()}
+                onChange={e => handleStatusChange(q, e.target.value)}
+                style={{
+                  background: `${statusColors[q.status] || '#5a5a7a'}18`,
+                  color: statusColors[q.status] || 'var(--text-muted)',
+                  border: `1px solid ${statusColors[q.status] || '#5a5a7a'}40`,
+                  borderRadius: 20, padding: '4px 10px',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  outline: 'none', appearance: 'none', textAlign: 'center',
+                }}
+              >
+                {['Pendiente','Aprobado','Rechazado'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={e => { e.stopPropagation(); openEdit(q) }} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Editar</button>
                 <button onClick={e => { e.stopPropagation(); setConfirmDelete(q) }} style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
