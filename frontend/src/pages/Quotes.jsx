@@ -9,8 +9,13 @@ const ESTADOS = ['Todos', 'Aprobado', 'Pendiente', 'Rechazado']
 const KINDS   = ['Todos', 'General', 'Catering']
 
 const SECCION_COLORS = {
-  'Entrada fría': '#3b82f6', 'Entrada caliente': '#f97316', 'Plato principal': '#8b5cf6',
-  'Guarnición': '#22c55e', 'Postre': '#ec4899', 'Torta': '#f59e0b', 'Bebidas': '#06b6d4', 'Otros': '#6b7280',
+  'Entrada fría':    '#3b82f6',
+  'Plato principal': '#8b5cf6',
+  'Guarnición':      '#22c55e',
+  'Bebidas':         '#06b6d4',
+  'Postre':          '#ec4899',
+  'Trasnoche':       '#f97316',
+  'Otros':           '#6b7280',
 }
 
 const formatCurrency = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -81,6 +86,17 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
 
   const [menuSections, setMenuSections] = useState([])
   const [loadingMenu,  setLoadingMenu]  = useState(false)
+
+  // Al editar una cotización Catering existente, cargar el menú del evento inicial
+  useEffect(() => {
+    const eventId = form.eventId
+    if (form.kind !== 'Catering' || !eventId) return
+    setLoadingMenu(true)
+    api.get(`/api/menu/event/${eventId}`)
+      .then(res => setMenuSections(res.data))
+      .catch(() => setMenuSections([]))
+      .finally(() => setLoadingMenu(false))
+  }, []) // solo al montar
 
   const setEvent = async (eventId) => {
     const ev = clientEvents.find(e => String(e.id) === eventId)
@@ -274,11 +290,12 @@ function QuoteDetail({ quote, onClose, onEdit }) {
   const [menuSections, setMenuSections] = useState([])
 
   useEffect(() => {
-    if (quote.kind !== 'Catering' || !quote.eventId) return
-    api.get(`/api/menu/event/${quote.eventId}`)
+    const eventId = quote.event?.id
+    if (quote.kind !== 'Catering' || !eventId) return
+    api.get(`/api/menu/event/${eventId}`)
       .then(r => setMenuSections(r.data))
       .catch(() => {})
-  }, [quote.eventId])
+  }, [quote.event?.id, quote.kind])
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

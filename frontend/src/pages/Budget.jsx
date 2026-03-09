@@ -14,6 +14,17 @@ const calcQuoteTotal = (q) => {
   return catering + items
 }
 
+const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const sortSections = (sections) =>
+  [...sections].sort((a, b) => {
+    const ia = SECCION_ORDER.indexOf(a.nombre)
+    const ib = SECCION_ORDER.indexOf(b.nombre)
+    if (ia === -1 && ib === -1) return 0
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
+
 // ── Preview component ────────────────────────────────────────────────────────
 function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
   const generalQuotes = quotes.filter(q => q.kind === 'General')
@@ -146,9 +157,9 @@ function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
               {/* ── Menú desde Catering → Menú (secciones del evento) ── */}
               {menuSections && menuSections.length > 0 && (() => {
                 const secColors = {
-                  'Entrada fría': '#3b82f6', 'Entrada caliente': '#f97316', 'Plato principal': '#8b5cf6',
-                  'Guarnición': '#22c55e', 'Postre': '#ec4899', 'Torta': '#f59e0b',
-                  'Bebidas': '#06b6d4', 'Otros': '#6b7280',
+                  'Entrada fría': '#3b82f6', 'Plato principal': '#8b5cf6',
+                  'Guarnición': '#22c55e', 'Bebidas': '#06b6d4',
+                  'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280',
                 }
                 const totalPlatos = menuSections.reduce((acc, s) => acc + s.items.length, 0)
                 return (
@@ -157,7 +168,7 @@ function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
                       <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Menú</div>
                       <div style={{ fontSize: 10, color: col.muted }}>{totalPlatos} plato{totalPlatos !== 1 ? 's' : ''}</div>
                     </div>
-                    {menuSections.map((section, si) => (
+                    {sortSections(menuSections).map((section, si) => (
                       <div key={section.id} style={{ borderTop: si > 0 ? `1px solid ${col.border}` : 'none' }}>
                         {/* Cabecera de sección */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px 6px', background: col.dark + '60' }}>

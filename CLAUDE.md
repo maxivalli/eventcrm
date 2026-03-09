@@ -49,6 +49,8 @@ eventcrm-main/
             ├── Payments.jsx
             ├── SupplierPayments.jsx
             ├── Budget.jsx
+            ├── Catering.jsx     # Gestión de insumos de catering por evento
+            ├── Recetario.jsx    # CRUD de platos con ingredientes
             └── Users.jsx
 ```
 
@@ -81,14 +83,21 @@ eventcrm-main/
 |---|---|
 | `User` | Independiente (gestión de acceso) |
 | `Client` | tiene muchos `Event` |
-| `Event` | pertenece a `Client`; tiene `Quote[]`, `Payment[]`, `SupplierPayment[]`, `ChecklistItem[]`, `EventFile[]` |
-| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`; campos: `kind`, `status`, `menu`, `covers`, `pricePerCover` |
+| `Event` | pertenece a `Client`; tiene `Quote[]`, `Payment[]`, `SupplierPayment[]`, `ChecklistItem[]`, `EventFile[]`, `CateringItem[]`, `EventMenuSection[]` |
+| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`, `QuoteDish[]`; campos: `kind`, `status`, `menu`, `covers`, `pricePerCover` |
 | `QuoteItem` | pertenece a `Quote`; campos: `description`, `quantity`, `unitPrice` |
+| `QuoteDish` | pertenece a `Quote` y a `Dish`; campos: `nota` |
 | `Payment` | pertenece a `Event` (cobros al cliente) |
-| `Supplier` | tiene `SupplierPayment[]`; campos: `category`, `rating`, `status` |
+| `Supplier` | tiene `SupplierPayment[]`, `CateringItem[]`; campos: `category`, `rating`, `status`, `alias` |
 | `SupplierPayment` | pertenece a `Supplier` y a `Event`; campos: `method`, `status` |
 | `ChecklistItem` | pertenece a `Event`; campos: `title`, `done`, `order` |
 | `EventFile` | pertenece a `Event`; campos: `name`, `url`, `publicId`, `resourceType` |
+| `CateringItem` | pertenece a `Event` y opcionalmente a `Supplier`; campos: `categoria`, `descripcion`, `cantidad`, `unidad`, `precioUnitario`, `proveedorLibre`, `nota` |
+| `Dish` | tiene `DishIngredient[]`, `EventMenuItem[]`, `QuoteDish[]`; campos: `name`, `seccion`, `descripcion` |
+| `DishIngredient` | pertenece a `Dish`; campos: `nombre`, `cantidad` (por persona), `unidad`, `categoria` |
+| `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]`; campos: `nombre`, `orden` |
+| `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish`; campos: `nota` |
+| `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` (JSON string) |
 
 ---
 
@@ -102,6 +111,7 @@ CORS_ORIGIN=http://localhost:5173          # o URL del frontend en prod
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
+ANTHROPIC_API_KEY=...                      # Para sugerencia de ingredientes con IA
 PORT=3001                                  # opcional, default 3001
 ```
 
@@ -161,6 +171,11 @@ Todas las rutas (excepto auth) requieren `Authorization: Bearer <token>`.
 | DELETE | `/api/event-files/:id` | Eliminar archivo |
 | GET/POST | `/api/users` | Usuarios del sistema |
 | PUT/DELETE | `/api/users/:id` | Editar / eliminar usuario |
+| GET/POST/PUT/DELETE | `/api/catering` | Insumos de catering por evento |
+| GET/POST/PUT/DELETE | `/api/dishes` | Platos del recetario |
+| GET/POST/PUT/DELETE | `/api/menu` | Secciones e ítems del menú por evento |
+| GET | `/api/activity` | Log de actividad (`?limit=N`, max 200) |
+| POST | `/api/ai/suggest-ingredients` | Sugerir ingredientes de un plato con IA (Claude Haiku) |
 
 **Health check**: `GET /health` → `{ status: "ok" }`
 
@@ -276,7 +291,48 @@ const fmtDate = (str) =>
 
 // SupplierPayment.status
 ["Pendiente", "Pagado", "Cancelado"]
+
+// DishIngredient.categoria
+["Carnes", "Fiambres", "Lácteos", "Verduras", "Frutas", "Almacén", "Bebidas", "Panificados", "Otros"]
+
+// ActivityLog.action
+["create", "update", "delete", "status", "payment", "file", "checklist"]
+
+// ActivityLog.entity
+["client", "event", "quote", "supplier", "payment", "supplierPayment", "file", "checklist", "dish"]
 ```
+
+---
+
+## Integración con IA (Anthropic)
+
+El endpoint `POST /api/ai/suggest-ingredients` usa **Claude Haiku** para generar ingredientes por persona dado un plato del recetario.
+
+- Requiere `ANTHROPIC_API_KEY` en el `.env` del backend.
+- Llama directamente a `https://api.anthropic.com/v1/messages`.
+- Devuelve `{ ingredients: DishIngredient[] }`.
+- El frontend lo usa en `Recetario.jsx` al crear/editar un plato con el botón "Sugerir con IA".
+
+---
+
+## Log de actividad
+
+El módulo `src/utils/activity.js` exporta una función `log()` que persiste acciones en `ActivityLog`. Se llama **fire-and-forget** (no bloquea la respuesta) desde los controllers.
+
+```js
+const { log } = require('../utils/activity')
+
+log({
+  action: 'create',       // tipo de acción
+  entity: 'event',        // entidad afectada
+  entityId: event.id,
+  label: event.name,      // descripción legible
+  detail: 'Propuesta',    // detalle secundario (opcional)
+  meta: { clientId }      // datos extra en objeto (opcional, se serializa a JSON)
+})
+```
+
+El Dashboard consulta `GET /api/activity` para mostrar el feed de actividad reciente.
 
 ---
 
@@ -314,9 +370,11 @@ Ejecutar `node src/seed.js` para crearlo. Usa `upsert` para ser idempotente.
 
 1. **Idioma**: Todo el código, mensajes de error y UI están en **español**.
 2. **Módulos**: Backend usa CommonJS (`require`/`module.exports`). Frontend usa ESM (`import`/`export`).
-3. **Cascada**: Las relaciones en Prisma usan `onDelete: Cascade`, por lo que eliminar un `Event` elimina sus `Quote`, `Payment`, `SupplierPayment`, `ChecklistItem` y `EventFile` automáticamente.
+3. **Cascada**: Las relaciones en Prisma usan `onDelete: Cascade`, por lo que eliminar un `Event` elimina sus `Quote`, `Payment`, `SupplierPayment`, `ChecklistItem`, `EventFile`, `CateringItem` y `EventMenuSection` automáticamente.
 4. **IDs**: Siempre convertir a `Number()` al usar IDs de params (`req.params.id`).
 5. **Validaciones**: Hacer en controller (backend) y en el formulario (frontend) con mensajes claros.
 6. **Cloudinary**: Los archivos subidos se almacenan en Cloudinary. Al eliminar un `EventFile`, también eliminar el asset de Cloudinary usando `publicId`.
 7. **Toast**: Usar `useToast()` para feedback de acciones. Nunca usar `alert()`.
 8. **ConfirmDialog**: Usar para confirmar eliminaciones. Nunca eliminar directamente sin confirmación.
+9. **ActivityLog**: Registrar acciones relevantes (create, update, delete, status, payment) usando `log()` de `src/utils/activity.js`. Llamar fire-and-forget, nunca `await`.
+10. **Supplier.alias**: Campo opcional para nombre corto del proveedor. Mostrarlo en la UI cuando esté disponible.

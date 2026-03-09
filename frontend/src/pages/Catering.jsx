@@ -3,7 +3,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const SECCIONES_SUGERIDAS = ['Entrada fría', 'Entrada caliente', 'Plato principal', 'Guarnición', 'Postre', 'Torta', 'Bebidas', 'Otros']
+const SECCIONES_SUGERIDAS = ['Entrada fría', 'Trasnoche', 'Plato principal', 'Guarnición', 'Postre', 'Torta', 'Bebidas', 'Otros']
 
 const CATEGORIA_COLORS = {
   'Carnes':      '#ef4444',
@@ -19,7 +19,7 @@ const CATEGORIA_COLORS = {
 
 const SECCION_COLORS = {
   'Entrada fría':     '#3b82f6',
-  'Entrada caliente': '#f97316',
+  'Trasnoche': '#f97316',
   'Plato principal':  '#8b5cf6',
   'Guarnición':       '#22c55e',
   'Postre':           '#ec4899',

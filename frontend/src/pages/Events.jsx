@@ -12,6 +12,16 @@ const statusColors = {
   Propuesta:  "#f59e0b",
   Finalizado: "#8b5cf6",
 };
+const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const sortSections = (sections) =>
+  [...sections].sort((a, b) => {
+    const ia = SECCION_ORDER.indexOf(a.nombre)
+    const ib = SECCION_ORDER.indexOf(b.nombre)
+    if (ia === -1 && ib === -1) return 0
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  })
 const quoteStatusColors = {
   Aprobado:  "#22c55e",
   Pendiente: "#f59e0b",
@@ -538,7 +548,7 @@ function EventDetail({ event, onClose, onEdit }) {
                   ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin menú cargado. Hacé click en Gestionar para armarlo.</div>
                   : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {menuSections.map(sec => (
+                      {sortSections(menuSections).map(sec => (
                         <div key={sec.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
                           <div style={{ padding: "8px 14px", borderBottom: sec.items.length > 0 ? "1px solid var(--border-row)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{sec.nombre}</span>
