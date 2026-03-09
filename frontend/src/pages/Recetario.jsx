@@ -74,7 +74,9 @@ function DishForm({ initial, onSave, onCancel }) {
       }
     : { name: '', seccion: 'Entrada fría', descripcion: '', ingredients: [] }
   )
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors]     = useState({})
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError]   = useState('')
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
   const validate = () => {
@@ -94,6 +96,35 @@ function DishForm({ initial, onSave, onCancel }) {
       descripcion: form.descripcion.trim() || null,
       ingredients: form.ingredients.map(({ nombre, cantidad, unidad, categoria }) => ({ nombre, cantidad: Number(cantidad), unidad, categoria })),
     })
+  }
+
+  const handleAISuggest = async () => {
+    if (!form.name.trim()) { setAiError('Ingresá el nombre del plato primero'); return }
+    setAiLoading(true); setAiError('')
+    try {
+      const res = await api.post('/api/ai/suggest-ingredients', {
+        name: form.name.trim(),
+        seccion: form.seccion,
+        descripcion: form.descripcion.trim() || null,
+      })
+
+      const suggested = res.data.ingredients
+      if (!Array.isArray(suggested) || suggested.length === 0) throw new Error('Respuesta inválida')
+
+      const newIngredients = suggested.map(ing => ({
+        _id: Date.now() + Math.random(),
+        nombre: ing.nombre || '',
+        cantidad: ing.cantidad || '',
+        unidad: UNIDADES.includes(ing.unidad) ? ing.unidad : 'g',
+        categoria: CATEGORIAS.includes(ing.categoria) ? ing.categoria : 'Otros',
+      }))
+
+      set('ingredients', newIngredients)
+    } catch {
+      setAiError('No se pudo generar la sugerencia. Intentá de nuevo.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   return (
@@ -121,9 +152,40 @@ function DishForm({ initial, onSave, onCancel }) {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, color: errors.ingredients ? '#ef4444' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, fontWeight: 700 }}>
-          Ingredientes por persona {errors.ingredients && `— ${errors.ingredients}`}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: errors.ingredients ? '#ef4444' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+            Ingredientes por persona {errors.ingredients && `— ${errors.ingredients}`}
+          </div>
+          <button
+            onClick={handleAISuggest}
+            disabled={aiLoading}
+            title="Generá la lista de ingredientes automáticamente con IA"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 8, cursor: aiLoading ? 'not-allowed' : 'pointer',
+              border: '1px solid rgba(201,168,76,0.4)',
+              background: aiLoading ? 'rgba(201,168,76,0.05)' : 'rgba(201,168,76,0.1)',
+              color: aiLoading ? 'var(--text-faint)' : 'var(--gold)',
+              fontSize: 12, fontWeight: 600, transition: 'all 0.2s',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{aiLoading ? '⏳' : '✨'}</span>
+            {aiLoading ? 'Generando...' : 'Sugerir con IA'}
+          </button>
         </div>
+
+        {aiError && (
+          <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+            {aiError}
+          </div>
+        )}
+
+        {aiLoading && (
+          <div style={{ fontSize: 12, color: 'var(--gold)', background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10 }}>
+            Analizando el plato y calculando cantidades por persona...
+          </div>
+        )}
+
         <IngredientsEditor ingredients={form.ingredients} onChange={v => set('ingredients', v)} />
       </div>
 

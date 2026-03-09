@@ -341,14 +341,8 @@ export default function Quotes() {
   }
 
   const openDetail = q => { setSelected(q); setModal('detail') }
-  const openEdit   = async q => {
-    try { const res = await api.get('/api/events'); setEvents(res.data) } catch {}
-    setSelected(q); setModal('edit')
-  }
-  const openNew = async () => {
-    try { const res = await api.get('/api/events'); setEvents(res.data) } catch {}
-    setModal('new')
-  }
+  const openEdit   = q => { setSelected(q); setModal('edit') }
+  const openNew    = () => { setModal('new') }
 
   const fbtn = (active, color) => ({
     padding: '6px 14px', borderRadius: 20, border: '1px solid', fontSize: 12, cursor: 'pointer', transition: 'all 0.2s',

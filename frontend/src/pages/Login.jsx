@@ -42,7 +42,6 @@ export default function Login() {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
 
       <div style={{
         position: 'fixed', inset: 0, zIndex: 0,

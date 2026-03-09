@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../api/axios'
+import ConfirmDialog from './ConfirmDialog'
 
 const getIcon = (name) => {
   const ext = name.split('.').pop().toLowerCase()
@@ -15,15 +16,19 @@ const formatDate = (str) =>
   new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 export default function EventFiles({ eventId }) {
-  const [files, setFiles]         = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [dragOver, setDragOver]   = useState(false)
-  const inputRef                  = useRef()
+  const [files, setFiles]             = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [uploading, setUploading]     = useState(false)
+  const [dragOver, setDragOver]       = useState(false)
+  const [error, setError]             = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const inputRef                      = useRef()
+
+  const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 3500) }
 
   const fetchFiles = async () => {
     try { const res = await api.get(`/api/event-files/event/${eventId}`); setFiles(res.data) }
-    catch (e) { console.error(e) }
+    catch { showError('No se pudieron cargar los archivos') }
     finally { setLoading(false) }
   }
   useEffect(() => { fetchFiles() }, [eventId])
@@ -37,14 +42,14 @@ export default function EventFiles({ eventId }) {
       formData.append('eventId', eventId)
       await api.post('/api/event-files', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       await fetchFiles()
-    } catch (e) { console.error(e) }
+    } catch { showError('No se pudo subir el archivo') }
     finally { setUploading(false) }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este archivo?')) return
-    try { await api.delete(`/api/event-files/${id}`); setFiles(prev => prev.filter(f => f.id !== id)) }
-    catch (e) { console.error(e) }
+  const handleDelete = async () => {
+    try { await api.delete(`/api/event-files/${confirmDelete}`); setFiles(prev => prev.filter(f => f.id !== confirmDelete)) }
+    catch { showError('No se pudo eliminar el archivo') }
+    finally { setConfirmDelete(null) }
   }
 
   const handleDrop = (e) => {
@@ -65,9 +70,15 @@ export default function EventFiles({ eventId }) {
         <div style={{ fontSize: 12, color: 'var(--text-label)' }}>{files.length} archivo{files.length !== 1 ? 's' : ''}</div>
       </div>
 
+      {error && (
+        <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
+
       {/* Drop zone */}
       <div
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !uploading && inputRef.current?.click()}
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
@@ -113,7 +124,8 @@ export default function EventFiles({ eventId }) {
                   }}
                 >Ver</a>
                 <button
-                  onClick={() => handleDelete(file.id)}
+                  title="Eliminar archivo"
+                  onClick={() => setConfirmDelete(file.id)}
                   style={{
                     width: 26, height: 26, border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
                     background: 'rgba(239,68,68,0.06)', color: '#ef4444',
@@ -125,6 +137,15 @@ export default function EventFiles({ eventId }) {
           </div>
         )
       }
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="¿Eliminar archivo?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   )
 }

@@ -291,6 +291,7 @@ export default function Users() {
                 }}
               >Editar</button>
               <button
+                title="Cambiar contraseña"
                 onClick={() => { setSelected(user); setModal('password') }}
                 style={{
                   padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
