@@ -64,7 +64,7 @@ function DishPicker({ dishes, onSelect, onCancel }) {
   )
 }
 
-function ShoppingList({ eventId, guests, onClose }) {
+function ShoppingList({ eventId, guests, eventName, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -74,6 +74,127 @@ function ShoppingList({ eventId, guests, onClose }) {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [eventId])
+
+  const handleDownload = async () => {
+    // Load jsPDF from CDN if not already loaded
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        script.onload = resolve
+        script.onerror = reject
+        document.head.appendChild(script)
+      })
+    }
+    const { jsPDF } = window.jspdf
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const categorias = Object.keys(data.lista).sort()
+
+    const CAT_COLORS = {
+      'Carnes':      [239, 68,  68],
+      'Fiambres':    [249, 115, 22],
+      'Lácteos':     [59,  130, 246],
+      'Verduras':    [34,  197, 94],
+      'Frutas':      [236, 72,  153],
+      'Almacén':     [245, 158, 11],
+      'Bebidas':     [6,   182, 212],
+      'Panificados': [139, 92,  246],
+      'Otros':       [107, 114, 128],
+    }
+
+    const W = 210, margin = 16
+    let y = 0
+
+    // Header background
+    doc.setFillColor(9, 9, 15)
+    doc.rect(0, 0, W, 38, 'F')
+
+    // Gold accent bar
+    doc.setFillColor(201, 168, 76)
+    doc.rect(0, 0, 4, 38, 'F')
+
+    // Title
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(20)
+    doc.setTextColor(232, 201, 122)
+    doc.text('Lista de Compras', margin + 4, 16)
+
+    // Event name
+    doc.setFontSize(10)
+    doc.setTextColor(180, 180, 180)
+    doc.setFont('helvetica', 'normal')
+    doc.text((eventName || 'Evento').toUpperCase(), margin + 4, 25)
+    doc.text(`${guests} invitados · ${new Date().toLocaleDateString('es-AR')}`, margin + 4, 32)
+
+    y = 46
+
+    categorias.forEach(cat => {
+      const items = data.lista[cat]
+      const rowH = 8
+      const blockH = 10 + items.length * rowH + 4
+
+      // Page break
+      if (y + blockH > 280) { doc.addPage(); y = 16 }
+
+      // Category header
+      const [r, g, b] = CAT_COLORS[cat] || [107, 114, 128]
+      doc.setFillColor(r, g, b, 0.12)
+      doc.setFillColor(Math.min(255, r + 180), Math.min(255, g + 180), Math.min(255, b + 180))
+      doc.roundedRect(margin, y, W - margin * 2, 9, 2, 2, 'F')
+
+      // Dot
+      doc.setFillColor(r, g, b)
+      doc.circle(margin + 5, y + 4.5, 2, 'F')
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9)
+      doc.setTextColor(r, g, b)
+      doc.text(cat.toUpperCase(), margin + 10, y + 6)
+      y += 11
+
+      // Items
+      items.forEach((item, i) => {
+        if (y > 280) { doc.addPage(); y = 16 }
+
+        // Alternating row bg
+        if (i % 2 === 0) {
+          doc.setFillColor(245, 245, 245)
+          doc.rect(margin, y, W - margin * 2, rowH, 'F')
+        }
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
+        doc.setTextColor(40, 40, 40)
+        doc.text(item.nombre, margin + 4, y + 5.5)
+
+        // Amount (right-aligned)
+        const cantidad = item.cantidadTotal % 1 === 0 ? String(item.cantidadTotal) : item.cantidadTotal.toFixed(1)
+        const amountText = `${cantidad} ${item.unidad}`
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(r, g, b)
+        doc.text(amountText, W - margin - 30, y + 5.5, { align: 'right' })
+
+        // Per person
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7.5)
+        doc.setTextColor(140, 140, 140)
+        doc.text(`${item.cantidadPorPersona} ${item.unidad}/pers.`, W - margin - 2, y + 5.5, { align: 'right' })
+
+        y += rowH
+      })
+
+      y += 6
+    })
+
+    // Footer
+    doc.setFillColor(9, 9, 15)
+    doc.rect(0, 290, W, 10, 'F')
+    doc.setFontSize(7)
+    doc.setTextColor(100, 100, 100)
+    doc.text('Haus-CRM · Producción', margin, 296)
+
+    doc.save(`lista-compras-${(eventName || 'evento').toLowerCase().replace(/\s+/g, '-')}.pdf`)
+  }
 
   if (loading) return <div style={{ padding: 20, color: 'var(--text-faint)', fontSize: 13 }}>Calculando lista...</div>
 
@@ -95,7 +216,10 @@ function ShoppingList({ eventId, guests, onClose }) {
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--text-primary)' }}>Lista de compras</div>
           <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 2 }}>{guests} invitados</div>
         </div>
-        <button onClick={onClose} style={{ padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>← Volver al menú</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={handleDownload} style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>⬇ Descargar</button>
+          <button onClick={onClose} style={{ padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>← Volver al menú</button>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {categorias.map(cat => (
@@ -236,7 +360,7 @@ export default function CateringPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, alignItems: 'start' }}>
           <div>
             {showShopping ? (
-              <ShoppingList eventId={Number(eventId)} guests={selectedEvent?.guests || 0} onClose={() => setShowShopping(false)} />
+              <ShoppingList eventId={Number(eventId)} guests={selectedEvent?.guests || 0} eventName={selectedEvent?.name} onClose={() => setShowShopping(false)} />
             ) : (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

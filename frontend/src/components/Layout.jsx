@@ -128,13 +128,17 @@ export default function Layout() {
               {user.name || 'Usuario'}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: open ? 'row' : 'column',
+            gap: 6,
+            alignItems: 'stretch',
+          }}>
             <button
               onClick={handleLogout}
               title="Cerrar sesión"
               style={{
-                flex: open ? 1 : 0,
-                padding: '9px 12px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8,
+                flex: 1, padding: '9px 0', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8,
                 background: 'rgba(239,68,68,0.06)', color: '#ef4444',
                 fontSize: 12, cursor: 'pointer', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -150,7 +154,7 @@ export default function Layout() {
               onClick={toggleTheme}
               title={isLight ? 'Modo oscuro' : 'Modo claro'}
               style={{
-                padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                flex: 1, padding: '9px 0', border: '1px solid var(--border)', borderRadius: 8,
                 background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.2s',
@@ -163,7 +167,7 @@ export default function Layout() {
             <button
               onClick={() => setOpen(!open)}
               style={{
-                padding: '9px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                flex: 1, padding: '9px 0', border: '1px solid var(--border)', borderRadius: 8,
                 background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
