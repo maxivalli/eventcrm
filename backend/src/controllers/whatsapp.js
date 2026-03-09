@@ -7,9 +7,11 @@ const prisma    = require('../prisma')
 
 exports.getStatus = async (req, res) => {
   try {
-    const status = await evolution.getInstanceStatus()
-    console.log('[WhatsApp status raw]', JSON.stringify(status))
-    res.json({ ok: true, status })
+    const data = await evolution.getInstanceStatus()
+    console.log('[WhatsApp status raw]', JSON.stringify(data))
+    // v1.8.7 devuelve { instance: { state: 'open' } }
+    const state = data?.instance?.state || data?.state || 'disconnected'
+    res.json({ ok: true, status: { state } })
   } catch (e) {
     console.log('[WhatsApp status error]', e.message)
     res.json({ ok: false, status: { state: 'disconnected' }, error: e.message })

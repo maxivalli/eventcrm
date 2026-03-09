@@ -49,7 +49,7 @@ async function sendText(phone, text) {
   const number  = normalizePhone(phone)
   const res = await client.post(`/message/sendText/${instance()}`, {
     number,
-    text,
+    textMessage: { text },
   })
   return res.data
 }
