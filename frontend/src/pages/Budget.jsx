@@ -15,7 +15,7 @@ const calcQuoteTotal = (q) => {
 }
 
 // ── Preview component ────────────────────────────────────────────────────────
-function BudgetPreview({ client, event, quotes, emissionDate }) {
+function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
   const generalQuotes = quotes.filter(q => q.kind === 'General')
   const cateringQuotes = quotes.filter(q => q.kind === 'Catering')
   const grandTotal    = quotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
@@ -143,71 +143,45 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
           {cateringQuotes.map(q => (
             <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
 
-              {/* ── Platos del menú agrupados por sección ── */}
-              {q.dishes && q.dishes.length > 0 && (() => {
-                const grouped = q.dishes.reduce((acc, qd) => {
-                  const sec = qd.dish?.seccion || 'Otros'
-                  if (!acc[sec]) acc[sec] = []
-                  acc[sec].push(qd)
-                  return acc
-                }, {})
+              {/* ── Menú desde Catering → Menú (secciones del evento) ── */}
+              {menuSections && menuSections.length > 0 && (() => {
                 const secColors = {
                   'Entrada fría': '#3b82f6', 'Entrada caliente': '#f97316', 'Plato principal': '#8b5cf6',
                   'Guarnición': '#22c55e', 'Postre': '#ec4899', 'Torta': '#f59e0b',
                   'Bebidas': '#06b6d4', 'Otros': '#6b7280',
                 }
+                const totalPlatos = menuSections.reduce((acc, s) => acc + s.items.length, 0)
                 return (
                   <div style={{ background: col.faint, borderRadius: 8, border: `1px solid ${col.border}`, marginBottom: 14, overflow: 'hidden' }}>
                     <div style={{ padding: '12px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Menú</div>
-                      <div style={{ fontSize: 10, color: col.muted }}>{q.dishes.length} plato{q.dishes.length !== 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: 10, color: col.muted }}>{totalPlatos} plato{totalPlatos !== 1 ? 's' : ''}</div>
                     </div>
-                    {Object.entries(grouped).map(([seccion, dishList], si) => (
-                      <div key={seccion} style={{ borderTop: si > 0 ? `1px solid ${col.border}` : 'none' }}>
+                    {menuSections.map((section, si) => (
+                      <div key={section.id} style={{ borderTop: si > 0 ? `1px solid ${col.border}` : 'none' }}>
                         {/* Cabecera de sección */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px 6px', background: col.dark + '60' }}>
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: secColors[seccion] || col.muted, flexShrink: 0 }} />
-                          <span style={{ fontSize: 9, fontWeight: 700, color: secColors[seccion] || col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{seccion}</span>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: secColors[section.nombre] || col.muted, flexShrink: 0 }} />
+                          <span style={{ fontSize: 9, fontWeight: 700, color: secColors[section.nombre] || col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{section.nombre}</span>
                         </div>
                         {/* Platos de la sección */}
-                        {dishList.map((qd, di) => (
-                          <div key={qd.id || di} style={{ padding: '8px 18px 8px 32px', borderTop: `1px solid ${col.border}20`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                        {section.items.map((item, di) => (
+                          <div key={item.id || di} style={{ padding: '8px 18px 8px 32px', borderTop: `1px solid ${col.border}20`, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, color: col.text, fontWeight: 500, marginBottom: qd.dish?.descripcion || qd.nota ? 3 : 0 }}>
-                                {qd.dish?.name}
+                              <div style={{ fontSize: 13, color: col.text, fontWeight: 500 }}>
+                                {item.dish?.name}
                               </div>
-                              {qd.dish?.descripcion && (
-                                <div style={{ fontSize: 11, color: col.muted, lineHeight: 1.5 }}>{qd.dish.descripcion}</div>
-                              )}
-                              {qd.nota && (
-                                <div style={{ fontSize: 11, color: col.goldLight, fontStyle: 'italic', marginTop: 2 }}>Nota: {qd.nota}</div>
+                              {item.dish?.descripcion && (
+                                <div style={{ fontSize: 11, color: col.muted, lineHeight: 1.5, marginTop: 2 }}>{item.dish.descripcion}</div>
                               )}
                             </div>
-
                           </div>
                         ))}
                       </div>
                     ))}
-                    {/* Notas generales */}
-                    {q.menu && (
-                      <div style={{ borderTop: `1px solid ${col.border}`, padding: '10px 18px', fontSize: 11, color: col.muted, fontStyle: 'italic', lineHeight: 1.6 }}>
-                        {q.menu}
-                      </div>
-                    )}
                   </div>
                 )
               })()}
-
-              {/* Fallback: solo texto (cotizaciones viejas sin platos vinculados) */}
-              {(!q.dishes || q.dishes.length === 0) && q.menu && (
-                <div style={{
-                  background: col.faint, borderRadius: 8, padding: '16px 20px',
-                  border: `1px solid ${col.border}`, marginBottom: 14,
-                }}>
-                  <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Menú</div>
-                  <div style={{ fontSize: 13, color: col.text, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{q.menu}</div>
-                </div>
-              )}
 
               <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
                 <div style={{
@@ -347,8 +321,9 @@ export default function Budget() {
   const [quotes,     setQuotes]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [clientId,   setClientId]   = useState('')
-  const [eventId,    setEventId]    = useState('')
+  const [clientId,      setClientId]     = useState('')
+  const [eventId,       setEventId]      = useState('')
+  const [menuSections,  setMenuSections] = useState([])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -369,6 +344,14 @@ export default function Budget() {
     }
     fetchAll()
   }, [])
+
+  // Fetch menú de catering al cambiar el evento
+  useEffect(() => {
+    if (!eventId) { setMenuSections([]); return }
+    api.get(`/api/menu/event/${eventId}`)
+      .then(r => setMenuSections(r.data))
+      .catch(() => setMenuSections([]))
+  }, [eventId])
 
   const clientEvents    = clientId ? events.filter(ev => String(ev.client?.id) === clientId) : []
   const selectedClient  = clients.find(c => String(c.id) === clientId)
@@ -650,6 +633,7 @@ Adjunto el PDF con el detalle completo. Cualquier consulta, estamos a tu disposi
               client={selectedClient}
               event={selectedEvent}
               quotes={eventQuotes}
+              menuSections={menuSections}
               emissionDate={new Date().toISOString()}
             />
           </div>

@@ -82,9 +82,34 @@ exports.removeItem = async (req, res) => {
     await prisma.eventMenuItem.delete({ where: { id: Number(req.params.id) } })
     res.json({ success: true })
   } catch (e) {
-    if (e.code === 'P2025') return res.status(404).json({ error: 'Item no encontrado' })
-    res.status(500).json({ error: e.message })
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Item no encontrado' })}
+}
+
+// ─── Conversión a unidad base ─────────────────────────────────────────────────
+// Convierte cualquier cantidad a su unidad base (g para sólidos, ml para líquidos)
+// Retorna { cantidad, unidad } en la unidad base, o null si no es convertible.
+const CUCHARADA_G  = 10  // aproximación genérica: 1 cucharada ≈ 10g
+const CUCHARADA_ML = 15  // 1 cucharada ≈ 15ml (para líquidos los usuarios suelen usar ml)
+
+function toBase(cantidad, unidad) {
+  switch (unidad) {
+    case 'g':        return { cantidad, unidad: 'g' }
+    case 'kg':       return { cantidad: cantidad * 1000, unidad: 'g' }
+    case 'ml':       return { cantidad, unidad: 'ml' }
+    case 'l':        return { cantidad: cantidad * 1000, unidad: 'ml' }
+    case 'cucharada': return { cantidad: cantidad * CUCHARADA_G, unidad: 'g' }
+    // unidad, porción, rebanada — no son convertibles entre sí, se mantienen
+    default:         return { cantidad, unidad }
   }
+}
+
+// Elige la unidad de display más legible para la cantidad acumulada
+function toDisplay(cantidad, unidad) {
+  if (unidad === 'g' && cantidad >= 1000)
+    return { cantidad: Math.round((cantidad / 1000) * 100) / 100, unidad: 'kg' }
+  if (unidad === 'ml' && cantidad >= 1000)
+    return { cantidad: Math.round((cantidad / 1000) * 100) / 100, unidad: 'l' }
+  return { cantidad: Math.round(cantidad * 100) / 100, unidad }
 }
 
 // Generar lista de compras agrupada por categoría de ingrediente
@@ -103,53 +128,53 @@ exports.shoppingList = async (req, res) => {
       }
     })
 
-    // Acumular ingredientes por nombre + unidad
+    // Acumular ingredientes por (nombre normalizado + categoría + unidad BASE)
+    // Así sal en gramos y sal en cucharadas se suman bajo la misma clave 'g'
     const map = {}
+
     for (const section of sections) {
       for (const item of section.items) {
         for (const ing of item.dish.ingredients) {
-          const key = `${ing.nombre.toLowerCase()}__${ing.unidad}__${ing.categoria}`
+          const base = toBase(ing.cantidad, ing.unidad)
+          const key  = `${ing.nombre.trim().toLowerCase()}__${ing.categoria}__${base.unidad}`
+
           if (!map[key]) {
             map[key] = {
-              nombre:    ing.nombre,
-              unidad:    ing.unidad,
-              categoria: ing.categoria,
-              cantidadPorPersona: ing.cantidad,
-              cantidadTotal: ing.cantidad * event.guests,
+              nombre:             ing.nombre,
+              unidad:             base.unidad,
+              categoria:          ing.categoria,
+              cantidadPorPersona: base.cantidad,
+              cantidadTotal:      base.cantidad * event.guests,
             }
           } else {
-            map[key].cantidadPorPersona += ing.cantidad
-            map[key].cantidadTotal      += ing.cantidad * event.guests
+            map[key].cantidadPorPersona += base.cantidad
+            map[key].cantidadTotal      += base.cantidad * event.guests
           }
         }
       }
     }
 
-    // Agrupar por categoría
+    // Convertir a unidad de display legible y agrupar por categoría
     const grouped = {}
-    for (const item of Object.values(map)) {
-      if (!grouped[item.categoria]) grouped[item.categoria] = []
-      grouped[item.categoria].push(item)
+    for (const entry of Object.values(map)) {
+      const display    = toDisplay(entry.cantidadTotal, entry.unidad)
+      const displayPP  = toDisplay(entry.cantidadPorPersona, entry.unidad)
+
+      const item = {
+        nombre:             entry.nombre,
+        unidad:             display.unidad,
+        categoria:          entry.categoria,
+        cantidadTotal:      display.cantidad,
+        cantidadPorPersona: displayPP.cantidad,
+      }
+
+      if (!grouped[entry.categoria]) grouped[entry.categoria] = []
+      grouped[entry.categoria].push(item)
     }
 
     // Ordenar ingredientes por nombre dentro de cada categoría
     for (const cat of Object.keys(grouped)) {
       grouped[cat].sort((a, b) => a.nombre.localeCompare(b.nombre))
-    }
-
-    // Convertir unidades grandes
-    for (const items of Object.values(grouped)) {
-      for (const item of items) {
-        if (item.unidad === 'g' && item.cantidadTotal >= 1000) {
-          item.cantidadTotal      = Math.round((item.cantidadTotal / 1000) * 100) / 100
-          item.cantidadPorPersona = Math.round((item.cantidadPorPersona / 1000) * 100) / 100
-          item.unidad = 'kg'
-        } else if (item.unidad === 'ml' && item.cantidadTotal >= 1000) {
-          item.cantidadTotal      = Math.round((item.cantidadTotal / 1000) * 100) / 100
-          item.cantidadPorPersona = Math.round((item.cantidadPorPersona / 1000) * 100) / 100
-          item.unidad = 'l'
-        }
-      }
     }
 
     res.json({ event: event.name, guests: event.guests, lista: grouped })

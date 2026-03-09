@@ -56,112 +56,16 @@ function ItemsEditor({ items, onChange, label = 'Ítems' }) {
 }
 
 // Selector de platos del recetario agrupado por sección
-function DishSelector({ selectedDishes, onChange, allDishes }) {
-  const grouped = allDishes.reduce((acc, d) => {
-    if (!acc[d.seccion]) acc[d.seccion] = []
-    acc[d.seccion].push(d)
-    return acc
-  }, {})
-
-  const toggle = (dish) => {
-    const exists = selectedDishes.find(d => d.dishId === dish.id)
-    if (exists) {
-      onChange(selectedDishes.filter(d => d.dishId !== dish.id))
-    } else {
-      onChange([...selectedDishes, { dishId: dish.id, nota: '', _dish: dish }])
-    }
-  }
-
-  const updateNota = (dishId, nota) => {
-    onChange(selectedDishes.map(d => d.dishId === dishId ? { ...d, nota } : d))
-  }
-
-  if (allDishes.length === 0) {
-    return (
-      <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
-        No hay platos en el recetario. Agregá platos desde la sección <strong>Recetario</strong> primero.
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      {/* Grilla de selección */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: selectedDishes.length > 0 ? 16 : 0 }}>
-        {Object.entries(grouped).map(([seccion, dishes]) => (
-          <div key={seccion}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: SECCION_COLORS[seccion] || '#6b7280', flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{seccion}</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {dishes.map(dish => {
-                const selected = !!selectedDishes.find(d => d.dishId === dish.id)
-                return (
-                  <button
-                    key={dish.id}
-                    onClick={() => toggle(dish)}
-                    style={{
-                      padding: '6px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s',
-                      border: `1px solid ${selected ? (SECCION_COLORS[seccion] || 'var(--gold)') : 'var(--border)'}`,
-                      background: selected ? `${SECCION_COLORS[seccion] || 'var(--gold)'}18` : 'var(--bg-sunken)',
-                      color: selected ? (SECCION_COLORS[seccion] || 'var(--gold)') : 'var(--text-muted)',
-                      fontWeight: selected ? 600 : 400,
-                    }}
-                  >
-                    {selected && <span style={{ marginRight: 4 }}>✓</span>}
-                    {dish.name}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Platos seleccionados con notas */}
-      {selectedDishes.length > 0 && (
-        <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
-          <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-            {selectedDishes.length} plato{selectedDishes.length !== 1 ? 's' : ''} seleccionado{selectedDishes.length !== 1 ? 's' : ''}
-          </div>
-          {selectedDishes.map(sd => {
-            const dish = sd._dish || allDishes.find(d => d.id === sd.dishId)
-            return (
-              <div key={sd.dishId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[dish?.seccion] || 'var(--gold)', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500, minWidth: 160, flexShrink: 0 }}>{dish?.name}</span>
-                <input
-                  style={{ ...inpS, flex: 1 }}
-                  value={sd.nota || ''}
-                  placeholder="Nota opcional (ej: sin sal, con limón...)"
-                  onChange={e => updateNota(sd.dishId, e.target.value)}
-                />
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
 
 const emptyGeneral  = { clientId: '', eventId: '', kind: 'General',  date: '', status: 'Pendiente', items: [] }
 const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', status: 'Pendiente', menu: '', covers: '', pricePerCover: '', items: [], dishes: [] }
 
-function QuoteForm({ initial, events, clients, allDishes, onSave, onClose }) {
+function QuoteForm({ initial, events, clients, onSave, onClose }) {
   const initialClientId  = initial ? String(events.find(ev => ev.id === initial.eventId)?.client?.id ?? '') : ''
   const initialEventDate = initial ? (events.find(ev => ev.id === initial.eventId)?.date?.slice(0, 10) ?? initial.date?.slice(0, 10)) : ''
 
-  // Mapear dishes del initial (vienen con {id, quoteId, dishId, nota, dish})
-  const initialDishes = initial?.dishes?.map(qd => ({
-    dishId: qd.dishId,
-    nota: qd.nota || '',
-    _dish: qd.dish,
-  })) || []
-
   const [form, setForm] = useState(initial
-    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initialEventDate, items: initial.items || [], dishes: initialDishes }
+    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initialEventDate, items: initial.items || [] }
     : emptyGeneral
   )
   const [errors, setErrors] = useState({})
@@ -175,11 +79,21 @@ function QuoteForm({ initial, events, clients, allDishes, onSave, onClose }) {
   const setClient = (clientId) => { setForm(f => ({ ...f, clientId, eventId: '', date: '' })); setErrors(e => ({ ...e, clientId: '', eventId: '' })) }
   const clientEvents = form.clientId ? events.filter(ev => String(ev.client?.id) === form.clientId) : []
 
-  const setEvent = (eventId) => {
+  const [menuSections, setMenuSections] = useState([])
+  const [loadingMenu,  setLoadingMenu]  = useState(false)
+
+  const setEvent = async (eventId) => {
     const ev = clientEvents.find(e => String(e.id) === eventId)
     const date = ev?.date ? ev.date.slice(0, 10) : ''
     setForm(f => ({ ...f, eventId, date }))
     setErrors(e => ({ ...e, eventId: '' }))
+    if (!eventId) { setMenuSections([]); return }
+    setLoadingMenu(true)
+    try {
+      const res = await api.get(`/api/menu/event/${eventId}`)
+      setMenuSections(res.data)
+    } catch { setMenuSections([]) }
+    finally { setLoadingMenu(false) }
   }
 
   const itemsTotal   = (form.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
@@ -287,16 +201,43 @@ function QuoteForm({ initial, events, clients, allDishes, onSave, onClose }) {
               </div>
             )}
 
-            {/* Platos del recetario */}
+            {/* Menú del evento (solo lectura desde Catering → Menú) */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, fontWeight: 700 }}>
-                Platos del menú
+              <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 700 }}>
+                Menú del evento
               </div>
-              <DishSelector
-                selectedDishes={form.dishes || []}
-                onChange={val => set('dishes', val)}
-                allDishes={allDishes}
-              />
+              {!form.eventId ? (
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '12px 14px', border: '1px solid var(--border)' }}>
+                  Seleccioná un evento para ver su menú.
+                </div>
+              ) : loadingMenu ? (
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '12px 0' }}>Cargando menú...</div>
+              ) : menuSections.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '12px 14px', border: '1px dashed var(--border-strong)' }}>
+                  Este evento todavía no tiene menú cargado. Podés armarlo desde <strong style={{ color: 'var(--text-label)' }}>Catering → Menú</strong>.
+                </div>
+              ) : (
+                <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>Menú cargado</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{menuSections.reduce((a, s) => a + s.items.length, 0)} platos · {menuSections.length} secciones</span>
+                  </div>
+                  {menuSections.map((section, si) => (
+                    <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: SECCION_COLORS[section.nombre] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{section.nombre}</span>
+                      </div>
+                      {section.items.map(item => (
+                        <div key={item.id} style={{ padding: '5px 14px 5px 28px', fontSize: 12, color: 'var(--text-secondary)' }}>
+                          {item.dish?.name}
+                          {item.dish?.descripcion && <span style={{ color: 'var(--text-faint)', marginLeft: 6, fontSize: 11 }}>— {item.dish.descripcion}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Notas generales */}
@@ -330,6 +271,14 @@ function QuoteForm({ initial, events, clients, allDishes, onSave, onClose }) {
 function QuoteDetail({ quote, onClose, onEdit }) {
   const total = calcTotal(quote)
   const cateringBase = quote.kind === 'Catering' ? (quote.covers || 0) * (quote.pricePerCover || 0) : 0
+  const [menuSections, setMenuSections] = useState([])
+
+  useEffect(() => {
+    if (quote.kind !== 'Catering' || !quote.eventId) return
+    api.get(`/api/menu/event/${quote.eventId}`)
+      .then(r => setMenuSections(r.data))
+      .catch(() => {})
+  }, [quote.eventId])
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -362,40 +311,33 @@ function QuoteDetail({ quote, onClose, onEdit }) {
               ))}
             </div>
 
-            {/* Platos seleccionados */}
-            {quote.dishes && quote.dishes.length > 0 && (
+            {/* Menú del evento (desde Catering → Menú) */}
+            {menuSections.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menú</div>
-                {/* Agrupar por sección */}
-                {Object.entries(
-                  quote.dishes.reduce((acc, qd) => {
-                    const sec = qd.dish?.seccion || 'Otros'
-                    if (!acc[sec]) acc[sec] = []
-                    acc[sec].push(qd)
-                    return acc
-                  }, {})
-                ).map(([seccion, dishList]) => (
-                  <div key={seccion} style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[seccion] || '#6b7280' }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{seccion}</span>
-                    </div>
-                    {dishList.map(qd => (
-                      <div key={qd.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 12px', background: 'var(--bg-sunken)', borderRadius: 8, marginBottom: 4 }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{qd.dish?.name}</div>
-                          {qd.dish?.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{qd.dish.descripcion}</div>}
-                          {qd.nota && <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 2, fontStyle: 'italic' }}>Nota: {qd.nota}</div>}
-                        </div>
-                        {qd.dish?.ingredients?.length > 0 && (
-                          <div style={{ fontSize: 10, color: 'var(--text-faint)', textAlign: 'right', flexShrink: 0 }}>
-                            {qd.dish.ingredients.length} ing.
-                          </div>
-                        )}
+                <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                  {menuSections.map((section, si) => (
+                    <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: SECCION_COLORS[section.nombre] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{section.nombre}</span>
                       </div>
-                    ))}
-                  </div>
-                ))}
+                      {section.items.map(item => (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 14px 7px 28px', borderTop: '1px solid var(--border-row)' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{item.dish?.name}</div>
+                            {item.dish?.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{item.dish.descripcion}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {menuSections.length === 0 && (
+              <div style={{ marginBottom: 16, fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '10px 14px', border: '1px dashed var(--border-strong)' }}>
+                Sin menú cargado para este evento.
               </div>
             )}
 
@@ -447,7 +389,7 @@ export default function Quotes() {
   const [quotes, setQuotes]     = useState([])
   const [events, setEvents]     = useState([])
   const [clients, setClients]   = useState([])
-  const [allDishes, setDishes]  = useState([])
+
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [filterEstado, setFilterEstado] = useState('Todos')
@@ -458,13 +400,12 @@ export default function Quotes() {
 
   const fetchData = async () => {
     try {
-      const [qRes, evRes, clRes, dRes] = await Promise.all([
+      const [qRes, evRes, clRes] = await Promise.all([
         api.get('/api/quotes'),
         api.get('/api/events'),
         api.get('/api/clients'),
-        api.get('/api/dishes'),
       ])
-      setQuotes(qRes.data); setEvents(evRes.data); setClients(clRes.data); setDishes(dRes.data)
+      setQuotes(qRes.data); setEvents(evRes.data); setClients(clRes.data)
     } catch { toast('Error al cargar cotizaciones') }
     finally { setLoading(false) }
   }
@@ -485,7 +426,7 @@ export default function Quotes() {
         covers: form.kind === 'Catering' ? Number(form.covers) : null,
         pricePerCover: form.kind === 'Catering' ? Number(form.pricePerCover) : null,
         items: (form.items || []).map(({ description, quantity, unitPrice }) => ({ description, quantity: Number(quantity), unitPrice: Number(unitPrice) })),
-        dishes: form.kind === 'Catering' ? (form.dishes || []).map(({ dishId, nota }) => ({ dishId, nota: nota || null })) : [],
+        dishes: [],
       }
       if (modal === 'new') { await api.post('/api/quotes', payload); toast('Cotización creada correctamente', 'success') }
       else { await api.put(`/api/quotes/${selected.id}`, payload); toast('Cotización actualizada', 'success') }
@@ -541,14 +482,14 @@ export default function Quotes() {
       </div>
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1.5fr 1.5fr 1fr 1.2fr 1fr 130px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '60px 110px 1.5fr 1.5fr 1fr 1.2fr 130px 160px', gap: '0 16px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
           <span>#</span><span>Tipo</span><span>Evento</span><span>Cliente</span><span>Fecha</span><span>Total</span><span>Estado</span><span></span>
         </div>
         {filtered.length === 0
           ? <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>No se encontraron cotizaciones</div>
           : filtered.map((q, i) => (
             <div key={q.id} onClick={() => openDetail(q)}
-              style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1.5fr 1.5fr 1fr 1.2fr 1fr 130px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'grid', gridTemplateColumns: '60px 110px 1.5fr 1.5fr 1fr 1.2fr 130px 160px', gap: '0 16px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
@@ -582,8 +523,8 @@ export default function Quotes() {
         }
       </div>
 
-      {modal === 'new'    && <QuoteForm events={events} clients={clients} allDishes={allDishes} onSave={handleSave} onClose={() => setModal(null)} />}
-      {modal === 'edit'   && selected && <QuoteForm initial={selected} events={events} clients={clients} allDishes={allDishes} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
+      {modal === 'new'    && <QuoteForm events={events} clients={clients} onSave={handleSave} onClose={() => setModal(null)} />}
+      {modal === 'edit'   && selected && <QuoteForm initial={selected} events={events} clients={clients} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
       {modal === 'detail' && selected && <QuoteDetail quote={selected} onClose={() => { setModal(null); setSelected(null) }} onEdit={q => { setModal('edit'); setSelected(q) }} />}
       {confirmDelete && <ConfirmDialog title="¿Eliminar cotización?" message={`Esto eliminará la cotización COT-${String(confirmDelete.id).padStart(4,'0')} del evento "${confirmDelete.event?.name}". Esta acción no se puede deshacer.`} onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
     </div>

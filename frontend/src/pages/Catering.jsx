@@ -64,6 +64,7 @@ function DishPicker({ dishes, onSelect, onCancel }) {
   )
 }
 
+
 function ShoppingList({ eventId, guests, eventName, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -221,28 +222,29 @@ function ShoppingList({ eventId, guests, eventName, onClose }) {
           <button onClick={onClose} style={{ padding: '6px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>← Volver al menú</button>
         </div>
       </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {categorias.map(cat => (
-          <div key={cat} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ padding: '10px 16px', background: `${CATEGORIA_COLORS[cat] || '#6b7280'}12`, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: CATEGORIA_COLORS[cat] || '#6b7280' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: CATEGORIA_COLORS[cat] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{cat}</span>
-            </div>
-            <div>
-              {data.lista[cat].map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < data.lista[cat].length - 1 ? '1px solid var(--border-row)' : 'none' }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.nombre}</span>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: CATEGORIA_COLORS[cat] || 'var(--text-primary)' }}>
-                      {item.cantidadTotal % 1 === 0 ? item.cantidadTotal : item.cantidadTotal.toFixed(1)} {item.unidad}
-                    </span>
-                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{item.cantidadPorPersona} {item.unidad}/pers.</div>
+          {categorias.map(cat => (
+            <div key={cat} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '10px 16px', background: `${CATEGORIA_COLORS[cat] || '#6b7280'}12`, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: CATEGORIA_COLORS[cat] || '#6b7280' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: CATEGORIA_COLORS[cat] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{cat}</span>
+              </div>
+              <div>
+                {data.lista[cat].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: i < data.lista[cat].length - 1 ? '1px solid var(--border-row)' : 'none' }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{item.nombre}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: CATEGORIA_COLORS[cat] || 'var(--text-primary)' }}>
+                        {item.cantidadTotal % 1 === 0 ? item.cantidadTotal : item.cantidadTotal.toFixed(1)} {item.unidad}
+                      </span>
+                      <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{item.cantidadPorPersona} {item.unidad}/pers.</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   )

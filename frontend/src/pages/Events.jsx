@@ -674,14 +674,14 @@ export default function Events() {
 
       {/* Tabla */}
       <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 1fr 130px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
           <span>Evento</span><span>Cliente</span><span>Fecha</span><span>Venue</span><span>Pres. estimado</span><span>Estado</span><span/>
         </div>
         {filtered.length === 0
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
           : filtered.map((ev, i) => (
             <div key={ev.id} onClick={() => openDetail(ev)}
-              style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 1fr 130px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
+              style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >

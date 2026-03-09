@@ -1,14 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/hauslogo.png" />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+
+    <!-- ─── Viewport & IE ─── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Haus - Organización y producción de eventos</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- ─── SEO primario ─── -->
+    <title>Haus · Organización y producción de eventos</title>
+    <meta name="description" content="Plataforma interna de gestión de eventos, clientes, presupuestos y catering de Haus." />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- ─── Open Graph (compartir en Slack / WhatsApp) ─── -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Haus · Organización y producción de eventos" />
+    <meta property="og:description" content="Plataforma interna de gestión de eventos, clientes, presupuestos y catering." />
+    <meta property="og:image"       content="/hauslogo.png" />
+
+    <!-- ─── Favicon ─── -->
+    <link rel="icon"             type="image/png"     href="/hauslogo.png" />
+    <link rel="apple-touch-icon"                      href="/hauslogo.png" />
+
+    <!-- ─── Theme color (barra de navegación mobile) ─── -->
+    <meta name="theme-color" content="#09090f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f4f8" media="(prefers-color-scheme: light)" />
+
+    <!-- ─── Fuentes: preconnect primero, luego carga no bloqueante ─── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;900&display=swap"
+      />
+    </noscript>
+
+    <!-- ─── Estilos de pantalla de carga (evita FOUC / flash en blanco) ─── -->
+    <style>
+      html { background: #09090f; color: #e8e8f0; }
+
+      #splash {
+        position: fixed; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: #09090f;
+        z-index: 9999;
+        transition: opacity .35s ease;
+      }
+      #splash.hide { opacity: 0; pointer-events: none; }
+
+      .splash-logo {
+        width: 64px; height: 64px;
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: .4; transform: scale(.96); }
+        50%       { opacity: 1;  transform: scale(1);   }
+      }
+    </style>
+
+    <!-- ─── Restaura tema guardado antes de pintar (evita parpadeo) ─── -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t) document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
+
   <body>
+    <!-- Splash mientras React hidrata -->
+    <div id="splash" aria-hidden="true">
+      <img class="splash-logo" src="/hauslogo.png" alt="" width="64" height="64" />
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Oculta el splash en cuanto React monta el primer elemento -->
+    <script>
+      (function () {
+        var el = document.getElementById('splash');
+        if (!el) return;
+        var ro = new MutationObserver(function () {
+          var root = document.getElementById('root');
+          if (root && root.childElementCount > 0) {
+            el.classList.add('hide');
+            setTimeout(function () { el.remove(); }, 400);
+            ro.disconnect();
+          }
+        });
+        ro.observe(document.getElementById('root'), { childList: true });
+      })();
+    </script>
   </body>
 </html>
