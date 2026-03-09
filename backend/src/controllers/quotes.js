@@ -129,7 +129,10 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    await prisma.quote.delete({ where: { id: Number(req.params.id) } })
+    const id = Number(req.params.id)
+    // Borrar items antes de la cotización
+    await prisma.quoteItem.deleteMany({ where: { quoteId: id } })
+    await prisma.quote.delete({ where: { id } })
     res.json({ success: true })
   } catch (e) {
     if (e.code === 'P2025') return res.status(404).json({ error: 'Cotización no encontrada' })
