@@ -14,7 +14,7 @@ const calcQuoteTotal = (q) => {
   return catering + items
 }
 
-const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
   [...sections].sort((a, b) => {
     const ia = SECCION_ORDER.indexOf(a.nombre)
@@ -157,7 +157,7 @@ function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
               {/* ── Menú desde Catering → Menú (secciones del evento) ── */}
               {menuSections && menuSections.length > 0 && (() => {
                 const secColors = {
-                  'Entrada fría': '#3b82f6', 'Plato principal': '#8b5cf6',
+                  'Entrada': '#3b82f6', 'Plato principal': '#8b5cf6',
                   'Guarnición': '#22c55e', 'Bebidas': '#06b6d4',
                   'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280',
                 }

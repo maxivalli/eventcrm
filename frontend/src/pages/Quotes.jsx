@@ -9,7 +9,7 @@ const ESTADOS = ['Todos', 'Aprobado', 'Pendiente', 'Rechazado']
 const KINDS   = ['Todos', 'General', 'Catering']
 
 const SECCION_COLORS = {
-  'Entrada fría':    '#3b82f6',
+  'Entrada':    '#3b82f6',
   'Plato principal': '#8b5cf6',
   'Guarnición':      '#22c55e',
   'Bebidas':         '#06b6d4',
@@ -18,7 +18,7 @@ const SECCION_COLORS = {
   'Otros':           '#6b7280',
 }
 
-const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
   [...sections].sort((a, b) => {
     const ia = SECCION_ORDER.indexOf(a.nombre)

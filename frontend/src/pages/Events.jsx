@@ -13,7 +13,7 @@ const statusColors = {
   Propuesta:        "#f59e0b",
   Finalizado:       "#8b5cf6",
 };
-const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
   [...sections].sort((a, b) => {
     const ia = SECCION_ORDER.indexOf(a.nombre)

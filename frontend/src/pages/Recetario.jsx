@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
+import { Sparkles, Wand2 } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const SECCIONES   = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCIONES   = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const CATEGORIAS  = ['Carnes', 'Fiambres', 'Lácteos', 'Verduras', 'Frutas', 'Almacén', 'Bebidas', 'Panificados', 'Otros']
 const UNIDADES    = ['g', 'kg', 'ml', 'l', 'unidad', 'porción', 'rebanada', 'cucharada']
 
 const SECCION_COLORS = {
-  'Entrada fría':    '#3b82f6',
+  'Entrada':    '#3b82f6',
   'Plato principal': '#8b5cf6',
   'Guarnición':      '#22c55e',
   'Bebidas':         '#06b6d4',
@@ -71,12 +72,32 @@ function DishForm({ initial, onSave, onCancel }) {
         descripcion: initial.descripcion || '',
         ingredients: (initial.ingredients || []).map(i => ({ ...i, _id: i.id })),
       }
-    : { name: '', seccion: 'Entrada fría', descripcion: '', ingredients: [] }
+    : { name: '', seccion: 'Entrada', descripcion: '', ingredients: [] }
   )
-  const [errors, setErrors]     = useState({})
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError]   = useState('')
+  const [errors, setErrors]         = useState({})
+  const [aiLoading, setAiLoading]   = useState(false)
+  const [aiError, setAiError]       = useState('')
+  const [aiNameLoading, setAiNameLoading] = useState(false)
+  const [aiNameError, setAiNameError]     = useState('')
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+
+  const handleAISuggestName = async () => {
+    if (!form.name.trim()) { setAiNameError('Ingresá el nombre del plato primero'); return }
+    if (form.ingredients.length === 0) { setAiNameError('Agregá al menos un ingrediente primero'); return }
+    setAiNameLoading(true); setAiNameError('')
+    try {
+      const res = await api.post('/api/ai/suggest-dish-info', {
+        name: form.name.trim(),
+        ingredients: form.ingredients,
+        seccion: form.seccion,
+      })
+      if (res.data.descripcion) set('descripcion', res.data.descripcion)
+    } catch {
+      setAiNameError('No se pudo generar la descripción. Intentá de nuevo.')
+    } finally {
+      setAiNameLoading(false)
+    }
+  }
 
   const validate = () => {
     const e = {}
@@ -145,8 +166,28 @@ function DishForm({ initial, onSave, onCancel }) {
           </select>
         </div>
         <div style={{ gridColumn: '1/-1' }}>
-          <label style={lbl}>Descripción (opcional)</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+            <label style={{ ...lbl, marginBottom: 0 }}>Descripción para el menú</label>
+            <button
+              onClick={handleAISuggestName}
+              disabled={aiNameLoading || form.ingredients.length === 0}
+              title={form.ingredients.length === 0 ? 'Agregá ingredientes primero' : 'Generar descripción a partir del nombre e ingredientes'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 6,
+                cursor: (aiNameLoading || form.ingredients.length === 0) ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(201,168,76,0.4)',
+                background: (aiNameLoading || form.ingredients.length === 0) ? 'rgba(201,168,76,0.05)' : 'rgba(201,168,76,0.1)',
+                color: (aiNameLoading || form.ingredients.length === 0) ? 'var(--text-faint)' : 'var(--gold)',
+                fontSize: 11, fontWeight: 600,
+              }}
+            >
+              <Wand2 size={11} />
+              {aiNameLoading ? 'Generando...' : 'Generar con IA'}
+            </button>
+          </div>
           <input style={inp()} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} placeholder="Descripción libre del plato..." />
+          {aiNameError && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{aiNameError}</div>}
         </div>
       </div>
 
@@ -168,8 +209,8 @@ function DishForm({ initial, onSave, onCancel }) {
               fontSize: 12, fontWeight: 600, transition: 'all 0.2s',
             }}
           >
-            <span style={{ fontSize: 14 }}>{aiLoading ? '⏳' : '✨'}</span>
-            {aiLoading ? 'Generando...' : 'Sugerir con IA'}
+            {aiLoading ? <Sparkles size={13} /> : <Sparkles size={13} />}
+            {aiLoading ? 'Generando...' : 'Sugerir ingredientes con IA'}
           </button>
         </div>
 

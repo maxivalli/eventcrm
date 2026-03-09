@@ -3,7 +3,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const SECCIONES_SUGERIDAS = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCIONES_SUGERIDAS = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 
 const CATEGORIA_COLORS = {
   'Carnes':      '#ef4444',
@@ -18,7 +18,7 @@ const CATEGORIA_COLORS = {
 }
 
 const SECCION_COLORS = {
-  'Entrada fría':    '#3b82f6',
+  'Entrada':    '#3b82f6',
   'Plato principal': '#8b5cf6',
   'Guarnición':      '#22c55e',
   'Bebidas':         '#06b6d4',
@@ -27,7 +27,7 @@ const SECCION_COLORS = {
   'Otros':           '#6b7280',
 }
 
-const SECCION_ORDER = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
   [...sections].sort((a, b) => {
     const ia = SECCION_ORDER.indexOf(a.nombre)
@@ -406,7 +406,7 @@ export default function CateringPage() {
                 {loadingMenu && <div style={{ fontSize: 13, color: 'var(--text-faint)', padding: '20px 0' }}>Cargando menú...</div>}
 
                 {!loadingMenu && sections.length === 0 && !addingSection && (
-                  <div style={{ fontSize: 13, color: 'var(--text-faint)', padding: '20px 0' }}>El menú está vacío. Creá una sección para empezar (ej: "Entrada fría", "Plato principal").</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-faint)', padding: '20px 0' }}>El menú está vacío. Creá una sección para empezar (ej: "Entrada", "Plato principal").</div>
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
