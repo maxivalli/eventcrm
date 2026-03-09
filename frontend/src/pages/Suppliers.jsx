@@ -22,7 +22,7 @@ function Stars({ rating }) {
   )
 }
 
-const emptyForm = { name: '', category: 'Técnica', contact: '', phone: '', email: '', rating: 3, status: 'Activo' }
+const emptyForm = { name: '', category: 'Técnica', contact: '', phone: '', email: '', alias: '', rating: 3, status: 'Activo' }
 
 const inp  = (err) => ({ width: '100%', background: 'var(--bg-sunken)', border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' })
 const lbl  = { fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5, display: 'block' }
@@ -82,6 +82,10 @@ function SupplierForm({ initial, onSave, onClose }) {
             {errors.email && <div style={err_}>{errors.email}</div>}
           </div>
           <div style={{ gridColumn: '1/-1' }}>
+            <label style={lbl}>Alias de transferencia</label>
+            <input style={inp()} value={form.alias || ''} onChange={e => set('alias', e.target.value)} placeholder="ej: proveedor.empresa" />
+          </div>
+          <div style={{ gridColumn: '1/-1' }}>
             <label style={lbl}>Calificación</label>
             <div style={{ display: 'flex', gap: 8 }}>
               {[1, 2, 3, 4, 5].map(n => (
@@ -100,12 +104,76 @@ function SupplierForm({ initial, onSave, onClose }) {
 }
 
 function SupplierDetail({ supplier, onClose, onEdit }) {
+  const [copied, setCopied] = useState(false)
+
+  const openWhatsApp = () => {
+    let phone = (supplier.phone || '').replace(/[\s\-().+]/g, '')
+    if (phone.startsWith('0')) phone = phone.slice(1)
+    if (!phone.startsWith('54')) phone = '54' + phone
+    window.open(`https://wa.me/${phone}`, '_blank')
+  }
+
+  const openEmail = () => window.open(`mailto:${supplier.email}`, '_blank')
+
+  const copyAlias = () => {
+    navigator.clipboard.writeText(supplier.alias).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  const actionBtn = (onClick, label, icon, color, borderColor, bg) => (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '4px 10px', borderRadius: 7,
+      border: `1px solid ${borderColor}`, background: bg,
+      color, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+    }}>
+      {icon}
+      {label}
+    </button>
+  )
+
+  const iconWA = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
+    </svg>
+  )
+  const iconMail = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+      <polyline points="22,6 12,13 2,6"/>
+    </svg>
+  )
+  const iconCopy = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+    </svg>
+  )
+  const iconCheck = (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  )
+
+  const row = (label, content) => (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <span style={{ fontSize: 12, color: 'var(--text-label)', flexShrink: 0 }}>{label}</span>
+      {content}
+    </div>
+  )
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 440, maxWidth: '90vw' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 460, maxWidth: '90vw' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--bg-sunken)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{categoryIcons[supplier.category] || '📦'}</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--bg-sunken)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+              {categoryIcons[supplier.category] || '📦'}
+            </div>
             <div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--text-primary)' }}>{supplier.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 2 }}>{supplier.category}</div>
@@ -113,17 +181,44 @@ function SupplierDetail({ supplier, onClose, onEdit }) {
           </div>
           <Badge label={supplier.status} color={statusColors[supplier.status] || '#5a5a7a'} />
         </div>
+
         <div style={{ marginBottom: 16 }}><Stars rating={supplier.rating} /></div>
-        {[
-          { label: 'Contacto', value: supplier.contact },
-          { label: 'Teléfono', value: supplier.phone   },
-          { label: 'Email',    value: supplier.email   },
-        ].map(row => (
-          <div key={row.label} style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-label)' }}>{row.label}</span>
-            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{row.value}</span>
+
+        {/* Filas */}
+        {row('Contacto', <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{supplier.contact}</span>)}
+
+        {row('Teléfono',
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{supplier.phone}</span>
+            {actionBtn(openWhatsApp, 'WhatsApp', iconWA, '#25d366', 'rgba(37,211,102,0.3)', 'rgba(37,211,102,0.08)')}
           </div>
-        ))}
+        )}
+
+        {row('Email',
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', wordBreak: 'break-all' }}>{supplier.email}</span>
+            {actionBtn(openEmail, 'Correo', iconMail, '#3b82f6', 'rgba(59,130,246,0.3)', 'rgba(59,130,246,0.08)')}
+          </div>
+        )}
+
+        {supplier.alias && row('Alias transferencia',
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: 'monospace' }}>{supplier.alias}</span>
+            <button onClick={copyAlias} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
+              background: copied ? 'rgba(34,197,94,0.08)' : 'var(--bg-sunken)',
+              color: copied ? '#22c55e' : 'var(--text-muted)',
+              transition: 'all 0.2s', flexShrink: 0,
+            }}>
+              {copied ? iconCheck : iconCopy}
+              {copied ? 'Copiado' : 'Copiar'}
+            </button>
+          </div>
+        )}
+
+        {/* Acciones */}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cerrar</button>
           <button onClick={() => onEdit(supplier)} style={{ flex: 1, padding: 11, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Editar</button>

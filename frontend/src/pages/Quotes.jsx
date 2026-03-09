@@ -67,8 +67,15 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
     clientId: f.clientId, eventId: f.eventId, date: f.date, status: f.status, kind,
   }))
 
-  const setClient = (clientId) => { setForm(f => ({ ...f, clientId, eventId: '' })); setErrors(e => ({ ...e, clientId: '', eventId: '' })) }
+  const setClient = (clientId) => { setForm(f => ({ ...f, clientId, eventId: '', date: '' })); setErrors(e => ({ ...e, clientId: '', eventId: '' })) }
   const clientEvents = form.clientId ? events.filter(ev => String(ev.client?.id) === form.clientId) : []
+
+  const setEvent = (eventId) => {
+    const ev = clientEvents.find(e => String(e.id) === eventId)
+    const date = ev?.date ? ev.date.slice(0, 10) : ''
+    setForm(f => ({ ...f, eventId, date }))
+    setErrors(e => ({ ...e, eventId: '' }))
+  }
 
   const itemsTotal   = (form.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
   const cateringBase = form.kind === 'Catering' ? (Number(form.covers) || 0) * (Number(form.pricePerCover) || 0) : 0
@@ -115,15 +122,28 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
           </div>
           <div style={{ gridColumn: '1/-1' }}>
             <label style={{ ...lbl, color: !form.clientId ? 'var(--border-strong)' : 'var(--text-label)' }}>Evento *</label>
-            <select disabled={!form.clientId} style={{ ...inp(errors.eventId), opacity: !form.clientId ? 0.4 : 1, cursor: !form.clientId ? 'not-allowed' : 'pointer' }} value={form.eventId} onChange={e => set('eventId', e.target.value)}>
+            <select disabled={!form.clientId} style={{ ...inp(errors.eventId), opacity: !form.clientId ? 0.4 : 1, cursor: !form.clientId ? 'not-allowed' : 'pointer' }} value={form.eventId} onChange={e => setEvent(e.target.value)}>
               <option value="">{!form.clientId ? '— Primero seleccioná un cliente —' : clientEvents.length === 0 ? '— Este cliente no tiene eventos —' : '— Seleccionar evento —'}</option>
               {clientEvents.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
             </select>
             {errors.eventId && <div style={err_}>{errors.eventId}</div>}
           </div>
           <div>
-            <label style={lbl}>Fecha</label>
-            <input type="date" style={inp()} value={form.date} onChange={e => set('date', e.target.value)} />
+            <label style={lbl}>Fecha del evento</label>
+            <div style={{
+              ...inp(), display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              opacity: form.eventId ? 1 : 0.45, userSelect: 'none',
+              background: 'var(--bg-sunken)', cursor: 'default',
+            }}>
+              <span style={{ color: form.date ? 'var(--text-primary)' : 'var(--text-faint)', fontSize: 13 }}>
+                {form.date
+                  ? new Date(form.date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
+                  : '— Se completa al elegir evento —'}
+              </span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-faint)', flexShrink: 0 }}>
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
           </div>
           <div>
             <label style={lbl}>Estado</label>

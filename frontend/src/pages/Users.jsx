@@ -27,12 +27,12 @@ function UserForm({ initial, onSave, onClose }) {
   }
 
   const inputStyle = {
-    width: '100%', background: '#0d0d18', border: '1px solid #1e1e30',
-    borderRadius: 8, padding: '10px 14px', color: '#e8e8f0',
+    width: '100%', background: 'var(--bg-sunken)', border: '1px solid #1e1e30',
+    borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)',
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   }
   const labelStyle = {
-    fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase',
+    fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase',
     letterSpacing: 1, marginBottom: 5, display: 'block',
   }
 
@@ -42,7 +42,7 @@ function UserForm({ initial, onSave, onClose }) {
       zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#12121e', border: '1px solid #2a2a40',
+        background: 'var(--bg-surface)', border: '1px solid #2a2a40',
         borderRadius: 18, padding: 32, width: 440, maxWidth: '90vw',
       }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: '#c9a84c', marginBottom: 24 }}>
@@ -72,7 +72,7 @@ function UserForm({ initial, onSave, onClose }) {
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{
             flex: 1, padding: 11, border: '1px solid #1e1e30', borderRadius: 8,
-            background: 'transparent', color: '#5a5a7a', fontSize: 13, cursor: 'pointer',
+            background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
           }}>Cancelar</button>
           <button onClick={handleSave} style={{
             flex: 1, padding: 11, border: 'none', borderRadius: 8,
@@ -98,12 +98,12 @@ function PasswordForm({ user, onSave, onClose }) {
   }
 
   const inputStyle = {
-    width: '100%', background: '#0d0d18', border: '1px solid #1e1e30',
-    borderRadius: 8, padding: '10px 14px', color: '#e8e8f0',
+    width: '100%', background: 'var(--bg-sunken)', border: '1px solid #1e1e30',
+    borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)',
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   }
   const labelStyle = {
-    fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase',
+    fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase',
     letterSpacing: 1, marginBottom: 5, display: 'block',
   }
 
@@ -113,13 +113,13 @@ function PasswordForm({ user, onSave, onClose }) {
       zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#12121e', border: '1px solid #2a2a40',
+        background: 'var(--bg-surface)', border: '1px solid #2a2a40',
         borderRadius: 18, padding: 32, width: 400, maxWidth: '90vw',
       }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: '#c9a84c', marginBottom: 6 }}>
           Cambiar contraseña
         </div>
-        <div style={{ fontSize: 13, color: '#4a4a6a', marginBottom: 24 }}>{user.name}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-label)', marginBottom: 24 }}>{user.name}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={labelStyle}>Nueva contraseña</label>
@@ -138,7 +138,7 @@ function PasswordForm({ user, onSave, onClose }) {
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{
             flex: 1, padding: 11, border: '1px solid #1e1e30', borderRadius: 8,
-            background: 'transparent', color: '#5a5a7a', fontSize: 13, cursor: 'pointer',
+            background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
           }}>Cancelar</button>
           <button onClick={handleSave} style={{
             flex: 1, padding: 11, border: 'none', borderRadius: 8,
@@ -220,7 +220,7 @@ export default function Users() {
     new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4a4a6a', fontSize: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>
       Cargando usuarios...
     </div>
   )
@@ -231,8 +231,8 @@ export default function Users() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 300,
-          background: '#1e1e30', border: '1px solid #2a2a40', borderRadius: 10,
-          padding: '12px 20px', fontSize: 13, color: '#e8e8f0',
+          background: 'var(--border)', border: '1px solid #2a2a40', borderRadius: 10,
+          padding: '12px 20px', fontSize: 13, color: 'var(--text-primary)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>{toast}</div>
       )}
@@ -240,8 +240,8 @@ export default function Users() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: '#e8e8f0' }}>Usuarios</div>
-          <div style={{ fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>{users.length} usuarios registrados</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Usuarios</div>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{users.length} usuarios registrados</div>
         </div>
         <button onClick={() => setModal('new')} style={{
           background: 'linear-gradient(135deg, #c9a84c, #e8c97a)', border: 'none',
@@ -251,11 +251,11 @@ export default function Users() {
       </div>
 
       {/* Tabla */}
-      <div style={{ background: '#12121e', border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 140px',
           padding: '12px 20px', borderBottom: '1px solid #1e1e30',
-          fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1,
+          fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1,
         }}>
           <span>Nombre</span>
           <span>Email</span>
@@ -264,7 +264,7 @@ export default function Users() {
         </div>
 
         {users.length === 0 ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#3a3a5a', fontSize: 13 }}>
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>
             No hay usuarios registrados
           </div>
         ) : users.map((user, i) => (
@@ -274,7 +274,7 @@ export default function Users() {
             borderBottom: i < users.length - 1 ? '1px solid #1a1a28' : 'none',
             transition: 'background 0.15s',
           }}
-            onMouseEnter={e => e.currentTarget.style.background = '#16162a'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -285,27 +285,27 @@ export default function Users() {
                 fontSize: 13, fontWeight: 700, color: '#09090f',
               }}>{user.name.charAt(0).toUpperCase()}</div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0' }}>{user.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</div>
                 {user.id === currentUser.id && (
                   <Badge label='Vos' color='#c9a84c' />
                 )}
               </div>
             </div>
-            <div style={{ fontSize: 13, color: '#5a5a7a' }}>{user.email}</div>
-            <div style={{ fontSize: 12, color: '#3a3a5a' }}>{formatDate(user.createdAt)}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{user.email}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>{formatDate(user.createdAt)}</div>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button
                 onClick={() => { setSelected(user); setModal('edit') }}
                 style={{
                   padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
-                  background: 'transparent', color: '#5a5a7a', fontSize: 11, cursor: 'pointer',
+                  background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
                 }}
               >Editar</button>
               <button
                 onClick={() => { setSelected(user); setModal('password') }}
                 style={{
                   padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
-                  background: 'transparent', color: '#5a5a7a', fontSize: 11, cursor: 'pointer',
+                  background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
                 }}
               >🔑</button>
               {user.id !== currentUser.id && (

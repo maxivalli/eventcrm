@@ -23,7 +23,7 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, category, contact, phone, email, rating, status } = req.body
+    const { name, category, contact, phone, email, rating, status, alias } = req.body
 
     if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
     if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
@@ -31,7 +31,7 @@ exports.create = async (req, res) => {
     if (!phone?.trim())   return res.status(400).json({ error: 'El teléfono es requerido' })
 
     const supplier = await prisma.supplier.create({
-      data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status }
+      data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status, alias: alias?.trim() || null }
     })
     res.status(201).json(supplier)
   } catch (e) {
@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, category, contact, phone, email, rating, status } = req.body
+    const { name, category, contact, phone, email, rating, status, alias } = req.body
 
     if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
     if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
@@ -52,7 +52,7 @@ exports.update = async (req, res) => {
 
     const supplier = await prisma.supplier.update({
       where: { id: Number(req.params.id) },
-      data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status }
+      data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status, alias: alias?.trim() || null }
     })
     res.json(supplier)
   } catch (e) {

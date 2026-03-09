@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -82,10 +83,39 @@ function ClientForm({ initial, onSave, onClose }) {
   )
 }
 
+const eventStatusColors = {
+  'Confirmado':    '#22c55e',
+  'En producción': '#3b82f6',
+  'Propuesta':     '#f59e0b',
+  'Finalizado':    '#8b5cf6',
+}
+
 function ClientDetail({ client, onClose, onEdit }) {
+  const navigate = useNavigate()
+  const [events, setEvents]     = useState([])
+  const [loadingEvs, setLoadingEvs] = useState(false)
+
+  useEffect(() => {
+    if ((client._count?.events ?? 0) === 0) return
+    setLoadingEvs(true)
+    api.get(`/api/clients/${client.id}`)
+      .then(res => setEvents(res.data.events ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingEvs(false))
+  }, [client.id])
+
+  const goToEvent = (ev) => {
+    onClose()
+    navigate('/events', { state: { openEventId: ev.id } })
+  }
+
+  const hasEvents = (client._count?.events ?? 0) > 0
+
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 440, maxWidth: '90vw' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 500, maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto' }}>
+
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
           <div>
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--text-primary)' }}>{client.name}</div>
@@ -93,17 +123,93 @@ function ClientDetail({ client, onClose, onEdit }) {
           </div>
           <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
         </div>
-        {[
-          { label: 'Email',                  value: client.email },
-          { label: 'Teléfono',               value: client.phone },
-          { label: 'Fecha nac. / fundación', value: formatDate(client.birthdate) },
-          { label: 'Eventos',                value: `${client._count?.events ?? 0} eventos registrados` },
-        ].map(row => (
-          <div key={row.label} style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-label)' }}>{row.label}</span>
-            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{row.value}</span>
+
+        {/* Info básica */}
+        {/* Teléfono */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)', flexShrink: 0 }}>Teléfono</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{client.phone}</span>
+            <button onClick={() => {
+              let phone = (client.phone || '').replace(/[\s\-().+]/g, '')
+              if (phone.startsWith('0')) phone = phone.slice(1)
+              if (!phone.startsWith('54')) phone = '54' + phone
+              window.open(`https://wa.me/${phone}`, '_blank')
+            }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(37,211,102,0.3)', background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
+              </svg>
+              WhatsApp
+            </button>
           </div>
-        ))}
+        </div>
+        {/* Email */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)', flexShrink: 0 }}>Email</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', wordBreak: 'break-all' }}>{client.email}</span>
+            <button onClick={() => window.open(`mailto:${client.email}`, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#3b82f6', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Correo
+            </button>
+          </div>
+        </div>
+        {/* Fecha */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)' }}>Fecha nac. / fundación</span>
+          <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{formatDate(client.birthdate)}</span>
+        </div>
+
+        {/* Sección de eventos */}
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            Eventos · {client._count?.events ?? 0}
+          </div>
+
+          {!hasEvents && (
+            <div style={{ padding: '14px 0', fontSize: 13, color: 'var(--text-faint)', textAlign: 'center' }}>
+              Sin eventos registrados
+            </div>
+          )}
+
+          {hasEvents && loadingEvs && (
+            <div style={{ padding: '14px 0', fontSize: 13, color: 'var(--text-faint)', textAlign: 'center' }}>
+              Cargando eventos...
+            </div>
+          )}
+
+          {hasEvents && !loadingEvs && events.map(ev => (
+            <div
+              key={ev.id}
+              onClick={() => goToEvent(ev)}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-sunken)'}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '11px 14px', borderRadius: 10, marginBottom: 6,
+                background: 'var(--bg-sunken)', cursor: 'pointer',
+                border: '1px solid var(--border)', transition: 'background 0.15s',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{ev.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {formatDate(ev.date)} · {ev.venue}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <Badge label={ev.status} color={eventStatusColors[ev.status] || '#5a5a7a'} />
+                <span style={{ fontSize: 18, color: 'var(--text-faint)', lineHeight: 1 }}>›</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Acciones */}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cerrar</button>
           <button onClick={() => onEdit(client)} style={{ flex: 1, padding: 11, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Editar</button>

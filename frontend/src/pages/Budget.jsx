@@ -320,67 +320,56 @@ export default function Budget() {
   const eventQuotes     = eventId ? quotes.filter(q => String(q.eventId) === eventId) : []
   const hasData         = selectedClient && selectedEvent && eventQuotes.length > 0
 
+  // ── Genera el PDF y lo devuelve (sin descargarlo) ───────────────────────────
+  const buildPDF = async () => {
+    if (!window.jspdf) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        s.onload = resolve; s.onerror = reject
+        document.head.appendChild(s)
+      })
+    }
+    if (!window.html2canvas) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+        s.onload = resolve; s.onerror = reject
+        document.head.appendChild(s)
+      })
+    }
+    const { jsPDF } = window.jspdf
+    const element   = document.getElementById('budget-preview')
+    const canvas = await window.html2canvas(element, {
+      scale: 2, useCORS: true, backgroundColor: '#0e0e18',
+      logging: false, windowWidth: element.scrollWidth, windowHeight: element.scrollHeight,
+    })
+    const pdf   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pdfW  = pdf.internal.pageSize.getWidth()
+    const pdfH  = pdf.internal.pageSize.getHeight()
+    const imgW  = canvas.width
+    const imgH  = canvas.height
+    const ratio = pdfW / imgW
+    const pages = Math.ceil((imgH * ratio) / pdfH)
+    for (let page = 0; page < pages; page++) {
+      if (page > 0) pdf.addPage()
+      const srcY   = Math.round((page * pdfH) / ratio)
+      const srcH   = Math.round(Math.min(pdfH / ratio, imgH - srcY))
+      const slice  = document.createElement('canvas')
+      slice.width  = imgW
+      slice.height = srcH
+      slice.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH)
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pdfW, srcH * ratio)
+    }
+    const fileName = `Presupuesto_${selectedClient.name.replace(/\s+/g, '_')}_${selectedEvent.name.replace(/\s+/g, '_')}.pdf`
+    return { pdf, fileName }
+  }
+
   const handleGeneratePDF = async () => {
     if (!hasData) return
     setGenerating(true)
     try {
-      // Cargar librerías si no están
-      if (!window.jspdf) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-          s.onload = resolve; s.onerror = reject
-          document.head.appendChild(s)
-        })
-      }
-      if (!window.html2canvas) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
-          s.onload = resolve; s.onerror = reject
-          document.head.appendChild(s)
-        })
-      }
-
-      const { jsPDF } = window.jspdf
-      const element   = document.getElementById('budget-preview')
-
-      const canvas = await window.html2canvas(element, {
-        scale:           2,
-        useCORS:         true,
-        backgroundColor: '#0e0e18',
-        logging:         false,
-        windowWidth:     element.scrollWidth,
-        windowHeight:    element.scrollHeight,
-      })
-
-      const pdf      = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pdfW     = pdf.internal.pageSize.getWidth()
-      const pdfH     = pdf.internal.pageSize.getHeight()
-      const imgW     = canvas.width
-      const imgH     = canvas.height
-      const ratio    = pdfW / imgW        // px → mm
-      const totalMM  = imgH * ratio       // alto total en mm
-
-      const pageCount = Math.ceil(totalMM / pdfH)
-
-      for (let page = 0; page < pageCount; page++) {
-        if (page > 0) pdf.addPage()
-
-        // Recortamos el canvas para esta página
-        const srcY    = Math.round((page * pdfH) / ratio)
-        const srcH    = Math.round(Math.min(pdfH / ratio, imgH - srcY))
-        const sliceH  = srcH * ratio   // alto en mm de este slice
-
-        const slice   = document.createElement('canvas')
-        slice.width   = imgW
-        slice.height  = srcH
-        slice.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH)
-
-        pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pdfW, sliceH)
-      }
-
-      const fileName = `Presupuesto_${selectedClient.name.replace(/\s+/g, '_')}_${selectedEvent.name.replace(/\s+/g, '_')}.pdf`
+      const { pdf, fileName } = await buildPDF()
       pdf.save(fileName)
       toast('PDF generado correctamente', 'success')
     } catch (e) {
@@ -391,17 +380,87 @@ export default function Budget() {
     }
   }
 
+  const handleSendEmail = async () => {
+    if (!hasData) return
+    setGenerating(true)
+    try {
+      const { pdf, fileName } = await buildPDF()
+      // Descargar el PDF
+      pdf.save(fileName)
+      // Abrir cliente de correo con los datos del presupuesto
+      const total   = eventQuotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
+      const subject = encodeURIComponent(`Presupuesto HAUS — ${selectedEvent.name}`)
+      const body    = encodeURIComponent(
+`Estimado/a ${selectedClient.contact || selectedClient.name},
+
+Le enviamos el presupuesto correspondiente al evento "${selectedEvent.name}" con fecha ${formatDateLong(selectedEvent.date)} en ${selectedEvent.venue}.
+
+El total asciende a ${formatCurrency(total)}.
+
+El archivo PDF ya fue descargado en su carpeta de Descargas — por favor adjúntelo a este correo antes de enviarlo.
+
+Quedo a disposición para cualquier consulta.
+
+Saludos,
+Equipo HAUS — Organización y producción de eventos`)
+      setTimeout(() => {
+        window.open(`mailto:${selectedClient.email}?subject=${subject}&body=${body}`, '_blank')
+        toast(`PDF descargado · Adjuntá "${fileName}" al correo`, 'success')
+      }, 400)
+    } catch (e) {
+      console.error(e)
+      toast('Error al generar el PDF')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleSendWhatsApp = async () => {
+    if (!hasData) return
+    setGenerating(true)
+    try {
+      const { pdf, fileName } = await buildPDF()
+      // Descargar el PDF
+      pdf.save(fileName)
+      // Normalizar número argentino para wa.me
+      let phone = (selectedClient.phone || '').replace(/[\s\-().+]/g, '')
+      if (phone.startsWith('0')) phone = phone.slice(1)
+      if (!phone.startsWith('54')) phone = '54' + phone
+      const total = eventQuotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
+      const msg   = encodeURIComponent(
+`Hola ${selectedClient.contact || selectedClient.name} 👋
+
+Te compartimos el presupuesto de HAUS para el evento *${selectedEvent.name}* 📋
+
+📅 Fecha: ${formatDateLong(selectedEvent.date)}
+📍 Venue: ${selectedEvent.venue}
+👥 Invitados: ${selectedEvent.guests} personas
+💰 *Total: ${formatCurrency(total)}*
+
+Adjunto el PDF con el detalle completo. Cualquier consulta, estamos a tu disposición.`)
+      setTimeout(() => {
+        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank')
+        toast(`PDF descargado · Adjuntá "${fileName}" al mensaje de WhatsApp`, 'success')
+      }, 400)
+    } catch (e) {
+      console.error(e)
+      toast('Error al generar el PDF')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const inputStyle = (disabled) => ({
-    width: '100%', background: disabled ? '#0a0a14' : '#12121e',
-    border: '1px solid #1e1e30', borderRadius: 8,
-    padding: '10px 14px', color: disabled ? '#3a3a5a' : '#e8e8f0',
+    width: '100%', background: disabled ? 'var(--bg-base)' : 'var(--bg-sunken)',
+    border: '1px solid var(--border)', borderRadius: 8,
+    padding: '10px 14px', color: disabled ? 'var(--text-faint)' : 'var(--text-primary)',
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
   })
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#4a4a6a', fontSize: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>
       Cargando...
     </div>
   )
@@ -411,33 +470,84 @@ export default function Budget() {
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: '#e8e8f0' }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>
             Generar presupuesto
           </div>
-          <div style={{ fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>
             Seleccioná el cliente y evento para armar el PDF
           </div>
         </div>
-        <button
-          onClick={handleGeneratePDF}
-          disabled={!hasData || generating}
-          style={{
-            background: hasData && !generating ? 'linear-gradient(135deg, #c9a84c, #e8c97a)' : '#1e1e30',
-            border: 'none', borderRadius: 8, padding: '10px 24px',
-            color: hasData && !generating ? '#09090f' : '#3a3a5a',
-            fontSize: 13, fontWeight: 600,
-            cursor: hasData && !generating ? 'pointer' : 'not-allowed',
-            transition: 'all 0.2s',
-          }}
-        >
-          {generating ? 'Generando...' : '↓ Descargar PDF'}
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {/* WhatsApp */}
+          <button
+            onClick={handleSendWhatsApp}
+            disabled={!hasData || generating}
+            title={hasData ? `Enviar a ${selectedClient?.phone}` : ''}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: hasData && !generating ? 'rgba(37,211,102,0.12)' : 'var(--bg-sunken)',
+              border: `1px solid ${hasData && !generating ? 'rgba(37,211,102,0.35)' : 'var(--border)'}`,
+              borderRadius: 8, padding: '10px 18px',
+              color: hasData && !generating ? '#25d366' : 'var(--text-faint)',
+              fontSize: 13, fontWeight: 600,
+              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
+            </svg>
+            {generating ? 'Generando...' : 'WhatsApp'}
+          </button>
+          {/* Email */}
+          <button
+            onClick={handleSendEmail}
+            disabled={!hasData || generating}
+            title={hasData ? `Enviar a ${selectedClient?.email}` : ''}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: hasData && !generating ? 'rgba(59,130,246,0.12)' : 'var(--bg-sunken)',
+              border: `1px solid ${hasData && !generating ? 'rgba(59,130,246,0.35)' : 'var(--border)'}`,
+              borderRadius: 8, padding: '10px 18px',
+              color: hasData && !generating ? '#3b82f6' : 'var(--text-faint)',
+              fontSize: 13, fontWeight: 600,
+              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            {generating ? 'Generando...' : 'Correo'}
+          </button>
+          {/* PDF */}
+          <button
+            onClick={handleGeneratePDF}
+            disabled={!hasData || generating}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: hasData && !generating ? 'linear-gradient(135deg, var(--gold), var(--gold-light))' : 'var(--bg-sunken)',
+              border: 'none', borderRadius: 8, padding: '10px 20px',
+              color: hasData && !generating ? '#09090f' : 'var(--text-faint)',
+              fontSize: 13, fontWeight: 600,
+              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {generating ? 'Generando...' : 'Descargar PDF'}
+          </button>
+        </div>
       </div>
 
       {/* Selectores */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
         <div>
-          <label style={{ fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Cliente</label>
+          <label style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Cliente</label>
           <select
             style={inputStyle(false)}
             value={clientId}
@@ -448,7 +558,7 @@ export default function Budget() {
           </select>
         </div>
         <div>
-          <label style={{ fontSize: 11, color: !clientId ? '#2a2a40' : '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Evento</label>
+          <label style={{ fontSize: 11, color: !clientId ? 'var(--text-faint)' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Evento</label>
           <select
             disabled={!clientId}
             style={inputStyle(!clientId)}
@@ -466,7 +576,7 @@ export default function Budget() {
       {/* Aviso sin cotizaciones */}
       {eventId && eventQuotes.length === 0 && (
         <div style={{
-          background: '#12121e', border: '1px solid #2a1a0a', borderRadius: 12,
+          background: 'var(--bg-surface)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12,
           padding: '20px 24px', marginBottom: 32, color: '#f59e0b', fontSize: 13,
         }}>
           Este evento no tiene cotizaciones cargadas todavía. Agregá cotizaciones desde la sección Cotizaciones.
@@ -476,10 +586,10 @@ export default function Budget() {
       {/* Preview */}
       {hasData && (
         <div>
-          <div style={{ fontSize: 11, color: '#4a4a6a', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
             Vista previa
           </div>
-          <div style={{ border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 48px rgba(0,0,0,0.4)' }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 48px rgba(0,0,0,0.15)' }}>
             <BudgetPreview
               client={selectedClient}
               event={selectedEvent}
@@ -492,7 +602,7 @@ export default function Budget() {
 
       {/* Estado vacío */}
       {!eventId && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: '#2a2a40', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-faint)', gap: 12 }}>
           <div style={{ fontSize: 48 }}>◇</div>
           <div style={{ fontSize: 14 }}>Seleccioná un cliente y evento para ver la vista previa</div>
         </div>

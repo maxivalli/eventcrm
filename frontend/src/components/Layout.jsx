@@ -12,9 +12,9 @@ const tabs = [
   { path: '/clients',           label: 'Clientes',        Icon: Users },
   { path: '/events',            label: 'Eventos',         Icon: CalendarDays },
   { path: '/quotes',            label: 'Cotizaciones',    Icon: FileText },
+  { path: '/budget',            label: 'Presupuestos',    Icon: PieChart },
   { path: '/payments',          label: 'Cobros',          Icon: HandCoins },
   { path: '/supplier-payments', label: 'Pagos',           Icon: Wallet },
-  { path: '/budget',            label: 'Presupuestos',    Icon: PieChart },
   { path: '/suppliers',         label: 'Proveedores',     Icon: Truck },
   { path: '/users',             label: 'Usuarios',        Icon: UserCog },
 ]
