@@ -7,18 +7,38 @@ import {
 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 
-const tabs = [
-  { path: '/dashboard',         label: 'Dashboard',      Icon: LayoutDashboard },
-  { path: '/clients',           label: 'Clientes',        Icon: Users },
-  { path: '/events',            label: 'Eventos',         Icon: CalendarDays },
-  { path: '/quotes',            label: 'Cotizaciones',    Icon: FileText },
-  { path: '/budget',            label: 'Presupuestos',    Icon: PieChart },
-  { path: '/catering',          label: 'Catering',        Icon: UtensilsCrossed },
-  { path: '/recetario',         label: 'Recetario',       Icon: ChefHat },
-  { path: '/payments',          label: 'Cobros',          Icon: HandCoins },
-  { path: '/supplier-payments', label: 'Pagos',           Icon: Wallet },
-  { path: '/suppliers',         label: 'Proveedores',     Icon: Truck },
-  { path: '/users',             label: 'Usuarios',        Icon: UserCog },
+const NAV_GROUPS = [
+  {
+    label: null,
+    items: [
+      { path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+      { path: '/clients',   label: 'Clientes',  Icon: Users },
+      { path: '/events',    label: 'Eventos',   Icon: CalendarDays },
+      { path: '/quotes',    label: 'Cotizaciones', Icon: FileText },
+      { path: '/budget',    label: 'Presupuestos', Icon: PieChart },
+    ],
+  },
+  {
+    label: 'Catering',
+    items: [
+      { path: '/catering',  label: 'Menú',      Icon: UtensilsCrossed },
+      { path: '/recetario', label: 'Recetario', Icon: ChefHat },
+    ],
+  },
+  {
+    label: 'Finanzas',
+    items: [
+      { path: '/payments',          label: 'Cobros',      Icon: HandCoins },
+      { path: '/supplier-payments', label: 'Pagos',       Icon: Wallet },
+    ],
+  },
+  {
+    label: 'Configuración',
+    items: [
+      { path: '/suppliers', label: 'Proveedores', Icon: Truck },
+      { path: '/users',     label: 'Usuarios',    Icon: UserCog },
+    ],
+  },
 ]
 
 export default function Layout() {
@@ -68,20 +88,36 @@ export default function Layout() {
         </div>
 
         {/* Nav */}
-        <nav style={{ padding: '16px 8px', flex: 1, overflowY: 'auto' }}>
-          {tabs.map(({ path, label, Icon }) => (
-            <NavLink key={path} to={path} style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '11px 12px', borderRadius: 10, marginBottom: 4,
-              color: isActive ? 'var(--gold-light)' : 'var(--text-muted)',
-              background: isActive ? 'var(--gold-bg)' : 'transparent',
-              borderLeft: isActive ? '2px solid var(--gold)' : '2px solid transparent',
-              transition: 'all 0.2s',
-              textDecoration: 'none',
-            })}>
-              <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
-              {open && <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>}
-            </NavLink>
+        <nav style={{ padding: '12px 8px', flex: 1, overflowY: 'auto' }}>
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi} style={{ marginBottom: 4 }}>
+              {group.label && open && (
+                <div style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
+                  textTransform: 'uppercase', color: 'var(--text-faint)',
+                  padding: '10px 12px 4px',
+                }}>
+                  {group.label}
+                </div>
+              )}
+              {group.label && !open && gi > 0 && (
+                <div style={{ margin: '8px 12px', borderTop: '1px solid var(--border)' }} />
+              )}
+              {group.items.map(({ path, label, Icon }) => (
+                <NavLink key={path} to={path} style={({ isActive }) => ({
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+                  color: isActive ? 'var(--gold-light)' : 'var(--text-muted)',
+                  background: isActive ? 'var(--gold-bg)' : 'transparent',
+                  borderLeft: isActive ? '2px solid var(--gold)' : '2px solid transparent',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                })}>
+                  <Icon size={18} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+                  {open && <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
