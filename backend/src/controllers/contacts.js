@@ -62,3 +62,13 @@ exports.remove = async (req, res) => {
     res.status(500).json({ error: e.message })
   }
 }
+
+exports.removeAll = async (req, res) => {
+  try {
+    const { count } = await prisma.contact.deleteMany({})
+    res.json({ success: true, count })
+  } catch (e) {
+    console.error('Error removeAll contacts:', e)
+    res.status(500).json({ error: e.message })
+  }
+}

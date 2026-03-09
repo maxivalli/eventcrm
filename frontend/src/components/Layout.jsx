@@ -18,6 +18,7 @@ import {
   UtensilsCrossed,
   ChefHat,
   BookUser,
+  MessageCircle,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -50,8 +51,9 @@ const NAV_GROUPS = [
   {
     label: "Configuración",
     items: [
+      { path: "/whatsapp",  label: "WhatsApp",    Icon: MessageCircle },
       { path: "/suppliers", label: "Proveedores", Icon: Truck },
-      { path: "/users", label: "Usuarios", Icon: UserCog },
+      { path: "/users",     label: "Usuarios",    Icon: UserCog },
     ],
   },
 ];

@@ -87,7 +87,19 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
   const existingEmails = new Set(
     existingContacts.map(c => c.email?.toLowerCase()).filter(Boolean)
   )
-  const isDup = (c) => c.email && existingEmails.has(c.email.toLowerCase())
+  const existingNames = new Set(
+    existingContacts.map(c => c.name?.toLowerCase().trim()).filter(Boolean)
+  )
+  const existingPhones = new Set(
+    existingContacts.map(c => c.phone?.replace(/\D/g, '')).filter(Boolean)
+  )
+  const isDup = (c) => {
+    if (c.email && existingEmails.has(c.email.toLowerCase())) return true
+    const phone = c.phone?.replace(/\D/g, '')
+    if (phone && existingPhones.has(phone)) return true
+    if (c.name && existingNames.has(c.name.toLowerCase().trim())) return true
+    return false
+  }
 
   const handleFile = (file) => {
     if (!file) return
@@ -345,7 +357,9 @@ export default function Contacts() {
   const [search,        setSearch]        = useState('')
   const [modal,         setModal]         = useState(null)   // 'new' | 'edit'
   const [selected,      setSelected]      = useState(null)
+  const [checkedIds,    setCheckedIds]    = useState(new Set())
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [confirmDeleteSel, setConfirmDeleteSel] = useState(false)
   const [showVcf,       setShowVcf]       = useState(false)
 
   const fetchContacts = async () => {
@@ -360,6 +374,31 @@ export default function Contacts() {
     c.email.toLowerCase().includes(search.toLowerCase()) ||
     c.phone.includes(search)
   )
+
+  const filteredIds    = filtered.map(c => c.id)
+  const allChecked     = filteredIds.length > 0 && filteredIds.every(id => checkedIds.has(id))
+  const someChecked    = filteredIds.some(id => checkedIds.has(id))
+  const checkedCount   = [...checkedIds].filter(id => filteredIds.includes(id)).length
+
+  const toggleAll = () => {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      if (allChecked) filteredIds.forEach(id => next.delete(id))
+      else            filteredIds.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const toggleOne = (id) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // Limpiar selección cuando cambia el filtro
+  useEffect(() => { setCheckedIds(new Set()) }, [search])
 
   const handleSave = async (form) => {
     try {
@@ -379,9 +418,21 @@ export default function Contacts() {
     try {
       await api.delete(`/api/contacts/${confirmDelete.id}`)
       toast('Contacto eliminado', 'success')
+      setCheckedIds(prev => { const n = new Set(prev); n.delete(confirmDelete.id); return n })
       await fetchContacts()
     } catch (e) { toast(e.response?.data?.error || 'Error al eliminar') }
     finally { setConfirmDelete(null) }
+  }
+
+  const handleDeleteSelected = async () => {
+    const ids = [...checkedIds].filter(id => filteredIds.includes(id))
+    try {
+      await Promise.all(ids.map(id => api.delete(`/api/contacts/${id}`)))
+      toast(`${ids.length} contacto${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}`, 'success')
+      setCheckedIds(new Set())
+      await fetchContacts()
+    } catch (e) { toast('Error al eliminar contactos') }
+    finally { setConfirmDeleteSel(false) }
   }
 
   const handleVcfImport = async (toImport) => {
@@ -457,17 +508,47 @@ export default function Contacts() {
       ) : (
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
           {/* Cabecera */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 2fr 120px', gap: '0 16px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '40px 2fr 1.4fr 2fr 120px', gap: '0 16px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div
+                onClick={toggleAll}
+                style={{
+                  width: 18, height: 18, borderRadius: 5, cursor: 'pointer', flexShrink: 0,
+                  border: `2px solid ${allChecked ? '#ef4444' : someChecked ? '#ef4444' : 'var(--border-strong)'}`,
+                  background: allChecked ? '#ef4444' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {allChecked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                {!allChecked && someChecked && <span style={{ color: '#ef4444', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>−</span>}
+              </div>
+            </div>
             <span>Nombre</span><span>Teléfono</span><span>Email</span><span></span>
           </div>
 
           {filtered.map((c, i) => (
             <div
               key={c.id}
-              style={{ display: 'grid', gridTemplateColumns: '2fr 1.4fr 2fr 120px', gap: '0 16px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              style={{ display: 'grid', gridTemplateColumns: '40px 2fr 1.4fr 2fr 120px', gap: '0 16px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', transition: 'background 0.15s', background: checkedIds.has(c.id) ? 'rgba(239,68,68,0.04)' : 'transparent' }}
+              onMouseEnter={e => { if (!checkedIds.has(c.id)) e.currentTarget.style.background = 'var(--bg-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = checkedIds.has(c.id) ? 'rgba(239,68,68,0.04)' : 'transparent' }}
             >
+              {/* Checkbox */}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div
+                  onClick={() => toggleOne(c.id)}
+                  style={{
+                    width: 18, height: 18, borderRadius: 5, cursor: 'pointer', flexShrink: 0,
+                    border: `2px solid ${checkedIds.has(c.id) ? '#ef4444' : 'var(--border-strong)'}`,
+                    background: checkedIds.has(c.id) ? '#ef4444' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {checkedIds.has(c.id) && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                </div>
+              </div>
               {/* Nombre + avatar inicial */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
@@ -537,6 +618,32 @@ export default function Contacts() {
         </div>
       )}
 
+      {/* Barra flotante de selección */}
+      {checkedCount > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
+          borderRadius: 14, padding: '12px 20px', display: 'flex', alignItems: 'center',
+          gap: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100, whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            <strong style={{ color: 'var(--text-primary)' }}>{checkedCount}</strong> contacto{checkedCount !== 1 ? 's' : ''} seleccionado{checkedCount !== 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => setCheckedIds(new Set())}
+            style={{ fontSize: 12, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+          >
+            Deseleccionar
+          </button>
+          <button
+            onClick={() => setConfirmDeleteSel(true)}
+            style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            🗑 Eliminar {checkedCount}
+          </button>
+        </div>
+      )}
+
       {/* Modales */}
       {modal === 'new'  && <ContactForm onSave={handleSave} onClose={() => setModal(null)} />}
       {modal === 'edit' && selected && <ContactForm initial={selected} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
@@ -546,6 +653,14 @@ export default function Contacts() {
           message={`Se eliminará a "${confirmDelete.name}" de la agenda. Esta acción no se puede deshacer.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {confirmDeleteSel && (
+        <ConfirmDialog
+          title={`¿Eliminar ${checkedCount} contacto${checkedCount !== 1 ? 's' : ''}?`}
+          message={`Se eliminarán ${checkedCount} contacto${checkedCount !== 1 ? 's' : ''} de la agenda. Esta acción no se puede deshacer.`}
+          onConfirm={handleDeleteSelected}
+          onCancel={() => setConfirmDeleteSel(false)}
         />
       )}
       {showVcf && (

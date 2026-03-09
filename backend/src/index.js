@@ -19,6 +19,8 @@ const eventMenuRoutes  = require('./routes/eventMenu')
 const aiRoutes         = require('./routes/ai')
 const activityRoutes   = require('./routes/activity')
 const contactRoutes    = require('./routes/contacts')
+const whatsappRoutes   = require('./routes/whatsapp')
+const cron             = require('./services/cron')
 
 const app = express();
 
@@ -51,8 +53,15 @@ app.use('/api/menu',        authMiddleware, eventMenuRoutes)
 app.use('/api/ai',          authMiddleware, aiRoutes)
 app.use('/api/activity',    authMiddleware, activityRoutes)
 app.use('/api/contacts',   authMiddleware, contactRoutes)
+app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () =>
-  console.log(`Backend corriendo en http://localhost:${PORT}`),
-);
+app.listen(PORT, () => {
+  console.log(`Backend corriendo en http://localhost:${PORT}`)
+  // Iniciar cron solo si Evolution API está configurada
+  if (process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY) {
+    cron.start()
+  } else {
+    console.log('[WhatsApp Cron] Desactivado — configurá EVOLUTION_API_URL y EVOLUTION_API_KEY')
+  }
+})
