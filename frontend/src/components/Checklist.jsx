@@ -6,10 +6,13 @@ export default function Checklist({ eventId }) {
   const [loading, setLoading]   = useState(true)
   const [newTitle, setNewTitle] = useState('')
   const [adding, setAdding]     = useState(false)
+  const [error, setError]       = useState('')
+
+  const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 3500) }
 
   const fetchItems = async () => {
     try { const res = await api.get(`/api/checklist/event/${eventId}`); setItems(res.data) }
-    catch (e) { console.error(e) }
+    catch { showError('No se pudo cargar el checklist') }
     finally { setLoading(false) }
   }
   useEffect(() => { fetchItems() }, [eventId])
@@ -19,21 +22,21 @@ export default function Checklist({ eventId }) {
     try {
       await api.post('/api/checklist', { title: newTitle.trim(), eventId })
       setNewTitle(''); setAdding(false); await fetchItems()
-    } catch (e) { console.error(e) }
+    } catch { showError('No se pudo agregar la tarea') }
   }
 
   const handleToggle = async (id) => {
     try {
       const res = await api.put(`/api/checklist/${id}/toggle`)
       setItems(prev => prev.map(i => i.id === id ? res.data : i))
-    } catch (e) { console.error(e) }
+    } catch { showError('No se pudo actualizar la tarea') }
   }
 
   const handleDelete = async (id) => {
     try {
       await api.delete(`/api/checklist/${id}`)
       setItems(prev => prev.filter(i => i.id !== id))
-    } catch (e) { console.error(e) }
+    } catch { showError('No se pudo eliminar la tarea') }
   }
 
   const done  = items.filter(i => i.done).length
@@ -50,6 +53,12 @@ export default function Checklist({ eventId }) {
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-label)' }}>{done}/{total} completadas</div>
       </div>
+
+      {error && (
+        <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
 
       {total > 0 && (
         <div style={{ marginBottom: 16 }}>

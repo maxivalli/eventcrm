@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const fmt     = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 const fmtDate = (d) => new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -13,15 +15,16 @@ function Badge({ label, color }) {
 }
 
 export default function SupplierPayments() {
-  const [suppliers, setSuppliers]   = useState([])
-  const [events, setEvents]         = useState([])
-  const [supplierId, setSupplierId] = useState('')
-  const [eventId, setEventId]       = useState('')
-  const [data, setData]             = useState(null)
-  const [loading, setLoading]       = useState(false)
-  const [form, setForm]             = useState({ amount: '', date: today(), note: '', method: 'Efectivo', status: 'Pendiente' })
-  const [saving, setSaving]         = useState(false)
-  const [error, setError]           = useState('')
+  const toast = useToast()
+  const [suppliers, setSuppliers]         = useState([])
+  const [events, setEvents]               = useState([])
+  const [supplierId, setSupplierId]       = useState('')
+  const [eventId, setEventId]             = useState('')
+  const [data, setData]                   = useState(null)
+  const [loading, setLoading]             = useState(false)
+  const [form, setForm]                   = useState({ amount: '', date: today(), note: '', method: 'Efectivo', status: 'Pendiente' })
+  const [saving, setSaving]               = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
     Promise.all([api.get('/api/suppliers'), api.get('/api/events')])
@@ -34,31 +37,32 @@ export default function SupplierPayments() {
   async function fetchPayments() {
     setLoading(true)
     try { const r = await api.get(`/api/supplier-payments?supplierId=${supplierId}&eventId=${eventId}`); setData(r.data) }
-    catch { setError('No se pudo cargar la información') }
+    catch { toast('No se pudo cargar la información') }
     finally { setLoading(false) }
   }
 
   async function handleAdd() {
-    if (!form.amount || Number(form.amount) <= 0) { setError('El monto debe ser mayor a 0'); return }
-    setSaving(true); setError('')
+    if (!form.amount || Number(form.amount) <= 0) { toast('El monto debe ser mayor a 0'); return }
+    setSaving(true)
     try {
       await api.post('/api/supplier-payments', { supplierId: Number(supplierId), eventId: Number(eventId), amount: Number(form.amount), date: form.date, note: form.note, method: form.method, status: form.status })
       setForm({ amount: '', date: today(), note: '', method: 'Efectivo', status: 'Pendiente' })
       await fetchPayments()
-    } catch (e) { setError(e.response?.data?.error || 'Error al guardar') }
+      toast('Pago registrado', 'success')
+    } catch (e) { toast(e.response?.data?.error || 'Error al guardar') }
     finally { setSaving(false) }
   }
 
   async function handleToggleStatus(p) {
     const newStatus = p.status === 'Pagado' ? 'Pendiente' : 'Pagado'
     try { await api.patch(`/api/supplier-payments/${p.id}/status`, { status: newStatus }); await fetchPayments() }
-    catch { setError('No se pudo actualizar el estado') }
+    catch { toast('No se pudo actualizar el estado') }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('¿Eliminar este pago?')) return
-    try { await api.delete(`/api/supplier-payments/${id}`); await fetchPayments() }
-    catch { setError('No se pudo eliminar el pago') }
+  async function handleDelete() {
+    try { await api.delete(`/api/supplier-payments/${confirmDelete}`); await fetchPayments(); toast('Pago eliminado', 'success') }
+    catch { toast('No se pudo eliminar el pago') }
+    finally { setConfirmDelete(null) }
   }
 
   const selectedSupplier = suppliers.find(s => s.id === Number(supplierId))
@@ -123,7 +127,6 @@ export default function SupplierPayments() {
           {/* Formulario */}
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold-light)', marginBottom: 16 }}>Registrar pago</div>
-            {error && <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</div>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, alignItems: 'end' }}>
               {[
                 { label: 'Monto',  type: 'number', key: 'amount', placeholder: '0' },
@@ -181,7 +184,7 @@ export default function SupplierPayments() {
                         </td>
                         <td style={{ ...td, color: 'var(--text-muted)' }}>{p.note || '—'}</td>
                         <td style={{ ...td, textAlign: 'right' }}>
-                          <button onClick={() => handleDelete(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
+                          <button onClick={() => setConfirmDelete(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
                         </td>
                       </tr>
                     ))}
@@ -197,6 +200,15 @@ export default function SupplierPayments() {
         <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-faint)', fontSize: 14 }}>
           Seleccioná un proveedor y un evento para ver y registrar pagos
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="¿Eliminar pago?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

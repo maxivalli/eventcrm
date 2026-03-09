@@ -72,7 +72,7 @@ function MobileBlock() {
 }
 
 export default function App() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);

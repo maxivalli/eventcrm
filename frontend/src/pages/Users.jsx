@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 function Badge({ label, color }) {
   return (
@@ -152,17 +154,13 @@ function PasswordForm({ user, onSave, onClose }) {
 }
 
 export default function Users() {
-  const [users, setUsers]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [modal, setModal]     = useState(null)
-  const [selected, setSelected] = useState(null)
-  const [toast, setToast]     = useState('')
-  const currentUser           = JSON.parse(localStorage.getItem('user') || '{}')
-
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
-  }
+  const toast = useToast()
+  const [users, setUsers]               = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [modal, setModal]               = useState(null)
+  const [selected, setSelected]         = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
 
   const fetchUsers = async () => {
     try {
@@ -181,14 +179,14 @@ export default function Users() {
     try {
       if (modal === 'new') {
         await api.post('/api/users', form)
-        showToast('Usuario creado')
+        toast('Usuario creado', 'success')
       } else {
         await api.put(`/api/users/${selected.id}`, form)
-        showToast('Usuario actualizado')
+        toast('Usuario actualizado', 'success')
       }
       await fetchUsers()
     } catch (e) {
-      showToast(e.response?.data?.error || 'Error al guardar')
+      toast(e.response?.data?.error || 'Error al guardar')
     }
     setModal(null)
     setSelected(null)
@@ -197,22 +195,23 @@ export default function Users() {
   const handlePassword = async (password) => {
     try {
       await api.put(`/api/users/${selected.id}/password`, { password })
-      showToast('Contraseña actualizada')
+      toast('Contraseña actualizada', 'success')
     } catch (e) {
-      showToast(e.response?.data?.error || 'Error al cambiar contraseña')
+      toast(e.response?.data?.error || 'Error al cambiar contraseña')
     }
     setModal(null)
     setSelected(null)
   }
 
-  const handleDelete = async (user) => {
-    if (!confirm(`¿Eliminar a ${user.name}?`)) return
+  const handleDelete = async () => {
     try {
-      await api.delete(`/api/users/${user.id}`)
-      showToast('Usuario eliminado')
+      await api.delete(`/api/users/${confirmDelete.id}`)
+      toast('Usuario eliminado', 'success')
       await fetchUsers()
     } catch (e) {
-      showToast(e.response?.data?.error || 'Error al eliminar')
+      toast(e.response?.data?.error || 'Error al eliminar')
+    } finally {
+      setConfirmDelete(null)
     }
   }
 
@@ -227,16 +226,6 @@ export default function Users() {
 
   return (
     <div>
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 300,
-          background: 'var(--border)', border: '1px solid #2a2a40', borderRadius: 10,
-          padding: '12px 20px', fontSize: 13, color: 'var(--text-primary)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-        }}>{toast}</div>
-      )}
-
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
@@ -310,7 +299,7 @@ export default function Users() {
               >🔑</button>
               {user.id !== currentUser.id && (
                 <button
-                  onClick={() => handleDelete(user)}
+                  onClick={() => setConfirmDelete(user)}
                   style={{
                     padding: '6px 10px', border: '1px solid #2a1a1a', borderRadius: 6,
                     background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontSize: 11, cursor: 'pointer',
@@ -331,6 +320,15 @@ export default function Users() {
       )}
       {modal === 'password' && selected && (
         <PasswordForm user={selected} onSave={handlePassword} onClose={() => { setModal(null); setSelected(null) }} />
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="¿Eliminar usuario?"
+          message={`Esto eliminará a "${confirmDelete.name}" permanentemente.`}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

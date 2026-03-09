@@ -32,6 +32,7 @@ function ClientForm({ initial, onSave, onClose }) {
     if (!form.name.trim())    e.name    = 'Requerido'
     if (!form.contact.trim()) e.contact = 'Requerido'
     if (!form.email.trim())   e.email   = 'Requerido'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Email inválido'
     if (!form.phone.trim())   e.phone   = 'Requerido'
     setErrors(e); return Object.keys(e).length === 0
   }
@@ -85,7 +86,6 @@ function ClientForm({ initial, onSave, onClose }) {
 
 const eventStatusColors = {
   'Confirmado':    '#22c55e',
-  'En producción': '#3b82f6',
   'Propuesta':     '#f59e0b',
   'Finalizado':    '#8b5cf6',
 }

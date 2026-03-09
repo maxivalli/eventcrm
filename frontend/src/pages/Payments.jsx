@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const fmt     = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 const fmtDate = (d) => new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const today   = () => new Date().toISOString().split('T')[0]
 
 export default function Payments() {
-  const [clients, setClients]   = useState([])
-  const [events, setEvents]     = useState([])
-  const [clientId, setClientId] = useState('')
-  const [eventId, setEventId]   = useState('')
-  const [data, setData]         = useState(null)
-  const [loading, setLoading]   = useState(false)
-  const [form, setForm]         = useState({ amount: '', date: today(), note: '' })
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState('')
+  const toast = useToast()
+  const [clients, setClients]         = useState([])
+  const [events, setEvents]           = useState([])
+  const [clientId, setClientId]       = useState('')
+  const [eventId, setEventId]         = useState('')
+  const [data, setData]               = useState(null)
+  const [loading, setLoading]         = useState(false)
+  const [form, setForm]               = useState({ amount: '', date: today(), note: '' })
+  const [saving, setSaving]           = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => { api.get('/api/clients').then(r => setClients(r.data)).catch(() => {}) }, [])
 
@@ -29,25 +32,26 @@ export default function Payments() {
   async function fetchPayments() {
     setLoading(true)
     try { const r = await api.get(`/api/payments?eventId=${eventId}`); setData(r.data) }
-    catch { setError('No se pudo cargar la información') }
+    catch { toast('No se pudo cargar la información') }
     finally { setLoading(false) }
   }
 
   async function handleAddPayment() {
-    if (!form.amount || Number(form.amount) <= 0) { setError('El monto debe ser mayor a 0'); return }
-    setSaving(true); setError('')
+    if (!form.amount || Number(form.amount) <= 0) { toast('El monto debe ser mayor a 0'); return }
+    setSaving(true)
     try {
       await api.post('/api/payments', { eventId: Number(eventId), ...form, amount: Number(form.amount) })
       setForm({ amount: '', date: today(), note: '' })
       await fetchPayments()
-    } catch (e) { setError(e.response?.data?.error || 'Error al guardar') }
+      toast('Cobro registrado', 'success')
+    } catch (e) { toast(e.response?.data?.error || 'Error al guardar') }
     finally { setSaving(false) }
   }
 
-  async function handleDelete(id) {
-    if (!confirm('¿Eliminar este pago?')) return
-    try { await api.delete(`/api/payments/${id}`); await fetchPayments() }
-    catch { setError('No se pudo eliminar el pago') }
+  async function handleDelete() {
+    try { await api.delete(`/api/payments/${confirmDelete}`); await fetchPayments(); toast('Cobro eliminado', 'success') }
+    catch { toast('No se pudo eliminar el cobro') }
+    finally { setConfirmDelete(null) }
   }
 
   const sel = { background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 10, color: 'var(--text-primary)', padding: '10px 14px', fontSize: 14, minWidth: 220, cursor: 'pointer', outline: 'none' }
@@ -92,7 +96,6 @@ export default function Payments() {
           {/* Formulario */}
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gold-light)', marginBottom: 16 }}>Registrar entrega de dinero</div>
-            {error && <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</div>}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               {[
                 { label: 'Monto', type: 'number', key: 'amount', placeholder: '0', style: {} },
@@ -132,7 +135,7 @@ export default function Payments() {
                         <td style={{ ...td, color: '#22c55e', fontWeight: 600 }}>{fmt(p.amount)}</td>
                         <td style={{ ...td, color: 'var(--text-muted)' }}>{p.note || '—'}</td>
                         <td style={{ ...td, textAlign: 'right' }}>
-                          <button onClick={() => handleDelete(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
+                          <button onClick={() => setConfirmDelete(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
                         </td>
                       </tr>
                     ))}
@@ -148,6 +151,15 @@ export default function Payments() {
         <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-faint)', fontSize: 14 }}>
           Seleccioná un cliente y un evento para ver el estado de cuenta
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="¿Eliminar cobro?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

@@ -10,7 +10,6 @@ import {
 
 const statusColors = {
   'Confirmado':    '#22c55e',
-  'En producción': '#3b82f6',
   'Propuesta':     '#f59e0b',
   'Finalizado':    '#8b5cf6',
   'Aprobado':      '#22c55e',
