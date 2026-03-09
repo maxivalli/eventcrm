@@ -13,6 +13,7 @@ import SupplierPayments from "./pages/SupplierPayments";
 import Users from "./pages/Users";
 import CateringPage from "./pages/Catering";
 import Recetario from "./pages/Recetario";
+import Contacts from "./pages/Contacts";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -106,6 +107,7 @@ export default function App() {
           <Route path="supplier-payments" element={<SupplierPayments />} />
           <Route path="catering" element={<CateringPage />} />
           <Route path="recetario" element={<Recetario />} />
+          <Route path="contacts" element={<Contacts />} />
         </Route>
       </Routes>
     </BrowserRouter>

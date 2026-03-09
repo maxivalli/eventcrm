@@ -128,4 +128,79 @@ Reglas:
   }
 })
 
+
+router.post('/generate-schedule', async (req, res) => {
+  const { type, guests, venue, date, time, name } = req.body
+
+  if (!type) return res.status(400).json({ error: 'El tipo de evento es requerido' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const prompt = `Sos un coordinador de eventos profesional en Argentina con más de 10 años de experiencia organizando eventos sociales y corporativos.
+
+Generá un cronograma detallado para el siguiente evento:
+- Nombre: ${name || 'Sin nombre'}
+- Tipo: ${type}
+- Invitados: ${guests || 'No especificado'}
+- Venue: ${venue || 'No especificado'}
+- Fecha: ${date || 'No especificada'}
+- Hora de inicio: ${time || '20:00'}
+
+El cronograma debe cubrir desde la preparación del venue (horas antes) hasta el cierre del evento.
+Incluí momentos clave: llegada del equipo, montaje, llegada de invitados, recepción, cada momento gastronómico, entretenimiento, momentos especiales y cierre.
+Adaptá el cronograma al tipo de evento (casamiento, corporativo, cumpleaños, etc.).
+Usá la hora de inicio indicada como referencia para calcular todos los horarios.
+Incluí entre 10 y 18 ítems según la complejidad.
+
+Respondé ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown, con este formato exacto:
+[
+  {
+    "hora": "HH:MM",
+    "titulo": "Nombre corto del momento",
+    "descripcion": "Descripción breve de lo que ocurre",
+    "categoria": "Preparación|Recepción|Gastronomía|Entretenimiento|Protocolo|Cierre"
+  }
+]
+
+Reglas:
+- Solo devolvé el array JSON, nada más
+- hora debe estar en formato HH:MM (24hs)
+- Los ítems deben estar ordenados cronológicamente
+- Usá categorías del listado exactamente como están escritas
+- Las descripciones deben ser concretas y útiles para el coordinador`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+    }
+
+    const text = data.content?.map(b => b.text || '').join('') || ''
+    const clean = text.replace(/```json|```/g, '').trim()
+    const schedule = JSON.parse(clean)
+
+    if (!Array.isArray(schedule)) throw new Error('Respuesta inválida')
+
+    res.json({ schedule })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo generar el cronograma' })
+  }
+})
+
 module.exports = router

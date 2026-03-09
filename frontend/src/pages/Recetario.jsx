@@ -1,651 +1,361 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-const formatCurrency = (n) =>
-  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+const SECCIONES   = ['Entrada fría', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+const CATEGORIAS  = ['Carnes', 'Fiambres', 'Lácteos', 'Verduras', 'Frutas', 'Almacén', 'Bebidas', 'Panificados', 'Otros']
+const UNIDADES    = ['g', 'kg', 'ml', 'l', 'unidad', 'porción', 'rebanada', 'cucharada']
 
-const formatDateLong = (str) =>
-  new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-
-const calcQuoteTotal = (q) => {
-  const items   = (q.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
-  const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
-  return catering + items
+const SECCION_COLORS = {
+  'Entrada fría':    '#3b82f6',
+  'Plato principal': '#8b5cf6',
+  'Guarnición':      '#22c55e',
+  'Bebidas':         '#06b6d4',
+  'Postre':          '#ec4899',
+  'Trasnoche':       '#f97316',
+  'Otros':           '#6b7280',
 }
 
-// ── Preview component ────────────────────────────────────────────────────────
-function BudgetPreview({ client, event, quotes, menuSections, emissionDate }) {
-  const generalQuotes = quotes.filter(q => q.kind === 'General')
-  const cateringQuotes = quotes.filter(q => q.kind === 'Catering')
-  const grandTotal    = quotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
-
-  const col = {
-    gold:      '#b8972a',
-    goldLight: '#d4ae4a',
-    dark:      '#0e0e18',
-    card:      '#13131f',
-    border:    '#1e1e2e',
-    text:      '#e2e2ee',
-    muted:     '#6a6a8a',
-    faint:     '#1a1a2a',
-  }
-
-  const sectionTitle = (label, color = col.gold) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-      <div style={{ height: 1, flex: 1, background: color + '40' }} />
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color }}>{label}</span>
-      <div style={{ height: 1, flex: 1, background: color + '40' }} />
-    </div>
-  )
-
-  return (
-    <div id="budget-preview" style={{
-      background: col.dark,
-      color: col.text,
-      fontFamily: "'Georgia', 'Times New Roman', serif",
-      padding: '48px 52px',
-      maxWidth: 760,
-      margin: '0 auto',
-    }}>
-
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 40, paddingBottom: 32, borderBottom: `1px solid ${col.border}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontFamily: "'Georgia', serif", fontSize: 26, fontWeight: 700, color: col.goldLight, letterSpacing: 1, marginBottom: 4 }}>
-              HAUS
-            </div>
-            <div style={{ fontSize: 11, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>
-              Organización y producción de eventos
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>Presupuesto</div>
-            <div style={{ fontSize: 11, color: col.goldLight }}>{formatDateLong(emissionDate)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Cliente + Evento ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 40 }}>
-        <div style={{ background: col.faint, borderRadius: 10, padding: '20px 22px', border: `1px solid ${col.border}` }}>
-          <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Preparado para</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: col.text, marginBottom: 6 }}>{client.name}</div>
-          {client.contact && <div style={{ fontSize: 12, color: col.muted, marginBottom: 3 }}>{client.contact}</div>}
-          {client.email   && <div style={{ fontSize: 12, color: col.muted, marginBottom: 3 }}>{client.email}</div>}
-          {client.phone   && <div style={{ fontSize: 12, color: col.muted }}>{client.phone}</div>}
-        </div>
-        <div style={{ background: col.faint, borderRadius: 10, padding: '20px 22px', border: `1px solid ${col.border}` }}>
-          <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Evento</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: col.text, marginBottom: 10 }}>{event.name}</div>
-          {[
-            { label: 'Fecha',     value: formatDateLong(event.date)    },
-            { label: 'Venue',     value: event.venue                   },
-            { label: 'Invitados', value: `${event.guests} personas`    },
-          ].map(r => (
-            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 11, color: col.muted }}>{r.label}</span>
-              <span style={{ fontSize: 11, color: col.text }}>{r.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Cotizaciones Generales ── */}
-      {generalQuotes.length > 0 && (
-        <div style={{ marginBottom: 36 }}>
-          {sectionTitle('Servicios incluidos')}
-          {generalQuotes.map(q => (
-            <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
-              <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}` }}>
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                  background: col.faint, padding: '10px 16px',
-                  fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase',
-                }}>
-                  <span>Descripción</span>
-                  <span style={{ textAlign: 'center' }}>Cant.</span>
-                  <span style={{ textAlign: 'right' }}>Precio unit.</span>
-                  <span style={{ textAlign: 'right' }}>Subtotal</span>
-                </div>
-                {q.items.map((item, i) => (
-                  <div key={item.id} style={{
-                    display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                    padding: '12px 16px', alignItems: 'center',
-                    borderTop: `1px solid ${col.border}`,
-                    background: i % 2 === 0 ? 'transparent' : col.faint + '80',
-                  }}>
-                    <span style={{ fontSize: 13, color: col.text }}>{item.description}</span>
-                    <span style={{ fontSize: 12, color: col.muted, textAlign: 'center' }}>{item.quantity}</span>
-                    <span style={{ fontSize: 12, color: col.muted, textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</span>
-                    <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.quantity * item.unitPrice)}</span>
-                  </div>
-                ))}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 16px', borderTop: `1px solid ${col.border}`,
-                  background: col.faint,
-                }}>
-                  <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Subtotal servicios</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: col.goldLight }}>{formatCurrency(calcQuoteTotal(q))}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Cotizaciones Catering ── */}
-      {cateringQuotes.length > 0 && (
-        <div style={{ marginBottom: 36 }}>
-          {sectionTitle('Catering', '#f97316')}
-          {cateringQuotes.map(q => (
-            <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
-
-              {/* ── Menú desde Catering → Menú (secciones del evento) ── */}
-              {menuSections && menuSections.length > 0 && (() => {
-                const secColors = {
-                  'Entrada fría': '#3b82f6', 'Plato principal': '#8b5cf6',
-                  'Guarnición': '#22c55e', 'Bebidas': '#06b6d4',
-                  'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280',
-                }
-                const totalPlatos = menuSections.reduce((acc, s) => acc + s.items.length, 0)
-                return (
-                  <div style={{ background: col.faint, borderRadius: 8, border: `1px solid ${col.border}`, marginBottom: 14, overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Menú</div>
-                      <div style={{ fontSize: 10, color: col.muted }}>{totalPlatos} plato{totalPlatos !== 1 ? 's' : ''}</div>
-                    </div>
-                    {menuSections.map((section, si) => (
-                      <div key={section.id} style={{ borderTop: si > 0 ? `1px solid ${col.border}` : 'none' }}>
-                        {/* Cabecera de sección */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px 6px', background: col.dark + '60' }}>
-                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: secColors[section.nombre] || col.muted, flexShrink: 0 }} />
-                          <span style={{ fontSize: 9, fontWeight: 700, color: secColors[section.nombre] || col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{section.nombre}</span>
-                        </div>
-                        {/* Platos de la sección */}
-                        {section.items.map((item, di) => (
-                          <div key={item.id || di} style={{ padding: '8px 18px 8px 32px', borderTop: `1px solid ${col.border}20`, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, color: col.text, fontWeight: 500 }}>
-                                {item.dish?.name}
-                              </div>
-                              {item.dish?.descripcion && (
-                                <div style={{ fontSize: 11, color: col.muted, lineHeight: 1.5, marginTop: 2 }}>{item.dish.descripcion}</div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )
-              })()}
-
-              <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                  background: col.faint, padding: '10px 16px',
-                  fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase',
-                }}>
-                  <span>Descripción</span>
-                  <span style={{ textAlign: 'center' }}>Cant.</span>
-                  <span style={{ textAlign: 'right' }}>Precio unit.</span>
-                  <span style={{ textAlign: 'right' }}>Subtotal</span>
-                </div>
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                  padding: '14px 16px', borderTop: `1px solid ${col.border}`,
-                }}>
-                  <span style={{ fontSize: 13, color: col.text }}>Servicio de catering por persona</span>
-                  <span style={{ fontSize: 12, color: col.muted, textAlign: 'center' }}>{q.covers}</span>
-                  <span style={{ fontSize: 12, color: col.muted, textAlign: 'right' }}>{formatCurrency(q.pricePerCover)}</span>
-                  <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{formatCurrency((q.covers || 0) * (q.pricePerCover || 0))}</span>
-                </div>
-              </div>
-
-              {q.items.length > 0 && (
-                <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${col.border}`, marginBottom: 14 }}>
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                    background: col.faint, padding: '10px 16px',
-                    fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase',
-                  }}>
-                    <span>Servicios adicionales</span>
-                    <span style={{ textAlign: 'center' }}>Cant.</span>
-                    <span style={{ textAlign: 'right' }}>Precio unit.</span>
-                    <span style={{ textAlign: 'right' }}>Subtotal</span>
-                  </div>
-                  {q.items.map((item, i) => (
-                    <div key={item.id} style={{
-                      display: 'grid', gridTemplateColumns: '3fr 60px 130px 130px',
-                      padding: '11px 16px', borderTop: `1px solid ${col.border}`,
-                      alignItems: 'center',
-                      background: i % 2 === 0 ? 'transparent' : col.faint + '80',
-                    }}>
-                      <span style={{ fontSize: 13, color: col.text }}>{item.description}</span>
-                      <span style={{ fontSize: 12, color: col.muted, textAlign: 'center' }}>{item.quantity}</span>
-                      <span style={{ fontSize: 12, color: col.muted, textAlign: 'right' }}>{formatCurrency(item.unitPrice)}</span>
-                      <span style={{ fontSize: 13, color: col.text, textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.quantity * item.unitPrice)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 16px', borderRadius: 8,
-                background: col.faint, border: `1px solid ${col.border}`,
-              }}>
-                <span style={{ fontSize: 10, color: col.muted, letterSpacing: 1, textTransform: 'uppercase' }}>Subtotal catering</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#f97316' }}>{formatCurrency(calcQuoteTotal(q))}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Total general ── */}
-      <div style={{
-        pageBreakInside: 'avoid',
-        marginBottom: 32,
-        borderRadius: 12,
-        overflow: 'hidden',
-        border: `1px solid ${col.gold}40`,
-      }}>
-        {/* Desglose por sección */}
-        {generalQuotes.length > 0 && cateringQuotes.length > 0 && (
-          <div style={{ background: col.faint, padding: '14px 22px', borderBottom: `1px solid ${col.border}` }}>
-            {generalQuotes.map(q => (
-              <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: col.muted }}>Servicios</span>
-                <span style={{ fontSize: 12, color: col.text }}>{formatCurrency(calcQuoteTotal(q))}</span>
-              </div>
-            ))}
-            {cateringQuotes.map(q => (
-              <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: col.muted }}>Catering</span>
-                <span style={{ fontSize: 12, color: col.text }}>{formatCurrency(calcQuoteTotal(q))}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* Total */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '18px 22px',
-          background: `linear-gradient(135deg, ${col.gold}18, ${col.gold}08)`,
-        }}>
-          <div>
-            <div style={{ fontSize: 10, color: col.muted, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-              Total general
-            </div>
-            <div style={{ fontSize: 11, color: col.muted }}>Incluye todos los servicios</div>
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: col.goldLight }}>
-            {formatCurrency(grandTotal)}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Nota final ── */}
-      <div style={{
-        pageBreakInside: 'avoid',
-        background: col.faint, borderRadius: 10, padding: '18px 22px',
-        border: `1px solid ${col.border}`, marginBottom: 36,
-        fontSize: 12, color: col.muted, lineHeight: 1.7, fontStyle: 'italic',
-      }}>
-        Este presupuesto tiene validez de 30 días a partir de la fecha de emisión. Los valores indicados son en pesos argentinos e incluyen IVA.
-      </div>
-
-      {/* ── Footer ── */}
-      <div style={{
-        pageBreakInside: 'avoid',
-        borderTop: `1px solid ${col.border}`, paddingTop: 20,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div style={{ fontSize: 11, color: col.muted }}>HAUS — Organización y producción de eventos</div>
-        <div style={{ fontSize: 11, color: col.muted }}>{formatDateLong(emissionDate)}</div>
-      </div>
-
-    </div>
-  )
+const inp = (err) => ({
+  width: '100%', background: 'var(--bg-sunken)',
+  border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`,
+  borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)',
+  fontSize: 13, outline: 'none', boxSizing: 'border-box',
+})
+const inpS = {
+  background: 'var(--bg-base)', border: '1px solid var(--border)',
+  borderRadius: 6, padding: '7px 10px', color: 'var(--text-primary)',
+  fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box',
 }
+const lbl = { fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5, display: 'block' }
 
-// ── Página principal ─────────────────────────────────────────────────────────
-export default function Budget() {
-  const toast = useToast()
-  const [clients,    setClients]    = useState([])
-  const [events,     setEvents]     = useState([])
-  const [quotes,     setQuotes]     = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [clientId,      setClientId]     = useState('')
-  const [eventId,       setEventId]      = useState('')
-  const [menuSections,  setMenuSections] = useState([])
-
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [clRes, evRes, qRes] = await Promise.all([
-          api.get('/api/clients'),
-          api.get('/api/events'),
-          api.get('/api/quotes'),
-        ])
-        setClients(clRes.data)
-        setEvents(evRes.data)
-        setQuotes(qRes.data)
-      } catch (e) {
-        toast('Error al cargar datos')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchAll()
-  }, [])
-
-  // Fetch menú de catering al cambiar el evento
-  useEffect(() => {
-    if (!eventId) { setMenuSections([]); return }
-    api.get(`/api/menu/event/${eventId}`)
-      .then(r => setMenuSections(r.data))
-      .catch(() => setMenuSections([]))
-  }, [eventId])
-
-  const clientEvents    = clientId ? events.filter(ev => String(ev.client?.id) === clientId) : []
-  const selectedClient  = clients.find(c => String(c.id) === clientId)
-  const selectedEvent   = events.find(e => String(e.id) === eventId)
-  const eventQuotes     = eventId ? quotes.filter(q => String(q.eventId) === eventId) : []
-  const hasData         = selectedClient && selectedEvent && eventQuotes.length > 0
-
-  // ── Genera el PDF y lo devuelve (sin descargarlo) ───────────────────────────
-  const buildPDF = async () => {
-    if (!window.jspdf) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-        s.onload = resolve; s.onerror = reject
-        document.head.appendChild(s)
-      })
-    }
-    if (!window.html2canvas) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
-        s.onload = resolve; s.onerror = reject
-        document.head.appendChild(s)
-      })
-    }
-    const { jsPDF } = window.jspdf
-    const element   = document.getElementById('budget-preview')
-    const canvas = await window.html2canvas(element, {
-      scale: 2, useCORS: true, backgroundColor: '#0e0e18',
-      logging: false, windowWidth: element.scrollWidth, windowHeight: element.scrollHeight,
-    })
-    const pdf   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const pdfW  = pdf.internal.pageSize.getWidth()
-    const pdfH  = pdf.internal.pageSize.getHeight()
-    const imgW  = canvas.width
-    const imgH  = canvas.height
-    const ratio = pdfW / imgW
-    const pages = Math.ceil((imgH * ratio) / pdfH)
-    for (let page = 0; page < pages; page++) {
-      if (page > 0) pdf.addPage()
-      const srcY   = Math.round((page * pdfH) / ratio)
-      const srcH   = Math.round(Math.min(pdfH / ratio, imgH - srcY))
-      const slice  = document.createElement('canvas')
-      slice.width  = imgW
-      slice.height = srcH
-      slice.getContext('2d').drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH)
-      pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pdfW, srcH * ratio)
-    }
-    const fileName = `Presupuesto_${selectedClient.name.replace(/\s+/g, '_')}_${selectedEvent.name.replace(/\s+/g, '_')}.pdf`
-    return { pdf, fileName }
-  }
-
-  const handleGeneratePDF = async () => {
-    if (!hasData) return
-    setGenerating(true)
-    try {
-      const { pdf, fileName } = await buildPDF()
-      pdf.save(fileName)
-      toast('PDF generado correctamente', 'success')
-    } catch (e) {
-      console.error(e)
-      toast('Error al generar el PDF')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleSendEmail = async () => {
-    if (!hasData) return
-    setGenerating(true)
-    try {
-      const { pdf, fileName } = await buildPDF()
-      // Descargar el PDF
-      pdf.save(fileName)
-      // Abrir cliente de correo con los datos del presupuesto
-      const total   = eventQuotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
-      const subject = encodeURIComponent(`Presupuesto HAUS — ${selectedEvent.name}`)
-      const body    = encodeURIComponent(
-`Estimado/a ${selectedClient.contact || selectedClient.name},
-
-Le enviamos el presupuesto correspondiente al evento "${selectedEvent.name}" con fecha ${formatDateLong(selectedEvent.date)} en ${selectedEvent.venue}.
-
-El total asciende a ${formatCurrency(total)}.
-
-El archivo PDF ya fue descargado en su carpeta de Descargas — por favor adjúntelo a este correo antes de enviarlo.
-
-Quedo a disposición para cualquier consulta.
-
-Saludos,
-Equipo HAUS — Organización y producción de eventos`)
-      setTimeout(() => {
-        window.open(`mailto:${selectedClient.email}?subject=${subject}&body=${body}`, '_blank')
-        toast(`PDF descargado · Adjuntá "${fileName}" al correo`, 'success')
-      }, 400)
-    } catch (e) {
-      console.error(e)
-      toast('Error al generar el PDF')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleSendWhatsApp = async () => {
-    if (!hasData) return
-    setGenerating(true)
-    try {
-      const { pdf, fileName } = await buildPDF()
-      // Descargar el PDF
-      pdf.save(fileName)
-      // Normalizar número argentino para wa.me
-      let phone = (selectedClient.phone || '').replace(/[\s\-().+]/g, '')
-      if (phone.startsWith('0')) phone = phone.slice(1)
-      if (!phone.startsWith('54')) phone = '54' + phone
-      const total = eventQuotes.reduce((acc, q) => acc + calcQuoteTotal(q), 0)
-      const msg   = encodeURIComponent(
-`Hola ${selectedClient.contact || selectedClient.name} 👋
-
-Te compartimos el presupuesto de HAUS para el evento *${selectedEvent.name}* 📋
-
-📅 Fecha: ${formatDateLong(selectedEvent.date)}
-📍 Venue: ${selectedEvent.venue}
-👥 Invitados: ${selectedEvent.guests} personas
-💰 *Total: ${formatCurrency(total)}*
-
-Adjunto el PDF con el detalle completo. Cualquier consulta, estamos a tu disposición.`)
-      setTimeout(() => {
-        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank')
-        toast(`PDF descargado · Adjuntá "${fileName}" al mensaje de WhatsApp`, 'success')
-      }, 400)
-    } catch (e) {
-      console.error(e)
-      toast('Error al generar el PDF')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const inputStyle = (disabled) => ({
-    width: '100%', background: disabled ? 'var(--bg-base)' : 'var(--bg-sunken)',
-    border: '1px solid var(--border)', borderRadius: 8,
-    padding: '10px 14px', color: disabled ? 'var(--text-faint)' : 'var(--text-primary)',
-    fontSize: 13, outline: 'none', boxSizing: 'border-box',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.5 : 1,
-  })
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>
-      Cargando...
-    </div>
-  )
+function IngredientsEditor({ ingredients, onChange }) {
+  const add = () => onChange([...ingredients, { _id: Date.now(), nombre: '', cantidad: '', unidad: 'g', categoria: 'Otros' }])
+  const remove = (id) => onChange(ingredients.filter(i => i._id !== id))
+  const update = (id, k, v) => onChange(ingredients.map(i => i._id === id ? { ...i, [k]: v } : i))
 
   return (
     <div>
-      {/* Encabezado */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
-        <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>
-            Generar presupuesto
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>
-            Seleccioná el cliente y evento para armar el PDF
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 120px 32px', gap: 6, marginBottom: 8, fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+        <span>Ingrediente</span><span>Cant./pers.</span><span>Unidad</span><span>Categoría</span><span></span>
+      </div>
+      {ingredients.length === 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0' }}>Sin ingredientes. Agregá uno abajo.</div>
+      )}
+      {ingredients.map(ing => (
+        <div key={ing._id} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 90px 120px 32px', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+          <input style={inpS} value={ing.nombre} placeholder="Ej: Fiambre" onChange={e => update(ing._id, 'nombre', e.target.value)} />
+          <input type="number" style={inpS} value={ing.cantidad} placeholder="0" min={0} step="0.5" onChange={e => update(ing._id, 'cantidad', e.target.value)} />
+          <select style={inpS} value={ing.unidad} onChange={e => update(ing._id, 'unidad', e.target.value)}>
+            {UNIDADES.map(u => <option key={u}>{u}</option>)}
+          </select>
+          <select style={inpS} value={ing.categoria} onChange={e => update(ing._id, 'categoria', e.target.value)}>
+            {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+          </select>
+          <button onClick={() => remove(ing._id)} style={{ width: 28, height: 28, border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {/* WhatsApp */}
-          <button
-            onClick={handleSendWhatsApp}
-            disabled={!hasData || generating}
-            title={hasData ? `Enviar a ${selectedClient?.phone}` : ''}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: hasData && !generating ? 'rgba(37,211,102,0.12)' : 'var(--bg-sunken)',
-              border: `1px solid ${hasData && !generating ? 'rgba(37,211,102,0.35)' : 'var(--border)'}`,
-              borderRadius: 8, padding: '10px 18px',
-              color: hasData && !generating ? '#25d366' : 'var(--text-faint)',
-              fontSize: 13, fontWeight: 600,
-              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
-            </svg>
-            {generating ? 'Generando...' : 'WhatsApp'}
-          </button>
-          {/* Email */}
-          <button
-            onClick={handleSendEmail}
-            disabled={!hasData || generating}
-            title={hasData ? `Enviar a ${selectedClient?.email}` : ''}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: hasData && !generating ? 'rgba(59,130,246,0.12)' : 'var(--bg-sunken)',
-              border: `1px solid ${hasData && !generating ? 'rgba(59,130,246,0.35)' : 'var(--border)'}`,
-              borderRadius: 8, padding: '10px 18px',
-              color: hasData && !generating ? '#3b82f6' : 'var(--text-faint)',
-              fontSize: 13, fontWeight: 600,
-              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-              <polyline points="22,6 12,13 2,6"/>
-            </svg>
-            {generating ? 'Generando...' : 'Correo'}
-          </button>
-          {/* PDF */}
-          <button
-            onClick={handleGeneratePDF}
-            disabled={!hasData || generating}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: hasData && !generating ? 'linear-gradient(135deg, var(--gold), var(--gold-light))' : 'var(--bg-sunken)',
-              border: 'none', borderRadius: 8, padding: '10px 20px',
-              color: hasData && !generating ? '#09090f' : 'var(--text-faint)',
-              fontSize: 13, fontWeight: 600,
-              cursor: hasData && !generating ? 'pointer' : 'not-allowed',
-              transition: 'all 0.2s',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            {generating ? 'Generando...' : 'Descargar PDF'}
-          </button>
+      ))}
+      <button onClick={add} style={{ marginTop: 6, padding: '7px 14px', border: '1px dashed var(--border-strong)', borderRadius: 8, background: 'transparent', color: 'var(--text-label)', fontSize: 12, cursor: 'pointer', width: '100%' }}>
+        + Agregar ingrediente
+      </button>
+    </div>
+  )
+}
+
+function DishForm({ initial, onSave, onCancel }) {
+  const [form, setForm] = useState(initial
+    ? {
+        name: initial.name,
+        seccion: initial.seccion,
+        descripcion: initial.descripcion || '',
+        ingredients: (initial.ingredients || []).map(i => ({ ...i, _id: i.id })),
+      }
+    : { name: '', seccion: 'Entrada fría', descripcion: '', ingredients: [] }
+  )
+  const [errors, setErrors]     = useState({})
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError]   = useState('')
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim()) e.name = 'Requerido'
+    if (form.ingredients.some(i => !i.nombre.trim())) e.ingredients = 'Todos los ingredientes deben tener nombre'
+    if (form.ingredients.some(i => !i.cantidad || Number(i.cantidad) <= 0)) e.ingredients = 'Todos los ingredientes deben tener cantidad mayor a 0'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleSave = () => {
+    if (!validate()) return
+    onSave({
+      name: form.name.trim(),
+      seccion: form.seccion,
+      descripcion: form.descripcion.trim() || null,
+      ingredients: form.ingredients.map(({ nombre, cantidad, unidad, categoria }) => ({ nombre, cantidad: Number(cantidad), unidad, categoria })),
+    })
+  }
+
+  const handleAISuggest = async () => {
+    if (!form.name.trim()) { setAiError('Ingresá el nombre del plato primero'); return }
+    setAiLoading(true); setAiError('')
+    try {
+      const res = await api.post('/api/ai/suggest-ingredients', {
+        name: form.name.trim(),
+        seccion: form.seccion,
+        descripcion: form.descripcion.trim() || null,
+      })
+
+      const suggested = res.data.ingredients
+      if (!Array.isArray(suggested) || suggested.length === 0) throw new Error('Respuesta inválida')
+
+      const newIngredients = suggested.map(ing => ({
+        _id: Date.now() + Math.random(),
+        nombre: ing.nombre || '',
+        cantidad: ing.cantidad || '',
+        unidad: UNIDADES.includes(ing.unidad) ? ing.unidad : 'g',
+        categoria: CATEGORIAS.includes(ing.categoria) ? ing.categoria : 'Otros',
+      }))
+
+      set('ingredients', newIngredients)
+    } catch {
+      setAiError('No se pudo generar la sugerencia. Intentá de nuevo.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 16, padding: 28 }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--gold)', marginBottom: 20 }}>
+        {initial ? 'Editar plato' : 'Nuevo plato'}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+        <div>
+          <label style={lbl}>Nombre del plato *</label>
+          <input style={inp(errors.name)} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ej: Tabla de fiambres con papas" />
+          {errors.name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>{errors.name}</div>}
+        </div>
+        <div>
+          <label style={lbl}>Sección</label>
+          <select style={inp()} value={form.seccion} onChange={e => set('seccion', e.target.value)}>
+            {SECCIONES.map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={lbl}>Descripción (opcional)</label>
+          <input style={inp()} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} placeholder="Descripción libre del plato..." />
         </div>
       </div>
 
-      {/* Selectores */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
-        <div>
-          <label style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Cliente</label>
-          <select
-            style={inputStyle(false)}
-            value={clientId}
-            onChange={e => { setClientId(e.target.value); setEventId('') }}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: errors.ingredients ? '#ef4444' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
+            Ingredientes por persona {errors.ingredients && `— ${errors.ingredients}`}
+          </div>
+          <button
+            onClick={handleAISuggest}
+            disabled={aiLoading}
+            title="Generá la lista de ingredientes automáticamente con IA"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 8, cursor: aiLoading ? 'not-allowed' : 'pointer',
+              border: '1px solid rgba(201,168,76,0.4)',
+              background: aiLoading ? 'rgba(201,168,76,0.05)' : 'rgba(201,168,76,0.1)',
+              color: aiLoading ? 'var(--text-faint)' : 'var(--gold)',
+              fontSize: 12, fontWeight: 600, transition: 'all 0.2s',
+            }}
           >
-            <option value=''>— Seleccionar cliente —</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            <span style={{ fontSize: 14 }}>{aiLoading ? '⏳' : '✨'}</span>
+            {aiLoading ? 'Generando...' : 'Sugerir con IA'}
+          </button>
         </div>
+
+        {aiError && (
+          <div style={{ fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+            {aiError}
+          </div>
+        )}
+
+        {aiLoading && (
+          <div style={{ fontSize: 12, color: 'var(--gold)', background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 10 }}>
+            Analizando el plato y calculando cantidades por persona...
+          </div>
+        )}
+
+        <IngredientsEditor ingredients={form.ingredients} onChange={v => set('ingredients', v)} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onCancel} style={{ flex: 1, padding: 10, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+        <button onClick={handleSave} style={{ flex: 1, padding: 10, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          {initial ? 'Guardar cambios' : 'Crear plato'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function Recetario() {
+  const toast = useToast()
+  const [dishes, setDishes]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [view, setView]       = useState('list') // 'list' | 'new' | 'edit'
+  const [selected, setSelected] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [search, setSearch]   = useState('')
+  const [filterSec, setFilterSec] = useState('Todos')
+
+  useEffect(() => { fetchDishes() }, [])
+
+  const fetchDishes = async () => {
+    try {
+      const res = await api.get('/api/dishes')
+      setDishes(res.data)
+    } catch { toast('Error al cargar recetario') }
+    finally { setLoading(false) }
+  }
+
+  const handleSave = async (data) => {
+    try {
+      if (view === 'new') {
+        await api.post('/api/dishes', data)
+        toast('Plato creado', 'success')
+      } else {
+        await api.put(`/api/dishes/${selected.id}`, data)
+        toast('Plato actualizado', 'success')
+      }
+      setView('list'); setSelected(null)
+      fetchDishes()
+    } catch (e) { toast(e.response?.data?.error || 'Error al guardar') }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/api/dishes/${confirmDelete.id}`)
+      toast('Plato eliminado', 'success')
+      fetchDishes()
+    } catch (e) { toast(e.response?.data?.error || 'Error al eliminar') }
+    finally { setConfirmDelete(null) }
+  }
+
+  const filtered = dishes.filter(d => {
+    const ms = d.name.toLowerCase().includes(search.toLowerCase())
+    const mf = filterSec === 'Todos' || d.seccion === filterSec
+    return ms && mf
+  })
+
+  // Agrupar por sección — incluye secciones desconocidas (datos viejos en DB)
+  const knownGrouped = SECCIONES.reduce((acc, s) => {
+    const items = filtered.filter(d => d.seccion === s)
+    if (items.length > 0) acc[s] = items
+    return acc
+  }, {})
+  const unknownItems = filtered.filter(d => !SECCIONES.includes(d.seccion))
+  const grouped = unknownItems.length > 0
+    ? { ...knownGrouped, 'Sin clasificar': unknownItems }
+    : knownGrouped
+
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)' }}>Cargando recetario...</div>
+
+  if (view === 'new' || view === 'edit') {
+    return (
+      <div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Recetario</div>
+        </div>
+        <DishForm initial={view === 'edit' ? selected : null} onSave={handleSave} onCancel={() => { setView('list'); setSelected(null) }} />
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <label style={{ fontSize: 11, color: !clientId ? 'var(--text-faint)' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'block' }}>Evento</label>
-          <select
-            disabled={!clientId}
-            style={inputStyle(!clientId)}
-            value={eventId}
-            onChange={e => setEventId(e.target.value)}
-          >
-            <option value=''>
-              {!clientId ? '— Primero seleccioná un cliente —' : clientEvents.length === 0 ? '— Sin eventos —' : '— Seleccionar evento —'}
-            </option>
-            {clientEvents.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
-          </select>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Recetario</div>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{dishes.length} platos guardados</div>
+        </div>
+        <button onClick={() => setView('new')} style={{ background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          + Nuevo plato
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar plato..."
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: 240 }} />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['Todos', ...SECCIONES].map(s => (
+            <button key={s} onClick={() => setFilterSec(s)} style={{
+              padding: '6px 14px', borderRadius: 20, border: '1px solid', fontSize: 12, cursor: 'pointer',
+              borderColor: filterSec === s ? (SECCION_COLORS[s] || 'var(--gold)') : 'var(--border)',
+              background:  filterSec === s ? `${SECCION_COLORS[s] || 'var(--gold)'}18` : 'transparent',
+              color:       filterSec === s ? (SECCION_COLORS[s] || 'var(--gold)') : 'var(--text-muted)',
+            }}>{s}</button>
+          ))}
         </div>
       </div>
 
-      {/* Aviso sin cotizaciones */}
-      {eventId && eventQuotes.length === 0 && (
-        <div style={{
-          background: 'var(--bg-surface)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12,
-          padding: '20px 24px', marginBottom: 32, color: '#f59e0b', fontSize: 13,
-        }}>
-          Este evento no tiene cotizaciones cargadas todavía. Agregá cotizaciones desde la sección Cotizaciones.
+      {/* Sin platos */}
+      {filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-faint)', fontSize: 14 }}>
+          {dishes.length === 0 ? 'No hay platos en el recetario. Creá el primero.' : 'No hay platos que coincidan.'}
         </div>
       )}
 
-      {/* Preview */}
-      {hasData && (
-        <div>
-          <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16 }}>
-            Vista previa
+      {/* Listado por sección */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {Object.entries(grouped).map(([seccion, items]) => (
+          <div key={seccion}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: SECCION_COLORS[seccion] || '#6b7280' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{seccion}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>({items.length})</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+              {items.map(dish => (
+                <div key={dish.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{dish.name}</div>
+                      {dish.descripcion && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{dish.descripcion}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 5, flexShrink: 0, marginLeft: 10 }}>
+                      <button onClick={() => { setSelected(dish); setView('edit') }} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>Editar</button>
+                      <button onClick={() => setConfirmDelete(dish)} style={{ padding: '4px 10px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer' }}>✕</button>
+                    </div>
+                  </div>
+                  {dish.ingredients.length > 0 && (
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {dish.ingredients.map(ing => (
+                        <div key={ing.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>{ing.nombre}</span>
+                          <span style={{ color: 'var(--text-faint)' }}>{ing.cantidad} {ing.unidad}/pers.</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {dish.ingredients.length === 0 && (
+                    <div style={{ fontSize: 12, color: 'var(--text-faint)', fontStyle: 'italic' }}>Sin ingredientes cargados</div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 8px 48px rgba(0,0,0,0.15)' }}>
-            <BudgetPreview
-              client={selectedClient}
-              event={selectedEvent}
-              quotes={eventQuotes}
-              menuSections={menuSections}
-              emissionDate={new Date().toISOString()}
-            />
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* Estado vacío */}
-      {!eventId && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-faint)', gap: 12 }}>
-          <div style={{ fontSize: 48 }}>◇</div>
-          <div style={{ fontSize: 14 }}>Seleccioná un cliente y evento para ver la vista previa</div>
-        </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title="¿Eliminar plato?"
+          message={`Esto eliminará "${confirmDelete.name}" del recetario.`}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Checklist from "../components/Checklist";
 import EventFiles from "../components/EventFiles";
+import Cronograma from "../components/Cronograma";
 import { useNavigate } from "react-router-dom";
 
 const statusColors = {
@@ -66,7 +67,6 @@ function BalanceBar({ label, value, max, color }) {
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const DIAS  = ["Lu","Ma","Mi","Ju","Vi","Sá","Do"];
 
-// Parsea "YYYY-MM-DD" sin problemas de timezone
 function parseLocalDate(str) {
   if (!str) return null;
   const [y, m, d] = str.split("-").map(Number);
@@ -83,20 +83,18 @@ function DatePicker({ value, onChange, hasError }) {
   const today      = new Date();
   const initial    = value ? parseLocalDate(value) : null;
   const [open, setOpen]     = useState(false);
-  const [cursor, setCursor] = useState(initial ?? today); // mes visible
+  const [cursor, setCursor] = useState(initial ?? today);
 
   const year  = cursor.getFullYear();
   const month = cursor.getMonth();
 
-  // Primer día de la semana del mes (lunes=0)
   const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7; // ajuste lunes
+  const startOffset = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  // Rellenar hasta múltiplo de 7
   while (cells.length % 7 !== 0) cells.push(null);
 
   const select = (day) => {
@@ -125,7 +123,6 @@ function DatePicker({ value, onChange, hasError }) {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -144,17 +141,14 @@ function DatePicker({ value, onChange, hasError }) {
         </svg>
       </button>
 
-      {/* Popover del calendario */}
       {open && (
         <>
-          {/* Overlay invisible para cerrar al hacer click afuera */}
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />
           <div style={{
             position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 300,
             background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 14,
             padding: 18, width: 280, boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
           }}>
-            {/* Navegación mes */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <button type="button" onClick={prevMonth} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontSize: 16, lineHeight: 1 }}>‹</button>
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
@@ -163,14 +157,12 @@ function DatePicker({ value, onChange, hasError }) {
               <button type="button" onClick={nextMonth} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontSize: 16, lineHeight: 1 }}>›</button>
             </div>
 
-            {/* Cabecera días */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 6 }}>
               {DIAS.map(d => (
                 <div key={d} style={{ textAlign: "center", fontSize: 10, color: "var(--text-faint)", fontWeight: 700, padding: "4px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>{d}</div>
               ))}
             </div>
 
-            {/* Días */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
               {cells.map((day, i) => {
                 const sel = isSelected(day);
@@ -197,7 +189,6 @@ function DatePicker({ value, onChange, hasError }) {
               })}
             </div>
 
-            {/* Hoy */}
             <button
               type="button"
               onClick={() => { onChange(toLocalISO(today)); setCursor(today); setOpen(false); }}
@@ -335,7 +326,6 @@ function EventDetail({ event, onClose, onEdit }) {
       setSpSummary({ totalPaid: spRes.data.totalPaid || 0, totalPending: spRes.data.totalPending || 0 });
     }).catch(console.error).finally(() => setLoading(false));
 
-    // Menú de catering por separado para que un fallo no rompa el resto del modal
     api.get(`/api/menu/event/${event.id}`)
       .then(res => setMenuSections(res.data || []))
       .catch(() => setMenuSections([]));
@@ -487,8 +477,6 @@ function EventDetail({ event, onClose, onEdit }) {
               <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
                 <div style={SL}>Balance del evento</div>
                 <div style={{ background: "var(--bg-sunken)", borderRadius: 14, border: "1px solid var(--border)", padding: "20px 22px" }}>
-
-                  {/* Tarjetas de resumen */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
                     {[
                       { label: "Ingresos aprobados", value: summary.totalQuotes,    color: "var(--gold)" },
@@ -502,15 +490,11 @@ function EventDetail({ event, onClose, onEdit }) {
                       </div>
                     ))}
                   </div>
-
-                  {/* Barras */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes} max={balanceMax} color="var(--gold)" />
                     <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}   max={balanceMax} color="#22c55e" />
                     <BalanceBar label="Total proveedores"   value={totalProveedores}     max={balanceMax} color="#ef4444" />
                   </div>
-
-                  {/* Utilidad */}
                   <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border-row)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 12, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>Utilidad estimada</div>
@@ -573,8 +557,13 @@ function EventDetail({ event, onClose, onEdit }) {
               )}
             </section>
 
+            {/* Cronograma IA */}
+            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
+              <Cronograma event={event} />
+            </section>
+
             {/* Checklist */}
-            <section>
+            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
               <Checklist eventId={event.id} event={event} />
             </section>
 
@@ -597,7 +586,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("Todos");
-  const [modal, setModal]     = useState(null);   // "new" | "edit" | "detail"
+  const [modal, setModal]     = useState(null);
   const [selected, setSelected]       = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -606,7 +595,6 @@ export default function Events() {
       const [evRes, clRes] = await Promise.all([api.get("/api/events"), api.get("/api/clients")]);
       setEvents(evRes.data);
       setClients(clRes.data);
-      // Si llegamos desde Clientes con un evento específico, abrirlo
       const targetId = location.state?.openEventId;
       if (targetId) {
         const target = evRes.data.find(e => e.id === targetId);

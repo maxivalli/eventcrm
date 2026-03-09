@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
@@ -27,6 +27,50 @@ function ClientForm({ initial, onSave, onClose }) {
   const [errors, setErrors] = useState({})
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
+  // ── Picker de contactos ──
+  const [contacts,     setContacts]     = useState([])
+  const [contactQuery, setContactQuery] = useState(initial?.contact || '')
+  const [suggestions,  setSuggestions]  = useState([])
+  const [pickerOpen,   setPickerOpen]   = useState(false)
+  const pickerRef = useRef()
+
+  useEffect(() => {
+    api.get('/api/contacts').then(r => setContacts(r.data)).catch(() => {})
+  }, [])
+
+  // Sincronizar query cuando se abre en modo edición
+  useEffect(() => { setContactQuery(form.contact) }, [])
+
+  const handleContactInput = (val) => {
+    setContactQuery(val)
+    set('contact', val)
+    if (val.trim().length < 1) { setSuggestions([]); setPickerOpen(false); return }
+    const q = val.toLowerCase()
+    const matches = contacts.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phone.includes(q) ||
+      c.email.toLowerCase().includes(q)
+    ).slice(0, 6)
+    setSuggestions(matches)
+    setPickerOpen(matches.length > 0)
+  }
+
+  const applyContact = (c) => {
+    setContactQuery(c.name)
+    set('contact', c.name)
+    if (c.phone && !form.phone) set('phone', c.phone)
+    if (c.email && !form.email) set('email', c.email)
+    setSuggestions([])
+    setPickerOpen(false)
+  }
+
+  // Cerrar al click afuera
+  useEffect(() => {
+    const handler = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const validate = () => {
     const e = {}
     if (!form.name.trim())    e.name    = 'Requerido'
@@ -44,22 +88,66 @@ function ClientForm({ initial, onSave, onClose }) {
           {initial ? 'Editar cliente' : 'Nuevo cliente'}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+
           <div style={{ gridColumn: '1/-1' }}>
             <label style={lbl}>Nombre / Empresa *</label>
             <input style={inp(errors.name)} value={form.name} onChange={e => set('name', e.target.value)} />
             {errors.name && <div style={err_}>{errors.name}</div>}
           </div>
-          <div>
-            <label style={lbl}>Contacto *</label>
-            <input style={inp(errors.contact)} value={form.contact} onChange={e => set('contact', e.target.value)} />
+
+          {/* Contacto con picker de agenda */}
+          <div style={{ gridColumn: '1/-1', position: 'relative' }} ref={pickerRef}>
+            <label style={lbl}>
+              Contacto *
+              {contacts.length > 0 && (
+                <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-faint)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                  — escribí para buscar en agenda ({contacts.length} contactos)
+                </span>
+              )}
+            </label>
+            <input
+              style={inp(errors.contact)}
+              value={contactQuery}
+              onChange={e => handleContactInput(e.target.value)}
+              onFocus={() => { if (suggestions.length > 0) setPickerOpen(true) }}
+              placeholder="Nombre de la persona de contacto"
+              autoComplete="off"
+            />
             {errors.contact && <div style={err_}>{errors.contact}</div>}
+
+            {/* Dropdown de sugerencias */}
+            {pickerOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 400,
+                background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
+                borderRadius: 10, marginTop: 4, overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+                {suggestions.map(c => (
+                  <div
+                    key={c.id}
+                    onMouseDown={() => applyContact(c)}
+                    style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border-row)', transition: 'background 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 12 }}>
+                      {c.phone && <span>📞 {c.phone}</span>}
+                      {c.email && <span>✉ {c.email}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
           <div>
             <label style={lbl}>Teléfono *</label>
             <input style={inp(errors.phone)} value={form.phone} onChange={e => set('phone', e.target.value)} />
             {errors.phone && <div style={err_}>{errors.phone}</div>}
           </div>
-          <div style={{ gridColumn: '1/-1' }}>
+          <div>
             <label style={lbl}>Email *</label>
             <input style={inp(errors.email)} value={form.email} onChange={e => set('email', e.target.value)} />
             {errors.email && <div style={err_}>{errors.email}</div>}

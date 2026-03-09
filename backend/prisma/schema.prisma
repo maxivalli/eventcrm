@@ -193,6 +193,16 @@ model EventMenuItem {
   nota      String?
   createdAt DateTime         @default(now())
 }
+// ── Contactos (agenda independiente) ─────────────────────
+
+model Contact {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String   @default("")
+  email     String   @default("")
+  createdAt DateTime @default(now())
+}
+
 // ── Log de actividad ──────────────────────────────────────
 
 model ActivityLog {
