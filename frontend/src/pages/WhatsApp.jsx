@@ -161,8 +161,8 @@ function ConnectionTab() {
             <div style={{ fontSize: 13, color: 'var(--text-label)', marginBottom: 12 }}>
               Escaneá este código con WhatsApp → Dispositivos vinculados → Vincular un dispositivo
             </div>
-            {qrData?.data?.qrcode ? (
-              <img src={qrData.data.qrcode} alt="QR WhatsApp" style={{ width: 220, height: 220, borderRadius: 8 }} />
+            {qrData?.data?.qrcode || qrData?.data?.base64 ? (
+              <img src={qrData.data.qrcode || qrData.data.base64} alt="QR WhatsApp" style={{ width: 220, height: 220, borderRadius: 8 }} />
             ) : (
               <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace', wordBreak: 'break-all', maxWidth: 400, margin: '0 auto' }}>
                 {JSON.stringify(qrData, null, 2)}
