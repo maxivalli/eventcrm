@@ -5,7 +5,7 @@ exports.getAll = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { date: 'asc' },
-      include: { client: { select: { id: true, name: true } }, _count: { select: { files: true } } }
+      include: { client: { select: { id: true, name: true, phone: true } }, _count: { select: { files: true } } }
     })
     res.json(events)
   } catch (e) {
