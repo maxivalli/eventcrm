@@ -92,8 +92,9 @@ const CHART_COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#c
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
 export default function Dashboard() {
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData]           = useState(null)
+  const [activityLogs, setActivity] = useState([])
+  const [loading, setLoading]       = useState(true)
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -107,10 +108,11 @@ export default function Dashboard() {
         const safeGet = async (url) => {
           try { return (await api.get(url)).data } catch { return null }
         }
-        const [spPending, allPayments, allSpPayments] = await Promise.all([
+        const [spPending, allPayments, allSpPayments, activityRes] = await Promise.all([
           safeGet('/api/supplier-payments/pending-total'),
           safeGet('/api/payments/all'),
           safeGet('/api/supplier-payments/all'),
+          safeGet('/api/activity?limit=60'),
         ])
         setData({
           clients:       clientsRes.data,
@@ -121,6 +123,7 @@ export default function Dashboard() {
           allPayments:   allPayments || [],
           allSpPayments: allSpPayments || [],
         })
+        setActivity(activityRes || [])
       } catch (e) {
         console.error(e)
       } finally {
@@ -181,14 +184,25 @@ export default function Dashboard() {
   const recentQuotes = data ? [...data.quotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4) : []
   const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 
-  const recentActivity = data ? [
-    ...data.clients.map(c      => ({ text: `Cliente agregado: ${c.name}`,          time: c.createdAt, icon: <UserPlus size={15} strokeWidth={1.75} />, type: 'default' })),
-    ...data.events.map(e       => ({ text: `Evento creado: ${e.name}`,              time: e.createdAt, icon: <CalendarPlus size={15} strokeWidth={1.75} />, type: 'default' })),
-    ...data.quotes.map(q       => ({ text: `Cotización para: ${q.event?.name||'—'}`, time: q.createdAt, icon: <FilePlus size={15} strokeWidth={1.75} />, type: 'default' })),
-    ...data.suppliers.map(s    => ({ text: `Proveedor: ${s.name}`,                   time: s.createdAt, icon: <Package size={15} strokeWidth={1.75} />, type: 'default' })),
-    ...data.allPayments.map(p  => ({ text: `Cobro: ${p.event?.name||'—'}`,  amount: fmtARS(p.amount), time: p.createdAt, icon: <ArrowDownCircle size={15} strokeWidth={1.75} />, type: 'income' })),
-    ...data.allSpPayments.map(p => ({ text: `Pago a ${p.supplier?.name||'—'}`, amount: fmtARS(p.amount), status: p.status, time: p.createdAt, icon: <ArrowUpCircle size={15} strokeWidth={1.75} />, type: 'payment' })),
-  ].sort((a, b) => new Date(b.time) - new Date(a.time)) : []
+  const ACTION_ICONS = {
+    create:    <FilePlus size={14} strokeWidth={1.75} />,
+    update:    <CheckCircle2 size={14} strokeWidth={1.75} />,
+    delete:    <AlertCircle size={14} strokeWidth={1.75} />,
+    status:    <TrendingUp size={14} strokeWidth={1.75} />,
+    payment:   <ArrowDownCircle size={14} strokeWidth={1.75} />,
+    file:      <Package size={14} strokeWidth={1.75} />,
+    checklist: <CheckCircle2 size={14} strokeWidth={1.75} />,
+  }
+  const ACTION_COLORS = {
+    create:    'var(--gold)',
+    update:    '#3b82f6',
+    delete:    '#ef4444',
+    status:    '#8b5cf6',
+    payment:   '#22c55e',
+    file:      '#06b6d4',
+    checklist: '#f97316',
+  }
+  const recentActivity = activityLogs
 
   const tooltipStyle = {
     background: 'var(--chart-tooltip-bg)',
@@ -408,23 +422,21 @@ export default function Dashboard() {
             ))
           ) : recentActivity.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--text-faint)', textAlign: 'center', padding: '20px 0' }}>Sin actividad reciente</div>
-          ) : recentActivity.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '11px 0', ...rowBorder }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-sunken)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--gold)', flexShrink: 0 }}>
-                {a.icon}
+          ) : recentActivity.map((a) => (
+            <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '11px 0', ...rowBorder }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: `${ACTION_COLORS[a.action] || 'var(--gold)'}15`, border: `1px solid ${ACTION_COLORS[a.action] || 'var(--gold)'}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACTION_COLORS[a.action] || 'var(--gold)', flexShrink: 0 }}>
+                {ACTION_ICONS[a.action] || <FilePlus size={14} />}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  {a.text}
-                  {a.type === 'income'  && <span style={{ fontWeight: 700, color: '#22c55e', marginLeft: 6 }}>{a.amount}</span>}
-                  {a.type === 'payment' && (
-                    <>
-                      <span style={{ marginLeft: 6, color: a.status === 'Pagado' ? '#22c55e' : '#f59e0b', fontWeight: 500 }}>{a.amount}</span>
-                      <span style={{ marginLeft: 6, fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 600, background: a.status === 'Pagado' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', color: a.status === 'Pagado' ? '#22c55e' : '#f59e0b' }}>{a.status}</span>
-                    </>
-                  )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {a.label}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 3 }}>{formatTimeAgo(a.time)}</div>
+                {a.detail && (
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {a.detail}
+                  </div>
+                )}
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 3 }}>{formatTimeAgo(a.createdAt)}</div>
               </div>
             </div>
           ))}

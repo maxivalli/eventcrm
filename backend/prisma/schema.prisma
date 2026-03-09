@@ -60,6 +60,7 @@ model Quote {
   covers        Int?
   pricePerCover Float?
   items         QuoteItem[]
+  dishes        QuoteDish[]
   createdAt     DateTime    @default(now())
 }
 
@@ -157,6 +158,7 @@ model Dish {
   descripcion String?
   ingredients DishIngredient[]
   menuItems   EventMenuItem[]
+  quoteDishes QuoteDish[]
   createdAt   DateTime         @default(now())
 }
 
@@ -190,4 +192,27 @@ model EventMenuItem {
   dishId    Int
   nota      String?
   createdAt DateTime         @default(now())
+}
+// ── Log de actividad ──────────────────────────────────────
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  entity    String
+  entityId  Int?
+  label     String
+  detail    String?
+  meta      String?
+  createdAt DateTime @default(now())
+}
+
+// ── Platos en cotización de catering ─────────────────────
+
+model QuoteDish {
+  id      Int   @id @default(autoincrement())
+  quote   Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId Int
+  dish    Dish  @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  dishId  Int
+  nota    String?
 }

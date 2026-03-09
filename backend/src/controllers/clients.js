@@ -1,4 +1,5 @@
 const prisma = require('../prisma')
+const { log } = require('../utils/activity')
 
 exports.getAll = async (req, res) => {
   try {
@@ -30,22 +31,15 @@ exports.getOne = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { name, contact, email, phone, birthdate, status } = req.body
-
     if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
     if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
     if (!contact?.trim()) return res.status(400).json({ error: 'El contacto es requerido' })
     if (!phone?.trim())   return res.status(400).json({ error: 'El teléfono es requerido' })
 
     const client = await prisma.client.create({
-      data: {
-        name: name.trim(),
-        contact: contact.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null,
-        status,
-      }
+      data: { name: name.trim(), contact: contact.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null, status }
     })
+    log({ action: 'create', entity: 'client', entityId: client.id, label: `Cliente creado: ${client.name}`, detail: client.email })
     res.status(201).json(client)
   } catch (e) {
     console.error('Error create client:', e)
@@ -57,7 +51,6 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { name, contact, email, phone, birthdate, status } = req.body
-
     if (!name?.trim())    return res.status(400).json({ error: 'El nombre es requerido' })
     if (!email?.trim())   return res.status(400).json({ error: 'El email es requerido' })
     if (!contact?.trim()) return res.status(400).json({ error: 'El contacto es requerido' })
@@ -65,15 +58,9 @@ exports.update = async (req, res) => {
 
     const client = await prisma.client.update({
       where: { id: Number(req.params.id) },
-      data: {
-        name: name.trim(),
-        contact: contact.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null,
-        status,
-      }
+      data: { name: name.trim(), contact: contact.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null, status }
     })
+    log({ action: 'update', entity: 'client', entityId: client.id, label: `Cliente editado: ${client.name}`, detail: `Estado: ${client.status}` })
     res.json(client)
   } catch (e) {
     console.error('Error update client:', e)
@@ -85,7 +72,10 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    await prisma.client.delete({ where: { id: Number(req.params.id) } })
+    const id = Number(req.params.id)
+    const client = await prisma.client.findUnique({ where: { id } })
+    await prisma.client.delete({ where: { id } })
+    log({ action: 'delete', entity: 'client', entityId: id, label: `Cliente eliminado: ${client?.name || id}` })
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete client:', e)

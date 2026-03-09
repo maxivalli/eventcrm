@@ -1,13 +1,11 @@
 const prisma = require('../prisma')
+const { log } = require('../utils/activity')
 
 exports.getAll = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { date: 'asc' },
-      include: {
-        client: { select: { id: true, name: true } },
-        _count: { select: { files: true } }
-      }
+      include: { client: { select: { id: true, name: true } }, _count: { select: { files: true } } }
     })
     res.json(events)
   } catch (e) {
@@ -33,7 +31,6 @@ exports.getOne = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
-
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
     if (!date)           return res.status(400).json({ error: 'La fecha es requerida' })
@@ -42,15 +39,10 @@ exports.create = async (req, res) => {
     if (!budget || Number(budget) <= 0) return res.status(400).json({ error: 'El presupuesto debe ser mayor a 0' })
 
     const event = await prisma.event.create({
-      data: {
-        name: name.trim(), venue: venue.trim(), type, status,
-        guests: Number(guests),
-        budget: Number(budget),
-        date:   new Date(`${date.slice(0,10)}T12:00:00`),
-        time:   time || null,
-        client: { connect: { id: Number(clientId) } }
-      }
+      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, client: { connect: { id: Number(clientId) } } },
+      include: { client: { select: { name: true } } }
     })
+    log({ action: 'create', entity: 'event', entityId: event.id, label: `Evento creado: ${event.name}`, detail: `Cliente: ${event.client?.name} · ${event.type} · ${Number(guests)} invitados` })
     res.status(201).json(event)
   } catch (e) {
     console.error('Error create event:', e)
@@ -62,7 +54,6 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
-
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
     if (!date)           return res.status(400).json({ error: 'La fecha es requerida' })
@@ -70,17 +61,17 @@ exports.update = async (req, res) => {
     if (!guests || Number(guests) <= 0) return res.status(400).json({ error: 'Los invitados deben ser mayor a 0' })
     if (!budget || Number(budget) <= 0) return res.status(400).json({ error: 'El presupuesto debe ser mayor a 0' })
 
+    const prev = await prisma.event.findUnique({ where: { id: Number(req.params.id) }, select: { status: true, name: true } })
     const event = await prisma.event.update({
       where: { id: Number(req.params.id) },
-      data: {
-        name: name.trim(), venue: venue.trim(), type, status,
-        guests: Number(guests),
-        budget: Number(budget),
-        date:   new Date(`${date.slice(0,10)}T12:00:00`),
-        time:   time || null,
-        client: { connect: { id: Number(clientId) } }
-      }
+      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, client: { connect: { id: Number(clientId) } } }
     })
+
+    if (prev?.status !== status) {
+      log({ action: 'status', entity: 'event', entityId: event.id, label: `Estado del evento cambiado: ${event.name}`, detail: `${prev?.status} → ${status}` })
+    } else {
+      log({ action: 'update', entity: 'event', entityId: event.id, label: `Evento editado: ${event.name}`, detail: `${type} · ${Number(guests)} invitados · ${venue.trim()}` })
+    }
     res.json(event)
   } catch (e) {
     console.error('Error update event:', e)
@@ -92,17 +83,16 @@ exports.update = async (req, res) => {
 exports.remove = async (req, res) => {
   try {
     const id = Number(req.params.id)
-    // Borrar dependientes en orden antes del evento
+    const event = await prisma.event.findUnique({ where: { id }, select: { name: true } })
     const quotes = await prisma.quote.findMany({ where: { eventId: id }, select: { id: true } })
     const quoteIds = quotes.map(q => q.id)
-    if (quoteIds.length > 0) {
-      await prisma.quoteItem.deleteMany({ where: { quoteId: { in: quoteIds } } })
-    }
+    if (quoteIds.length > 0) await prisma.quoteItem.deleteMany({ where: { quoteId: { in: quoteIds } } })
     await prisma.supplierPayment.deleteMany({ where: { eventId: id } })
     await prisma.payment.deleteMany({ where: { eventId: id } })
     await prisma.quote.deleteMany({ where: { eventId: id } })
     await prisma.eventFile.deleteMany({ where: { eventId: id } })
     await prisma.event.delete({ where: { id } })
+    log({ action: 'delete', entity: 'event', entityId: id, label: `Evento eliminado: ${event?.name || id}` })
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete event:', e)

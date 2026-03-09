@@ -3,7 +3,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
-const SECCIONES   = ['Entrada fría', 'Entrada caliente', 'Plato principal', 'Guarnición', 'Postre', 'Torta', 'Bebidas', 'Otros']
+const SECCIONES   = ['Entrada fría', 'Entrada caliente', 'Plato principal', 'Guarnición', 'Postre', 'Bebidas', 'Otros']
 const CATEGORIAS  = ['Carnes', 'Fiambres', 'Lácteos', 'Verduras', 'Frutas', 'Almacén', 'Bebidas', 'Panificados', 'Otros']
 const UNIDADES    = ['g', 'kg', 'ml', 'l', 'unidad', 'porción', 'rebanada', 'cucharada']
 

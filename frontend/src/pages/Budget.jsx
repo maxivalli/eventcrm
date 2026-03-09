@@ -143,7 +143,63 @@ function BudgetPreview({ client, event, quotes, emissionDate }) {
           {cateringQuotes.map(q => (
             <div key={q.id} style={{ marginBottom: 24, pageBreakInside: 'avoid' }}>
 
-              {q.menu && (
+              {/* ── Platos del menú agrupados por sección ── */}
+              {q.dishes && q.dishes.length > 0 && (() => {
+                const grouped = q.dishes.reduce((acc, qd) => {
+                  const sec = qd.dish?.seccion || 'Otros'
+                  if (!acc[sec]) acc[sec] = []
+                  acc[sec].push(qd)
+                  return acc
+                }, {})
+                const secColors = {
+                  'Entrada fría': '#3b82f6', 'Entrada caliente': '#f97316', 'Plato principal': '#8b5cf6',
+                  'Guarnición': '#22c55e', 'Postre': '#ec4899', 'Torta': '#f59e0b',
+                  'Bebidas': '#06b6d4', 'Otros': '#6b7280',
+                }
+                return (
+                  <div style={{ background: col.faint, borderRadius: 8, border: `1px solid ${col.border}`, marginBottom: 14, overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 9, color: col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>Menú</div>
+                      <div style={{ fontSize: 10, color: col.muted }}>{q.dishes.length} plato{q.dishes.length !== 1 ? 's' : ''}</div>
+                    </div>
+                    {Object.entries(grouped).map(([seccion, dishList], si) => (
+                      <div key={seccion} style={{ borderTop: si > 0 ? `1px solid ${col.border}` : 'none' }}>
+                        {/* Cabecera de sección */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px 6px', background: col.dark + '60' }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: secColors[seccion] || col.muted, flexShrink: 0 }} />
+                          <span style={{ fontSize: 9, fontWeight: 700, color: secColors[seccion] || col.muted, letterSpacing: 2, textTransform: 'uppercase' }}>{seccion}</span>
+                        </div>
+                        {/* Platos de la sección */}
+                        {dishList.map((qd, di) => (
+                          <div key={qd.id || di} style={{ padding: '8px 18px 8px 32px', borderTop: `1px solid ${col.border}20`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, color: col.text, fontWeight: 500, marginBottom: qd.dish?.descripcion || qd.nota ? 3 : 0 }}>
+                                {qd.dish?.name}
+                              </div>
+                              {qd.dish?.descripcion && (
+                                <div style={{ fontSize: 11, color: col.muted, lineHeight: 1.5 }}>{qd.dish.descripcion}</div>
+                              )}
+                              {qd.nota && (
+                                <div style={{ fontSize: 11, color: col.goldLight, fontStyle: 'italic', marginTop: 2 }}>Nota: {qd.nota}</div>
+                              )}
+                            </div>
+
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    {/* Notas generales */}
+                    {q.menu && (
+                      <div style={{ borderTop: `1px solid ${col.border}`, padding: '10px 18px', fontSize: 11, color: col.muted, fontStyle: 'italic', lineHeight: 1.6 }}>
+                        {q.menu}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* Fallback: solo texto (cotizaciones viejas sin platos vinculados) */}
+              {(!q.dishes || q.dishes.length === 0) && q.menu && (
                 <div style={{
                   background: col.faint, borderRadius: 8, padding: '16px 20px',
                   border: `1px solid ${col.border}`, marginBottom: 14,

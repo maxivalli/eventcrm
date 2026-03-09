@@ -1,3 +1,4 @@
+const { log } = require('../utils/activity')
 const prisma = require('../prisma')
 
 exports.getAll = async (req, res) => {
@@ -33,6 +34,7 @@ exports.create = async (req, res) => {
     const supplier = await prisma.supplier.create({
       data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status, alias: alias?.trim() || null }
     })
+    log({ action: 'create', entity: 'supplier', entityId: supplier.id, label: `Proveedor creado: ${supplier.name}`, detail: `${category} · ${supplier.email}` })
     res.status(201).json(supplier)
   } catch (e) {
     console.error('Error create supplier:', e)
@@ -54,6 +56,7 @@ exports.update = async (req, res) => {
       where: { id: Number(req.params.id) },
       data: { name: name.trim(), category, contact: contact.trim(), phone: phone.trim(), email: email.trim().toLowerCase(), rating: Number(rating) || 3, status, alias: alias?.trim() || null }
     })
+    log({ action: 'update', entity: 'supplier', entityId: supplier.id, label: `Proveedor editado: ${supplier.name}`, detail: `${category} · Estado: ${status}` })
     res.json(supplier)
   } catch (e) {
     console.error('Error update supplier:', e)
@@ -65,7 +68,10 @@ exports.update = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    await prisma.supplier.delete({ where: { id: Number(req.params.id) } })
+    const id = Number(req.params.id)
+    const supplier = await prisma.supplier.findUnique({ where: { id }, select: { name: true, category: true } })
+    await prisma.supplier.delete({ where: { id } })
+    log({ action: 'delete', entity: 'supplier', entityId: id, label: `Proveedor eliminado: ${supplier?.name || id}`, detail: supplier?.category })
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete supplier:', e)

@@ -17,6 +17,7 @@ const cateringRoutes   = require('./routes/catering')
 const dishRoutes       = require('./routes/dishes')
 const eventMenuRoutes  = require('./routes/eventMenu')
 const aiRoutes         = require('./routes/ai')
+const activityRoutes   = require('./routes/activity')
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/catering',    authMiddleware, cateringRoutes)
 app.use('/api/dishes',      authMiddleware, dishRoutes)
 app.use('/api/menu',        authMiddleware, eventMenuRoutes)
 app.use('/api/ai',          authMiddleware, aiRoutes)
+app.use('/api/activity',    authMiddleware, activityRoutes)
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () =>

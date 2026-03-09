@@ -8,6 +8,11 @@ const kindColors   = { 'General': '#8b5cf6', 'Catering': '#f97316' }
 const ESTADOS = ['Todos', 'Aprobado', 'Pendiente', 'Rechazado']
 const KINDS   = ['Todos', 'General', 'Catering']
 
+const SECCION_COLORS = {
+  'Entrada fría': '#3b82f6', 'Entrada caliente': '#f97316', 'Plato principal': '#8b5cf6',
+  'Guarnición': '#22c55e', 'Postre': '#ec4899', 'Torta': '#f59e0b', 'Bebidas': '#06b6d4', 'Otros': '#6b7280',
+}
+
 const formatCurrency = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 const formatDate     = (str) => new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -50,15 +55,113 @@ function ItemsEditor({ items, onChange, label = 'Ítems' }) {
   )
 }
 
-const emptyGeneral  = { clientId: '', eventId: '', kind: 'General',  date: '', status: 'Pendiente', items: [] }
-const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', status: 'Pendiente', menu: '', covers: '', pricePerCover: '', items: [] }
+// Selector de platos del recetario agrupado por sección
+function DishSelector({ selectedDishes, onChange, allDishes }) {
+  const grouped = allDishes.reduce((acc, d) => {
+    if (!acc[d.seccion]) acc[d.seccion] = []
+    acc[d.seccion].push(d)
+    return acc
+  }, {})
 
-function QuoteForm({ initial, events, clients, onSave, onClose }) {
-  const initialClientId = initial ? String(events.find(ev => ev.id === initial.eventId)?.client?.id ?? '') : ''
-  // Usar siempre la fecha del evento actualizado, no la fecha guardada en la cotización
+  const toggle = (dish) => {
+    const exists = selectedDishes.find(d => d.dishId === dish.id)
+    if (exists) {
+      onChange(selectedDishes.filter(d => d.dishId !== dish.id))
+    } else {
+      onChange([...selectedDishes, { dishId: dish.id, nota: '', _dish: dish }])
+    }
+  }
+
+  const updateNota = (dishId, nota) => {
+    onChange(selectedDishes.map(d => d.dishId === dishId ? { ...d, nota } : d))
+  }
+
+  if (allDishes.length === 0) {
+    return (
+      <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '14px 16px', textAlign: 'center' }}>
+        No hay platos en el recetario. Agregá platos desde la sección <strong>Recetario</strong> primero.
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Grilla de selección */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: selectedDishes.length > 0 ? 16 : 0 }}>
+        {Object.entries(grouped).map(([seccion, dishes]) => (
+          <div key={seccion}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: SECCION_COLORS[seccion] || '#6b7280', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{seccion}</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {dishes.map(dish => {
+                const selected = !!selectedDishes.find(d => d.dishId === dish.id)
+                return (
+                  <button
+                    key={dish.id}
+                    onClick={() => toggle(dish)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s',
+                      border: `1px solid ${selected ? (SECCION_COLORS[seccion] || 'var(--gold)') : 'var(--border)'}`,
+                      background: selected ? `${SECCION_COLORS[seccion] || 'var(--gold)'}18` : 'var(--bg-sunken)',
+                      color: selected ? (SECCION_COLORS[seccion] || 'var(--gold)') : 'var(--text-muted)',
+                      fontWeight: selected ? 600 : 400,
+                    }}
+                  >
+                    {selected && <span style={{ marginRight: 4 }}>✓</span>}
+                    {dish.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Platos seleccionados con notas */}
+      {selectedDishes.length > 0 && (
+        <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            {selectedDishes.length} plato{selectedDishes.length !== 1 ? 's' : ''} seleccionado{selectedDishes.length !== 1 ? 's' : ''}
+          </div>
+          {selectedDishes.map(sd => {
+            const dish = sd._dish || allDishes.find(d => d.id === sd.dishId)
+            return (
+              <div key={sd.dishId} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[dish?.seccion] || 'var(--gold)', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500, minWidth: 160, flexShrink: 0 }}>{dish?.name}</span>
+                <input
+                  style={{ ...inpS, flex: 1 }}
+                  value={sd.nota || ''}
+                  placeholder="Nota opcional (ej: sin sal, con limón...)"
+                  onChange={e => updateNota(sd.dishId, e.target.value)}
+                />
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const emptyGeneral  = { clientId: '', eventId: '', kind: 'General',  date: '', status: 'Pendiente', items: [] }
+const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', status: 'Pendiente', menu: '', covers: '', pricePerCover: '', items: [], dishes: [] }
+
+function QuoteForm({ initial, events, clients, allDishes, onSave, onClose }) {
+  const initialClientId  = initial ? String(events.find(ev => ev.id === initial.eventId)?.client?.id ?? '') : ''
   const initialEventDate = initial ? (events.find(ev => ev.id === initial.eventId)?.date?.slice(0, 10) ?? initial.date?.slice(0, 10)) : ''
+
+  // Mapear dishes del initial (vienen con {id, quoteId, dishId, nota, dish})
+  const initialDishes = initial?.dishes?.map(qd => ({
+    dishId: qd.dishId,
+    nota: qd.nota || '',
+    _dish: qd.dish,
+  })) || []
+
   const [form, setForm] = useState(initial
-    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initialEventDate, items: initial.items || [] }
+    ? { ...initial, clientId: initialClientId, eventId: String(initial.eventId), date: initialEventDate, items: initial.items || [], dishes: initialDishes }
     : emptyGeneral
   )
   const [errors, setErrors] = useState({})
@@ -92,7 +195,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
       else if (form.items.some(i => !i.description.trim())) e.items = 'Todos los ítems deben tener descripción'
     }
     if (form.kind === 'Catering') {
-      if (!form.covers || Number(form.covers) <= 0)             e.covers        = 'Requerido'
+      if (!form.covers || Number(form.covers) <= 0)               e.covers        = 'Requerido'
       if (!form.pricePerCover || Number(form.pricePerCover) <= 0) e.pricePerCover = 'Requerido'
     }
     setErrors(e); return Object.keys(e).length === 0
@@ -100,7 +203,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 640, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 680, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--gold)', marginBottom: 24 }}>
           {initial ? 'Editar cotización' : 'Nueva cotización'}
         </div>
@@ -132,15 +235,9 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
           </div>
           <div>
             <label style={lbl}>Fecha del evento</label>
-            <div style={{
-              ...inp(), display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              opacity: form.eventId ? 1 : 0.45, userSelect: 'none',
-              background: 'var(--bg-sunken)', cursor: 'default',
-            }}>
+            <div style={{ ...inp(), display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: form.eventId ? 1 : 0.45, userSelect: 'none', background: 'var(--bg-sunken)', cursor: 'default' }}>
               <span style={{ color: form.date ? 'var(--text-primary)' : 'var(--text-faint)', fontSize: 13 }}>
-                {form.date
-                  ? new Date(form.date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })
-                  : '— Se completa al elegir evento —'}
+                {form.date ? new Date(form.date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : '— Se completa al elegir evento —'}
               </span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-faint)', flexShrink: 0 }}>
                 <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -155,6 +252,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
           </div>
         </div>
 
+        {/* ── GENERAL ── */}
         {form.kind === 'General' && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: errors.items ? '#ef4444' : 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>
@@ -164,13 +262,11 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
           </div>
         )}
 
+        {/* ── CATERING ── */}
         {form.kind === 'Catering' && (
           <div style={{ marginBottom: 20 }}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Menú / descripción de platos</label>
-              <textarea rows={3} value={form.menu} onChange={e => set('menu', e.target.value)} placeholder="Ej: Entrada fría, plato principal con guarnición, postre..."
-                style={{ width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
-            </div>
+
+            {/* Cubiertos y precio */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
                 <label style={lbl}>Cantidad de cubiertos *</label>
@@ -183,12 +279,35 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
                 {errors.pricePerCover && <div style={err_}>{errors.pricePerCover}</div>}
               </div>
             </div>
+
             {cateringBase > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-sunken)', borderRadius: 8, marginBottom: 20, border: '1px solid var(--border)' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-label)' }}>{form.covers} cubiertos × {formatCurrency(form.pricePerCover)}</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>{formatCurrency(cateringBase)}</span>
               </div>
             )}
+
+            {/* Platos del recetario */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, fontWeight: 700 }}>
+                Platos del menú
+              </div>
+              <DishSelector
+                selectedDishes={form.dishes || []}
+                onChange={val => set('dishes', val)}
+                allDishes={allDishes}
+              />
+            </div>
+
+            {/* Notas generales */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={lbl}>Notas generales del menú (opcional)</label>
+              <textarea rows={2} value={form.menu || ''} onChange={e => set('menu', e.target.value)}
+                placeholder="Ej: Servicio de mesa, vajilla incluida, horario de montaje..."
+                style={{ width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
+            </div>
+
+            {/* Extras */}
             <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 }}>Extras (barra, torta, mesa dulce, etc.)</div>
             <ItemsEditor items={form.items} onChange={val => set('items', val)} label="Descripción del extra" />
           </div>
@@ -214,7 +333,7 @@ function QuoteDetail({ quote, onClose, onEdit }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 560, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 580, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
           <div>
             <div style={{ fontSize: 11, color: 'var(--text-label)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>COT-{String(quote.id).padStart(4, '0')}</div>
@@ -229,13 +348,8 @@ function QuoteDetail({ quote, onClose, onEdit }) {
 
         {quote.kind === 'Catering' && (
           <div style={{ marginBottom: 20 }}>
-            {quote.menu && (
-              <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Menú</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{quote.menu}</div>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-sunken)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 4 }}>
+            {/* Resumen cubiertos */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg-sunken)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 16 }}>
               {[
                 { label: 'Cubiertos', value: quote.covers },
                 { label: 'Precio por cubierto', value: formatCurrency(quote.pricePerCover) },
@@ -247,6 +361,51 @@ function QuoteDetail({ quote, onClose, onEdit }) {
                 </div>
               ))}
             </div>
+
+            {/* Platos seleccionados */}
+            {quote.dishes && quote.dishes.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menú</div>
+                {/* Agrupar por sección */}
+                {Object.entries(
+                  quote.dishes.reduce((acc, qd) => {
+                    const sec = qd.dish?.seccion || 'Otros'
+                    if (!acc[sec]) acc[sec] = []
+                    acc[sec].push(qd)
+                    return acc
+                  }, {})
+                ).map(([seccion, dishList]) => (
+                  <div key={seccion} style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[seccion] || '#6b7280' }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{seccion}</span>
+                    </div>
+                    {dishList.map(qd => (
+                      <div key={qd.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 12px', background: 'var(--bg-sunken)', borderRadius: 8, marginBottom: 4 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{qd.dish?.name}</div>
+                          {qd.dish?.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{qd.dish.descripcion}</div>}
+                          {qd.nota && <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 2, fontStyle: 'italic' }}>Nota: {qd.nota}</div>}
+                        </div>
+                        {qd.dish?.ingredients?.length > 0 && (
+                          <div style={{ fontSize: 10, color: 'var(--text-faint)', textAlign: 'right', flexShrink: 0 }}>
+                            {qd.dish.ingredients.length} ing.
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Notas generales */}
+            {quote.menu && (
+              <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Notas</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{quote.menu}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -285,21 +444,27 @@ function QuoteDetail({ quote, onClose, onEdit }) {
 
 export default function Quotes() {
   const toast = useToast()
-  const [quotes, setQuotes]   = useState([])
-  const [events, setEvents]   = useState([])
-  const [clients, setClients] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
+  const [quotes, setQuotes]     = useState([])
+  const [events, setEvents]     = useState([])
+  const [clients, setClients]   = useState([])
+  const [allDishes, setDishes]  = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [search, setSearch]     = useState('')
   const [filterEstado, setFilterEstado] = useState('Todos')
   const [filterKind,   setFilterKind]   = useState('Todos')
-  const [modal, setModal]     = useState(null)
+  const [modal, setModal]       = useState(null)
   const [selected, setSelected] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const fetchData = async () => {
     try {
-      const [qRes, evRes, clRes] = await Promise.all([api.get('/api/quotes'), api.get('/api/events'), api.get('/api/clients')])
-      setQuotes(qRes.data); setEvents(evRes.data); setClients(clRes.data)
+      const [qRes, evRes, clRes, dRes] = await Promise.all([
+        api.get('/api/quotes'),
+        api.get('/api/events'),
+        api.get('/api/clients'),
+        api.get('/api/dishes'),
+      ])
+      setQuotes(qRes.data); setEvents(evRes.data); setClients(clRes.data); setDishes(dRes.data)
     } catch { toast('Error al cargar cotizaciones') }
     finally { setLoading(false) }
   }
@@ -319,7 +484,8 @@ export default function Quotes() {
         menu: form.kind === 'Catering' ? (form.menu || null) : null,
         covers: form.kind === 'Catering' ? Number(form.covers) : null,
         pricePerCover: form.kind === 'Catering' ? Number(form.pricePerCover) : null,
-        items: (form.items || []).map(({ description, quantity, unitPrice }) => ({ description, quantity: Number(quantity), unitPrice: Number(unitPrice) }))
+        items: (form.items || []).map(({ description, quantity, unitPrice }) => ({ description, quantity: Number(quantity), unitPrice: Number(unitPrice) })),
+        dishes: form.kind === 'Catering' ? (form.dishes || []).map(({ dishId, nota }) => ({ dishId, nota: nota || null })) : [],
       }
       if (modal === 'new') { await api.post('/api/quotes', payload); toast('Cotización creada correctamente', 'success') }
       else { await api.put(`/api/quotes/${selected.id}`, payload); toast('Cotización actualizada', 'success') }
@@ -416,8 +582,8 @@ export default function Quotes() {
         }
       </div>
 
-      {modal === 'new'    && <QuoteForm events={events} clients={clients} onSave={handleSave} onClose={() => setModal(null)} />}
-      {modal === 'edit'   && selected && <QuoteForm initial={selected} events={events} clients={clients} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
+      {modal === 'new'    && <QuoteForm events={events} clients={clients} allDishes={allDishes} onSave={handleSave} onClose={() => setModal(null)} />}
+      {modal === 'edit'   && selected && <QuoteForm initial={selected} events={events} clients={clients} allDishes={allDishes} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
       {modal === 'detail' && selected && <QuoteDetail quote={selected} onClose={() => { setModal(null); setSelected(null) }} onEdit={q => { setModal('edit'); setSelected(q) }} />}
       {confirmDelete && <ConfirmDialog title="¿Eliminar cotización?" message={`Esto eliminará la cotización COT-${String(confirmDelete.id).padStart(4,'0')} del evento "${confirmDelete.event?.name}". Esta acción no se puede deshacer.`} onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
     </div>
