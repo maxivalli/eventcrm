@@ -79,7 +79,6 @@ function ConnectionTab() {
 
   useEffect(() => { fetchStatus() }, [fetchStatus])
 
-  // Polling cada 5s cuando hay QR esperando conexión
   useEffect(() => {
     if (qrData && status?.status?.state !== 'open') {
       const t = setInterval(fetchStatus, 5000)
@@ -112,20 +111,12 @@ function ConnectionTab() {
   const state = status?.status?.state
   const connected = state === 'open'
 
-  const envVars = [
-    { key: 'EVOLUTION_API_URL',  desc: 'URL pública de tu Evolution API (ej: https://evolution.tudominio.com)' },
-    { key: 'EVOLUTION_API_KEY',  desc: 'Global API Key configurada en Evolution API' },
-    { key: 'EVOLUTION_INSTANCE', desc: 'Nombre de la instancia (default: haus-crm)' },
-  ]
-
   if (loading) return (
     <div style={{ color: 'var(--text-label)', fontSize: 13, padding: 8 }}>Verificando conexión...</div>
   )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* Estado actual */}
       <div style={card}>
         <div style={sectionTitle}>Estado de la conexión</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -151,11 +142,17 @@ function ConnectionTab() {
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
             <button onClick={fetchStatus} style={btn()}>↻ Actualizar</button>
-            {!connected && <button onClick={handleGetQR} style={btn('primary')}>Ver QR</button>}
+            {!connected && (
+              <>
+                <button onClick={handleCreate} disabled={creating} style={btn()}>
+                  {creating ? 'Creando...' : '+ Crear instancia'}
+                </button>
+                <button onClick={handleGetQR} style={btn('primary')}>Ver QR</button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* QR Code */}
         {qrData && !connected && (
           <div style={{ marginTop: 20, padding: 20, background: 'var(--bg-sunken)', borderRadius: 12, border: '1px solid var(--border)', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: 'var(--text-label)', marginBottom: 12 }}>
@@ -173,71 +170,6 @@ function ConnectionTab() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Instrucciones de setup */}
-      <div style={card}>
-        <div style={sectionTitle}>Configuración inicial</div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Paso 1 */}
-          <Step n={1} title="Deployar Evolution API en Railway">
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-              En Railway, creá un nuevo servicio → <strong>Deploy from Docker Image</strong> → ingresá:
-            </p>
-            <code style={{ display: 'block', marginTop: 8, padding: '10px 14px', background: 'var(--bg-sunken)', borderRadius: 8, fontSize: 12, color: 'var(--gold)', fontFamily: 'monospace', border: '1px solid var(--border)' }}>
-              atendai/evolution-api:latest
-            </code>
-            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              En <strong>Variables</strong> del servicio, agregá:<br />
-              <code style={{ color: 'var(--gold)' }}>AUTHENTICATION_API_KEY</code> = una clave secreta que vos elijas<br />
-              <code style={{ color: 'var(--gold)' }}>SERVER_URL</code> = la URL pública que Railway te asigne
-            </p>
-          </Step>
-
-          {/* Paso 2 */}
-          <Step n={2} title="Configurar variables en el backend">
-            <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-secondary)' }}>
-              En las variables de entorno de tu servicio de backend en Railway, agregá:
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {envVars.map(v => (
-                <div key={v.key} style={{ padding: '8px 12px', background: 'var(--bg-sunken)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--gold)', marginBottom: 2 }}>{v.key}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{v.desc}</div>
-                </div>
-              ))}
-            </div>
-          </Step>
-
-          {/* Paso 3 */}
-          <Step n={3} title="Crear la instancia y vincular WhatsApp">
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
-              Una vez configuradas las variables y redeployado el backend, creá la instancia:
-            </p>
-            <button onClick={handleCreate} disabled={creating} style={btn('primary')}>
-              {creating ? 'Creando...' : '+ Crear instancia'}
-            </button>
-            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-              Luego hacé clic en <strong>Ver QR</strong>, abrí WhatsApp en tu celular → Dispositivos vinculados → Vincular dispositivo, y escaneá el código.
-            </p>
-          </Step>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Step({ n, title, children }) {
-  return (
-    <div style={{ display: 'flex', gap: 14, padding: '16px', background: 'var(--bg-sunken)', borderRadius: 12, border: '1px solid var(--border)' }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'var(--gold-bg)', border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>
-        {n}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{title}</div>
-        {children}
       </div>
     </div>
   )

@@ -82,6 +82,7 @@ exports.sendToEvent = async (req, res) => {
     await evolution.sendText(event.client.phone, text)
     res.json({ ok: true, to: event.client.phone, text })
   } catch (e) {
+    console.error('[WhatsApp sendToEvent error]', e.response?.data || e.message)
     res.status(500).json({ ok: false, error: e.message })
   }
 }
