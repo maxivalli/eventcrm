@@ -1,13 +1,12 @@
-import { MessageCircle } from "lucide-react"
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { MessageCircle } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Checklist from "../components/Checklist";
 import EventFiles from "../components/EventFiles";
 import Cronograma from "../components/Cronograma";
-import { useNavigate } from "react-router-dom";
 
 const statusColors = {
   Confirmado:       "#22c55e",

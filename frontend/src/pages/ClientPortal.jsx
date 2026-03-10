@@ -291,6 +291,10 @@ export default function ClientPortal() {
 
         {/* Estado de cuenta */}
         <Section title="Estado de cuenta" icon="💳">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)', marginBottom: 10 }}>
+            <span style={{ fontSize: 14 }}>🔒</span>
+            <span style={{ fontSize: 11, color: '#A0906A' }}>Esta información es confidencial y está destinada exclusivamente a vos.</span>
+          </div>
           <div style={{ background: '#12121A', border: '1px solid #1A1A28', borderRadius: 10, overflow: 'hidden' }}>
             <div style={{ padding: '16px 16px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>

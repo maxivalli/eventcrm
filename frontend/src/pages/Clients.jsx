@@ -1,783 +1,409 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import api from "../api/axios";
-import { useToast } from "../components/Toast";
-import ConfirmDialog from "../components/ConfirmDialog";
-import Checklist from "../components/Checklist";
-import EventFiles from "../components/EventFiles";
-import Cronograma from "../components/Cronograma";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Phone, Mail } from 'lucide-react'
+import api from '../api/axios'
+import { useToast } from '../components/Toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
-const statusColors = {
-  Confirmado:       "#22c55e",
-  Propuesta:        "#f59e0b",
-  Finalizado:       "#8b5cf6",
-};
+const statusColors = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8' }
+const ESTADOS = ['Todos', 'Activo', 'Inactivo']
 
-const isPastEvent = (ev) => {
-  if (ev.status === 'Finalizado') return false
-  const eventDate = new Date(ev.date)
-  if (ev.time) {
-    const [h, m] = ev.time.split(':')
-    eventDate.setHours(Number(h), Number(m), 0, 0)
-  } else {
-    eventDate.setHours(23, 59, 0, 0)
-  }
-  return eventDate < new Date()
+const formatDate = (str) => {
+  if (!str) return '—'
+  return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
-
-// Inyectar keyframe una sola vez
-if (!document.getElementById('past-event-style')) {
-  const style = document.createElement('style')
-  style.id = 'past-event-style'
-  style.textContent = `
-    @keyframes pulse-past {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-  `
-  document.head.appendChild(style)
-}
-const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
-const sortSections = (sections) =>
-  [...sections].sort((a, b) => {
-    const ia = SECCION_ORDER.indexOf(a.nombre)
-    const ib = SECCION_ORDER.indexOf(b.nombre)
-    if (ia === -1 && ib === -1) return 0
-    if (ia === -1) return 1
-    if (ib === -1) return -1
-    return ia - ib
-  })
-const quoteStatusColors = {
-  Aprobado:  "#22c55e",
-  Pendiente: "#f59e0b",
-  Rechazado: "#ef4444",
-};
-const typeColors = {
-  Corporativo: "#3b82f6",
-  Cultural:    "#8b5cf6",
-  Social:      "#ec4899",
-};
-const ESTADOS = ["Todos", "Propuesta", "Confirmado", "Finalizado"];
-
-const fmt = (n) =>
-  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
-const fmtDate = (str) =>
-  new Date(str).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
 
 function Badge({ label, color }) {
-  return (
-    <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, fontWeight: 600, background: `${color}20`, color, whiteSpace: "nowrap" }}>
-      {label}
-    </span>
-  );
+  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, background: `${color}20`, color }}>{label}</span>
 }
 
-function BalanceBar({ label, value, max, color }) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color }}>{fmt(value)}</span>
-      </div>
-      <div style={{ background: "var(--border-strong)", borderRadius: 99, height: 7, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99, transition: "width 0.7s ease" }} />
-      </div>
-    </div>
-  );
-}
+const inp  = (err) => ({ width: '100%', background: 'var(--bg-sunken)', border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' })
+const lbl  = { fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5, display: 'block' }
+const err_ = { fontSize: 11, color: '#ef4444', marginTop: 4 }
 
-const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const DIAS  = ["Lu","Ma","Mi","Ju","Vi","Sá","Do"];
+const emptyForm = { name: '', contact: '', email: '', phone: '', birthdate: '', status: 'Inactivo' }
 
-function parseLocalDate(str) {
-  if (!str) return null;
-  const [y, m, d] = str.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-function toLocalISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
+function ClientForm({ initial, onSave, onClose }) {
+  const [form, setForm] = useState(initial ? { ...initial, birthdate: initial.birthdate?.slice(0, 10) ?? '' } : emptyForm)
+  const [errors, setErrors] = useState({})
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
-function DatePicker({ value, onChange, hasError }) {
-  const today      = new Date();
-  const initial    = value ? parseLocalDate(value) : null;
-  const [open, setOpen]     = useState(false);
-  const [cursor, setCursor] = useState(initial ?? today);
-
-  const year  = cursor.getFullYear();
-  const month = cursor.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const startOffset = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const cells = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const select = (day) => {
-    if (!day) return;
-    const picked = new Date(year, month, day);
-    onChange(toLocalISO(picked));
-    setOpen(false);
-  };
-
-  const prevMonth = () => setCursor(new Date(year, month - 1, 1));
-  const nextMonth = () => setCursor(new Date(year, month + 1, 1));
-
-  const isSelected = (day) => {
-    if (!day || !value) return false;
-    const sel = parseLocalDate(value);
-    return sel && sel.getFullYear() === year && sel.getMonth() === month && sel.getDate() === day;
-  };
-  const isToday = (day) => {
-    if (!day) return false;
-    return today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
-  };
-
-  const displayValue = value
-    ? parseLocalDate(value).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })
-    : "Seleccionar fecha...";
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: "100%", background: "var(--bg-sunken)",
-          border: `1px solid ${hasError ? "#ef4444" : open ? "var(--gold)" : "var(--border)"}`,
-          borderRadius: 8, padding: "10px 14px", color: value ? "var(--text-primary)" : "var(--text-faint)",
-          fontSize: 13, outline: "none", boxSizing: "border-box", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          transition: "border-color 0.2s",
-        }}
-      >
-        <span>{displayValue}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-label)", flexShrink: 0 }}>
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-      </button>
-
-      {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 299 }} />
-          <div style={{
-            position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 300,
-            background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 14,
-            padding: 18, width: 280, boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <button type="button" onClick={prevMonth} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontSize: 16, lineHeight: 1 }}>‹</button>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
-                {MESES[month]} {year}
-              </span>
-              <button type="button" onClick={nextMonth} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px 8px", borderRadius: 6, fontSize: 16, lineHeight: 1 }}>›</button>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 6 }}>
-              {DIAS.map(d => (
-                <div key={d} style={{ textAlign: "center", fontSize: 10, color: "var(--text-faint)", fontWeight: 700, padding: "4px 0", textTransform: "uppercase", letterSpacing: 0.5 }}>{d}</div>
-              ))}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-              {cells.map((day, i) => {
-                const sel = isSelected(day);
-                const tod = isToday(day);
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => select(day)}
-                    disabled={!day}
-                    style={{
-                      aspectRatio: "1", border: "none", borderRadius: 8, cursor: day ? "pointer" : "default",
-                      fontSize: 12, fontWeight: sel ? 700 : 400,
-                      background: sel ? "linear-gradient(135deg, #c9a84c, #e8c97a)" : tod ? "rgba(201,168,76,0.12)" : "transparent",
-                      color: sel ? "#09090f" : tod ? "var(--gold)" : day ? "var(--text-secondary)" : "transparent",
-                      outline: "none", transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => { if (day && !sel) e.currentTarget.style.background = "var(--bg-hover)" }}
-                    onMouseLeave={e => { if (day && !sel) e.currentTarget.style.background = tod ? "rgba(201,168,76,0.12)" : "transparent" }}
-                  >
-                    {day || ""}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => { onChange(toLocalISO(today)); setCursor(today); setOpen(false); }}
-              style={{ width: "100%", marginTop: 12, padding: "7px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 11, cursor: "pointer", letterSpacing: 0.5 }}
-            >
-              Hoy
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "" };
-
-function EventForm({ initial, clients, onSave, onClose }) {
-  const [form, setForm] = useState(
-    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "" } : emptyForm
-  );
-  const [errors, setErrors] = useState({});
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })) };
-
-  const validate = () => {
-    const e = {};
-    if (!form.name.trim())                     e.name     = "Requerido";
-    if (!form.clientId)                        e.clientId = "Seleccionar cliente";
-    if (!form.date)                            e.date     = "Requerido";
-    if (!form.venue.trim())                    e.venue    = "Requerido";
-    if (!form.guests  || Number(form.guests)  <= 0) e.guests = "Debe ser mayor a 0";
-    if (!form.budget  || Number(form.budget)  <= 0) e.budget = "Debe ser mayor a 0";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const inp = (err) => ({
-    width: "100%", background: "var(--bg-sunken)", border: `1px solid ${err ? "#ef4444" : "var(--border)"}`,
-    borderRadius: 8, padding: "10px 14px", color: "var(--text-primary)", fontSize: 13, outline: "none", boxSizing: "border-box",
-  });
-  const lbl = { fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5, display: "block" };
-  const err = { fontSize: 11, color: "#ef4444", marginTop: 4 };
-
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 18, padding: 32, width: 520, maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "var(--gold)", marginBottom: 24 }}>
-          {initial ? "Editar evento" : "Nuevo evento"}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Nombre *</label>
-            <input style={inp(errors.name)} value={form.name} onChange={e => set("name", e.target.value)} />
-            {errors.name && <div style={err}>{errors.name}</div>}
-          </div>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Cliente *</label>
-            <select style={inp(errors.clientId)} value={form.clientId} onChange={e => set("clientId", e.target.value)}>
-              <option value="">— Seleccionar cliente —</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            {errors.clientId && <div style={err}>{errors.clientId}</div>}
-          </div>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Venue *</label>
-            <input style={inp(errors.venue)} value={form.venue} onChange={e => set("venue", e.target.value)} />
-            {errors.venue && <div style={err}>{errors.venue}</div>}
-          </div>
-          <div>
-            <label style={lbl}>Fecha *</label>
-            <DatePicker value={form.date} onChange={v => set("date", v)} hasError={!!errors.date} />
-            {errors.date && <div style={err}>{errors.date}</div>}
-          </div>
-          <div>
-            <label style={lbl}>Hora del evento</label>
-            <input
-              type="time"
-              style={inp()}
-              value={form.time}
-              onChange={e => set("time", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={lbl}>Tipo</label>
-            <select style={inp()} value={form.type} onChange={e => set("type", e.target.value)}>
-              {["Corporativo", "Cultural", "Social"].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={lbl}>Estado</label>
-            <select style={inp()} value={form.status} onChange={e => set("status", e.target.value)}>
-              {["Propuesta", "Confirmado", "Finalizado"].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={lbl}>Invitados *</label>
-            <input type="number" style={inp(errors.guests)} value={form.guests} onChange={e => set("guests", e.target.value)} />
-            {errors.guests && <div style={err}>{errors.guests}</div>}
-          </div>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Presupuesto estimado (ARS) *</label>
-            <input type="number" style={inp(errors.budget)} value={form.budget} onChange={e => set("budget", e.target.value)} />
-            {errors.budget && <div style={err}>{errors.budget}</div>}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 11, border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
-          <button onClick={() => { if (validate()) onSave(form) }} style={{ flex: 1, padding: 11, border: "none", borderRadius: 8, background: "linear-gradient(135deg, #c9a84c, #e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Guardar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EventDetail({ event, onClose, onEdit }) {
-  const navigate = useNavigate();
-  const [quotes, setQuotes]   = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [spPayments, setSpPayments] = useState([]);
-  const [summary, setSummary] = useState({ totalQuotes: 0, totalPaid: 0, balance: 0 });
-  const [spSummary, setSpSummary] = useState({ totalPaid: 0, totalPending: 0 });
-  const [cateringTotal, setCateringTotal] = useState(null);
-  const [menuSections, setMenuSections]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  // ── Picker de contactos ──
+  const [contacts,     setContacts]     = useState([])
+  const [contactQuery, setContactQuery] = useState(initial?.contact || '')
+  const [suggestions,  setSuggestions]  = useState([])
+  const [pickerOpen,   setPickerOpen]   = useState(false)
+  const pickerRef = useRef()
 
   useEffect(() => {
-    Promise.all([
-      api.get("/api/quotes"),
-      api.get(`/api/payments?eventId=${event.id}`),
-      api.get(`/api/supplier-payments/by-event/${event.id}`),
-    ]).then(([qRes, pRes, spRes]) => {
-      setQuotes(qRes.data.filter(q => q.eventId === event.id));
-      setPayments(pRes.data.payments || []);
-      setSummary({ totalQuotes: pRes.data.totalQuotes || 0, totalPaid: pRes.data.totalPaid || 0, balance: pRes.data.balance || 0 });
-      setSpPayments(spRes.data.payments || []);
-      setSpSummary({ totalPaid: spRes.data.totalPaid || 0, totalPending: spRes.data.totalPending || 0 });
-    }).catch(console.error).finally(() => setLoading(false));
+    api.get('/api/contacts').then(r => setContacts(r.data)).catch(() => {})
+  }, [])
 
-    api.get(`/api/menu/event/${event.id}`)
-      .then(res => setMenuSections(res.data || []))
-      .catch(() => setMenuSections([]));
-  }, [event.id]);
+  // Sincronizar query cuando se abre en modo edición
+  useEffect(() => { setContactQuery(form.contact) }, [])
 
-  const calcQuoteTotal = q => {
-    const items    = (q.items || []).reduce((a, i) => a + i.quantity * i.unitPrice, 0);
-    const catering = q.kind === "Catering" ? (q.covers || 0) * (q.pricePerCover || 0) : 0;
-    return catering + items;
-  };
+  const handleContactInput = (val) => {
+    setContactQuery(val)
+    set('contact', val)
+    if (val.trim().length < 1) { setSuggestions([]); setPickerOpen(false); return }
+    const q = val.toLowerCase()
+    const matches = contacts.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phone.includes(q) ||
+      c.email.toLowerCase().includes(q)
+    ).slice(0, 6)
+    setSuggestions(matches)
+    setPickerOpen(matches.length > 0)
+  }
 
-  const totalProveedores = spSummary.totalPaid + spSummary.totalPending;
-  const utilidad = summary.totalQuotes - totalProveedores;
-  const balanceMax = Math.max(summary.totalQuotes, summary.totalPaid, totalProveedores, 1);
+  const applyContact = (c) => {
+    setContactQuery(c.name)
+    set('contact', c.name)
+    if (c.phone && !form.phone) set('phone', c.phone)
+    if (c.email && !form.email) set('email', c.email)
+    setSuggestions([])
+    setPickerOpen(false)
+  }
 
-  const SL = { fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, fontWeight: 600 };
-  const Card = ({ children, style = {} }) => (
-    <div style={{ background: "var(--bg-sunken)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden", ...style }}>{children}</div>
-  );
-  const Row = ({ label, value, color = "var(--text-primary)", last = false }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "11px 16px", borderBottom: last ? "none" : "1px solid var(--border-row)" }}>
-      <span style={{ fontSize: 12, color: "var(--text-label)" }}>{label}</span>
-      <span style={{ fontSize: 13, color, fontWeight: color !== "var(--text-primary)" ? 600 : 400 }}>{value}</span>
-    </div>
-  );
+  // Cerrar al click afuera
+  useEffect(() => {
+    const handler = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setPickerOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const validate = () => {
+    const e = {}
+    if (!form.name.trim())    e.name    = 'Requerido'
+    if (!form.contact.trim()) e.contact = 'Requerido'
+    if (!form.email.trim())   e.email   = 'Requerido'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Email inválido'
+    if (!form.phone.trim())   e.phone   = 'Requerido'
+    setErrors(e); return Object.keys(e).length === 0
+  }
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 20,
-        width: "100%", maxWidth: 1100, maxHeight: "90vh",
-        display: "flex", flexDirection: "column", overflow: "hidden",
-      }}>
-        {/* Header */}
-        <div style={{ padding: "22px 32px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "var(--text-primary)" }}>{event.name}</div>
-            <div style={{ fontSize: 12, color: "var(--text-label)", marginTop: 3 }}>{event.client?.name}</div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Badge label={event.type} color={typeColors[event.type] || "var(--text-muted)"} />
-            <Badge label={event.status} color={statusColors[event.status] || "var(--text-muted)"} />
-            <button onClick={() => onEdit(event)} style={{ marginLeft: 6, padding: "7px 16px", border: "none", borderRadius: 8, background: "linear-gradient(135deg,#c9a84c,#e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Editar</button>
-            <button onClick={onClose} style={{ padding: "7px 13px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>✕</button>
-          </div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 480, maxWidth: '90vw' }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--gold)', marginBottom: 24 }}>
+          {initial ? 'Editar cliente' : 'Nuevo cliente'}
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
-        {/* Body — 2 columnas */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", flex: 1, overflow: "hidden" }}>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={lbl}>Nombre / Empresa *</label>
+            <input style={inp(errors.name)} value={form.name} onChange={e => set('name', e.target.value)} />
+            {errors.name && <div style={err_}>{errors.name}</div>}
+          </div>
 
-          {/* ── Columna izquierda ── */}
-          <div style={{ overflowY: "auto", padding: "28px 32px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 26 }}>
-
-            {/* Datos */}
-            <section>
-              <div style={SL}>Datos del evento</div>
-              <Card>
-                <Row label="Fecha"          value={fmtDate(event.date)} />
-                <Row label="Hora"           value={event.time || "—"} />
-                <Row label="Venue"          value={event.venue} />
-                <Row label="Invitados"      value={`${event.guests} personas`} />
-                <Row label="Pres. estimado" value={fmt(event.budget)} last />
-              </Card>
-            </section>
-
-            {/* Cotizaciones */}
-            <section>
-              <div style={SL}>Cotizaciones</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : quotes.length === 0
-                ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin cotizaciones</div>
-                : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    {quotes.map(q => (
-                      <div key={q.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{q.kind}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{fmtDate(q.date)}</div>
-                        </div>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <Badge label={q.status} color={quoteStatusColors[q.status] || "var(--text-muted)"} />
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--gold-light)" }}>{fmt(calcQuoteTotal(q))}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 15px", background: "rgba(201,168,76,0.06)", borderRadius: 8, border: "1px solid rgba(201,168,76,0.15)" }}>
-                      <span style={{ fontSize: 12, color: "var(--text-label)" }}>Total aprobadas</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--gold-light)" }}>{fmt(summary.totalQuotes)}</span>
-                    </div>
-                  </div>
-                )
-              }
-            </section>
-
-            {/* Cobros */}
-            <section>
-              <div style={SL}>Cobros al cliente</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {payments.length === 0
-                    ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin cobros registrados</div>
-                    : payments.map(p => (
-                      <div key={p.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{fmt(p.amount)}</div>
-                          {p.note && <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{p.note}</div>}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{fmtDate(p.date)}</div>
-                      </div>
-                    ))
-                  }
-                  <Card>
-                    <Row label="Total cobrado"         value={fmt(summary.totalPaid)} color="#22c55e" />
-                    <Row label="Saldo pendiente"        value={fmt(summary.balance)}  color={summary.balance > 0 ? "#ef4444" : "#22c55e"} last />
-                  </Card>
-                </div>
+          {/* Contacto con picker de agenda */}
+          <div style={{ gridColumn: '1/-1', position: 'relative' }} ref={pickerRef}>
+            <label style={lbl}>
+              Contacto *
+              {contacts.length > 0 && (
+                <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-faint)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                  — escribí para buscar en agenda ({contacts.length} contactos)
+                </span>
               )}
-            </section>
+            </label>
+            <input
+              style={inp(errors.contact)}
+              value={contactQuery}
+              onChange={e => handleContactInput(e.target.value)}
+              onFocus={() => { if (suggestions.length > 0) setPickerOpen(true) }}
+              placeholder="Nombre de la persona de contacto"
+              autoComplete="off"
+            />
+            {errors.contact && <div style={err_}>{errors.contact}</div>}
 
-            {/* Pagos a proveedores */}
-            <section>
-              <div style={SL}>Pagos a proveedores</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {spPayments.length === 0
-                    ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin pagos registrados</div>
-                    : spPayments.map(p => (
-                      <div key={p.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{p.supplier?.name}</div>
-                          {p.note && <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{p.note}</div>}
-                        </div>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <Badge label={p.status} color={p.status === "Pagado" ? "#22c55e" : "#f59e0b"} />
-                          <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{fmt(p.amount)}</span>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  <Card>
-                    <Row label="Pagado a proveedores"   value={fmt(spSummary.totalPaid)}    color="#ef4444" />
-                    <Row label="Pendiente proveedores"  value={fmt(spSummary.totalPending)} color="#f59e0b" last />
-                  </Card>
-                </div>
-              )}
-            </section>
-
-            {/* Balance del evento */}
-            {!loading && (
-              <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-                <div style={SL}>Balance del evento</div>
-                <div style={{ background: "var(--bg-sunken)", borderRadius: 14, border: "1px solid var(--border)", padding: "20px 22px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
-                    {[
-                      { label: "Ingresos aprobados", value: summary.totalQuotes,    color: "var(--gold)" },
-                      { label: "Cobrado al cliente",  value: summary.totalPaid,      color: "#22c55e" },
-                      { label: "Pagado proveedores",  value: spSummary.totalPaid,    color: "#ef4444" },
-                      { label: "Pend. proveedores",   value: spSummary.totalPending, color: "#f59e0b" },
-                    ].map(item => (
-                      <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}25`, borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ fontSize: 10, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 5 }}>{item.label}</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes} max={balanceMax} color="var(--gold)" />
-                    <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}   max={balanceMax} color="#22c55e" />
-                    <BalanceBar label="Total proveedores"   value={totalProveedores}     max={balanceMax} color="#ef4444" />
-                  </div>
-                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border-row)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontSize: 12, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>Utilidad estimada</div>
-                      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>Ingresos − total proveedores</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: utilidad >= 0 ? "#22c55e" : "#ef4444" }}>{fmt(utilidad)}</div>
-                      {summary.totalQuotes > 0 && (
-                        <div style={{ fontSize: 11, color: "var(--text-label)" }}>
-                          {Math.round((utilidad / summary.totalQuotes) * 100)}% del ingreso
-                        </div>
-                      )}
+            {/* Dropdown de sugerencias */}
+            {pickerOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 400,
+                background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
+                borderRadius: 10, marginTop: 4, overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}>
+                {suggestions.map(c => (
+                  <div
+                    key={c.id}
+                    onMouseDown={() => applyContact(c)}
+                    style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border-row)', transition: 'background 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 12 }}>
+                      {c.phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={11} />{c.phone}</span>}
+                      {c.email && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={11} />{c.email}</span>}
                     </div>
                   </div>
-                </div>
-              </section>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* ── Columna derecha ── */}
-          <div style={{ overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 26 }}>
-
-            {/* Catering — resumen */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={SL}>Menú de catering</div>
-                <button
-                  onClick={() => { onClose(); navigate("/catering"); }}
-                  style={{ padding: "4px 12px", border: "1px solid var(--border)", borderRadius: 20, background: "transparent", color: "var(--text-muted)", fontSize: 11, cursor: "pointer" }}
-                >
-                  Gestionar →
-                </button>
-              </div>
-              {!loading && (
-                menuSections.length === 0
-                  ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin menú cargado. Hacé click en Gestionar para armarlo.</div>
-                  : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {sortSections(menuSections).map(sec => (
-                        <div key={sec.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                          <div style={{ padding: "8px 14px", borderBottom: sec.items.length > 0 ? "1px solid var(--border-row)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{sec.nombre}</span>
-                            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{sec.items.length} plato{sec.items.length !== 1 ? "s" : ""}</span>
-                          </div>
-                          {sec.items.map((item, i) => (
-                            <div key={item.id} style={{ padding: "7px 14px", borderBottom: i < sec.items.length - 1 ? "1px solid var(--border-row)" : "none" }}>
-                              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{item.dish.name}</div>
-                              {item.dish.descripcion && (
-                                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>{item.dish.descripcion}</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                      <div style={{ fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>
-                        {menuSections.reduce((t, s) => t + s.items.length, 0)} platos · {event.guests} invitados
-                      </div>
-                    </div>
-                  )
-              )}
-            </section>
-
-            {/* Cronograma IA */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <Cronograma event={event} />
-            </section>
-
-            {/* Checklist */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <Checklist eventId={event.id} event={event} />
-            </section>
-
-            {/* Archivos */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <EventFiles eventId={event.id} />
-            </section>
+          <div>
+            <label style={lbl}>Teléfono *</label>
+            <input style={inp(errors.phone)} value={form.phone} onChange={e => set('phone', e.target.value)} />
+            {errors.phone && <div style={err_}>{errors.phone}</div>}
           </div>
+          <div>
+            <label style={lbl}>Email *</label>
+            <input style={inp(errors.email)} value={form.email} onChange={e => set('email', e.target.value)} />
+            {errors.email && <div style={err_}>{errors.email}</div>}
+          </div>
+          <div>
+            <label style={lbl}>Fecha de nac. / fundación</label>
+            <input type="date" style={inp()} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Estado</label>
+            <select style={inp()} value={form.status} onChange={e => set('status', e.target.value)}>
+              {['Activo', 'Inactivo'].map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={() => { if (validate()) onSave(form) }} style={{ flex: 1, padding: 11, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Guardar</button>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default function Events() {
-  const toast = useToast();
-  const location = useLocation();
-  const [events, setEvents]   = useState([]);
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState("");
-  const [filter, setFilter]   = useState("Todos");
-  const [filterTime, setFilterTime] = useState("Todos");
-  const [modal, setModal]     = useState(null);
-  const [selected, setSelected]       = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null);
+const eventStatusColors = {
+  'Confirmado':    '#22c55e',
+  'Propuesta':     '#f59e0b',
+  'Finalizado':    '#8b5cf6',
+}
 
-  const fetchData = async () => {
-    try {
-      const [evRes, clRes] = await Promise.all([api.get("/api/events"), api.get("/api/clients")]);
-      setEvents(evRes.data);
-      setClients(clRes.data);
-      const targetId = location.state?.openEventId;
-      if (targetId) {
-        const target = evRes.data.find(e => e.id === targetId);
-        if (target) { setSelected(target); setModal("detail"); }
-      }
-    } catch { toast("Error al cargar eventos"); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { fetchData(); }, []);
+function ClientDetail({ client, onClose, onEdit }) {
+  const navigate = useNavigate()
+  const [events, setEvents]     = useState([])
+  const [loadingEvs, setLoadingEvs] = useState(false)
 
-  const filtered = events.filter(e => {
-    const ms = e.name.toLowerCase().includes(search.toLowerCase()) || e.client?.name.toLowerCase().includes(search.toLowerCase());
-    const mf = filter === "Todos" || e.status === filter;
-    const past = isPastEvent(e)
-    const mt = filterTime === "Todos" || (filterTime === "Pasaron" && past) || (filterTime === "Próximos" && !past)
-    return ms && mf && mt;
-  });
+  useEffect(() => {
+    if ((client._count?.events ?? 0) === 0) return
+    setLoadingEvs(true)
+    api.get(`/api/clients/${client.id}`)
+      .then(res => setEvents(res.data.events ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingEvs(false))
+  }, [client.id])
+
+  const goToEvent = (ev) => {
+    onClose()
+    navigate('/events', { state: { openEventId: ev.id } })
+  }
+
+  const hasEvents = (client._count?.events ?? 0) > 0
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 500, maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--text-primary)' }}>{client.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 4 }}>{client.contact}</div>
+          </div>
+          <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
+        </div>
+
+        {/* Info básica */}
+        {/* Teléfono */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)', flexShrink: 0 }}>Teléfono</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{client.phone}</span>
+            <button onClick={() => {
+              let phone = (client.phone || '').replace(/[\s\-().+]/g, '')
+              if (phone.startsWith('0')) phone = phone.slice(1)
+              if (!phone.startsWith('54')) phone = '54' + phone
+              window.open(`https://wa.me/${phone}`, '_blank')
+            }} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(37,211,102,0.3)', background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
+              </svg>
+              WhatsApp
+            </button>
+          </div>
+        </div>
+        {/* Email */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)', flexShrink: 0 }}>Email</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)', wordBreak: 'break-all' }}>{client.email}</span>
+            <button onClick={() => window.open(`mailto:${client.email}`, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#3b82f6', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              Correo
+            </button>
+          </div>
+        </div>
+        {/* Fecha */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)' }}>Fecha nac. / fundación</span>
+          <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{formatDate(client.birthdate)}</span>
+        </div>
+
+        {/* Sección de eventos */}
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            Eventos · {client._count?.events ?? 0}
+          </div>
+
+          {!hasEvents && (
+            <div style={{ padding: '14px 0', fontSize: 13, color: 'var(--text-faint)', textAlign: 'center' }}>
+              Sin eventos registrados
+            </div>
+          )}
+
+          {hasEvents && loadingEvs && (
+            <div style={{ padding: '14px 0', fontSize: 13, color: 'var(--text-faint)', textAlign: 'center' }}>
+              Cargando eventos...
+            </div>
+          )}
+
+          {hasEvents && !loadingEvs && events.map(ev => (
+            <div
+              key={ev.id}
+              onClick={() => goToEvent(ev)}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-sunken)'}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '11px 14px', borderRadius: 10, marginBottom: 6,
+                background: 'var(--bg-sunken)', cursor: 'pointer',
+                border: '1px solid var(--border)', transition: 'background 0.15s',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{ev.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {formatDate(ev.date)} · {ev.venue}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <Badge label={ev.status} color={eventStatusColors[ev.status] || '#5a5a7a'} />
+                <span style={{ fontSize: 18, color: 'var(--text-faint)', lineHeight: 1 }}>›</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Acciones */}
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cerrar</button>
+          <button onClick={() => onEdit(client)} style={{ flex: 1, padding: 11, border: 'none', borderRadius: 8, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Editar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Clients() {
+  const toast = useToast()
+  const [clients, setClients]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [search, setSearch]     = useState('')
+  const [filterEstado, setFilterEstado] = useState('Todos')
+  const [modal, setModal]       = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
+  const fetchClients = async () => {
+    try { const res = await api.get('/api/clients'); setClients(res.data) }
+    catch { toast('Error al cargar clientes') }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { fetchClients() }, [])
+
+  const filtered = clients.filter(c => {
+    const ms = c.name.toLowerCase().includes(search.toLowerCase()) || c.contact.toLowerCase().includes(search.toLowerCase())
+    const mf = filterEstado === 'Todos' || c.status === filterEstado
+    return ms && mf
+  })
 
   const handleSave = async (form) => {
     try {
-      const p = { ...form, clientId: Number(form.clientId), guests: Number(form.guests), budget: Number(form.budget) };
-      if (modal === "new") { await api.post("/api/events", p); toast("Evento creado", "success"); }
-      else                 { await api.put(`/api/events/${selected.id}`, p); toast("Evento actualizado", "success"); }
-      await fetchData();
-      setModal(null); setSelected(null);
-    } catch (e) { toast(e.response?.data?.error || "Error al guardar"); }
-  };
+      const payload = { ...form, birthdate: form.birthdate || null }
+      if (modal === 'new') { await api.post('/api/clients', payload); toast('Cliente creado correctamente', 'success') }
+      else { await api.put(`/api/clients/${selected.id}`, payload); toast('Cliente actualizado', 'success') }
+      await fetchClients(); setModal(null); setSelected(null)
+    } catch (e) { toast(e.response?.data?.error || 'Error al guardar cliente') }
+  }
 
   const handleDelete = async () => {
-    try {
-      await api.delete(`/api/events/${confirmDelete.id}`);
-      toast("Evento eliminado", "success");
-      await fetchData();
-    } catch (e) { toast(e.response?.data?.error || "Error al eliminar"); }
-    finally { setConfirmDelete(null); }
-  };
+    try { await api.delete(`/api/clients/${confirmDelete.id}`); toast('Cliente eliminado', 'success'); await fetchClients() }
+    catch (e) { toast(e.response?.data?.error || 'Error al eliminar cliente') }
+    finally { setConfirmDelete(null) }
+  }
 
-  const handleStatusChange = async (ev, newStatus) => {
-    try {
-      await api.put(`/api/events/${ev.id}`, { ...ev, clientId: ev.clientId, status: newStatus });
-      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, status: newStatus } : e));
-    } catch { toast("Error al cambiar el estado"); }
-  };
+  const openDetail = c => { setSelected(c); setModal('detail') }
+  const openEdit   = c => { setSelected(c); setModal('edit') }
+  const fbtn = (active) => ({ padding: '6px 14px', borderRadius: 20, border: '1px solid', fontSize: 12, cursor: 'pointer', transition: 'all 0.2s', borderColor: active ? 'var(--gold)' : 'var(--border)', background: active ? 'var(--gold-bg)' : 'transparent', color: active ? 'var(--gold)' : 'var(--text-muted)' })
 
-  const openDetail = ev => { setSelected(ev); setModal("detail"); };
-  const openEdit   = ev => { setSelected(ev); setModal("edit");   };
-
-  const fbtn = (active) => ({
-    padding: "6px 14px", borderRadius: 20, border: "1px solid", fontSize: 12, cursor: "pointer", transition: "all 0.2s",
-    borderColor: active ? "var(--gold)" : "var(--border)",
-    background:  active ? "rgba(201,168,76,0.12)" : "transparent",
-    color:       active ? "var(--gold)" : "var(--text-muted)",
-  });
-
-  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "var(--text-label)" }}>Cargando eventos...</div>;
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>Cargando clientes...</div>
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: "var(--text-primary)" }}>Eventos</div>
-          <div style={{ fontSize: 13, color: "var(--text-label)", marginTop: 4 }}>{filtered.length} eventos encontrados</div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Clientes</div>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} clientes encontrados</div>
         </div>
-        <button onClick={() => setModal("new")} style={{ background: "linear-gradient(135deg,#c9a84c,#e8c97a)", border: "none", borderRadius: 8, padding: "10px 20px", color: "#09090f", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          + Nuevo evento
-        </button>
+        <button onClick={() => setModal('new')} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nuevo cliente</button>
       </div>
 
-      {/* Filtros */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por evento o cliente..."
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "9px 14px", color: "var(--text-primary)", fontSize: 13, outline: "none", width: 280 }} />
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {ESTADOS.map(e => <button key={e} onClick={() => setFilter(e)} style={fbtn(filter === e)}>{e}</button>)}
-        </div>
-        <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
-        <div style={{ display: "flex", gap: 6 }}>
-          {["Todos", "Próximos", "Pasaron"].map(t => (
-            <button key={t} onClick={() => setFilterTime(t)} style={{
-              ...fbtn(filterTime === t),
-              ...(t === "Pasaron" && filterTime === t ? { background: "rgba(239,68,68,0.12)", color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" } : {}),
-            }}>{t === "Pasaron" ? "● Ya pasaron" : t}</button>
-          ))}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o contacto..."
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: 280 }} />
+        <div style={{ display: 'flex', gap: 6 }}>
+          {ESTADOS.map(e => <button key={e} onClick={() => setFilterEstado(e)} style={fbtn(filterEstado === e)}>{e}</button>)}
         </div>
       </div>
 
-      {/* Tabla */}
-      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
-          <span>Evento</span><span>Cliente</span><span>Fecha</span><span>Venue</span><span>Pres. estimado</span><span>Estado</span><span/>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1fr 130px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <span>Nombre / Empresa</span><span>Contacto</span><span>Email</span><span>Teléfono</span><span>Nac. / Fundación</span><span>Estado</span><span></span>
         </div>
         {filtered.length === 0
-          ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
-          : filtered.map((ev, i) => (
-            <div key={ev.id} onClick={() => openDetail(ev)}
-              style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          ? <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>No se encontraron clientes</div>
+          : filtered.map((client, i) => (
+            <div key={client.id} onClick={() => openDetail(client)}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1fr 130px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{ev.name}</span>
-                  {ev._count?.files > 0 && <span title={`${ev._count.files} adjunto${ev._count.files !== 1 ? "s" : ""}`} style={{ fontSize: 12, color: "var(--text-label)" }}>📎</span>}
-                  {isPastEvent(ev) && (
-                    <span style={{
-                      fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 700,
-                      background: "rgba(239,68,68,0.15)", color: "#ef4444",
-                      border: "1px solid rgba(239,68,68,0.3)",
-                      animation: "pulse-past 1.5s ease-in-out infinite",
-                      whiteSpace: "nowrap",
-                    }}>
-                      ● Ya pasó
-                    </span>
-                  )}
-                </div>
-                <Badge label={ev.type} color={typeColors[ev.type] || "var(--text-muted)"} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{client.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-label)' }}>◆ {client._count?.events ?? 0} eventos</div>
               </div>
-              <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{ev.client?.name}</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{fmtDate(ev.date)}</div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{ev.venue}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#22c55e" }}>{fmt(ev.budget)}</div>
-              <select
-                value={ev.status}
-                onClick={e => e.stopPropagation()}
-                onChange={e => handleStatusChange(ev, e.target.value)}
-                style={{
-                  background: `${statusColors[ev.status]}18`,
-                  color: statusColors[ev.status] || "var(--text-muted)",
-                  border: `1px solid ${statusColors[ev.status]}40`,
-                  borderRadius: 20, padding: "4px 10px",
-                  fontSize: 11, fontWeight: 600, cursor: "pointer",
-                  outline: "none", appearance: "none", textAlign: "center",
-                }}
-              >
-                {["Propuesta","Confirmado","Finalizado"].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={e => { e.stopPropagation(); openEdit(ev) }} style={{ padding: "5px 10px", border: "1px solid var(--border)", borderRadius: 6, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>Editar</button>
-                <button onClick={e => { e.stopPropagation(); setConfirmDelete(ev) }} style={{ padding: "5px 10px", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, background: "transparent", color: "#ef4444", fontSize: 12, cursor: "pointer" }}>Eliminar</button>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{client.contact}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{client.email}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{client.phone}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(client.birthdate)}</div>
+              <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={e => { e.stopPropagation(); openEdit(client) }} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Editar</button>
+                <button onClick={e => { e.stopPropagation(); setConfirmDelete(client) }} style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
               </div>
             </div>
           ))
         }
       </div>
 
-      {modal === "new"    && <EventForm clients={clients} onSave={handleSave} onClose={() => setModal(null)} />}
-      {modal === "edit"   && selected && <EventForm initial={selected} clients={clients} onSave={handleSave} onClose={() => { setModal(null); setSelected(null); }} />}
-      {modal === "detail" && selected && <EventDetail event={selected} onClose={() => { setModal(null); setSelected(null); }} onEdit={ev => { setModal("edit"); setSelected(ev); }} />}
-
-      {confirmDelete && (
-        <ConfirmDialog
-          title="¿Eliminar evento?"
-          message={`Esto eliminará "${confirmDelete.name}" y todas sus cotizaciones. Esta acción no se puede deshacer.`}
-          onConfirm={handleDelete}
-          onCancel={() => setConfirmDelete(null)}
-        />
-      )}
+      {modal === 'new'    && <ClientForm onSave={handleSave} onClose={() => setModal(null)} />}
+      {modal === 'edit'   && selected && <ClientForm initial={selected} onSave={handleSave} onClose={() => { setModal(null); setSelected(null) }} />}
+      {modal === 'detail' && selected && <ClientDetail client={selected} onClose={() => { setModal(null); setSelected(null) }} onEdit={c => { setModal('edit'); setSelected(c) }} />}
+      {confirmDelete && <ConfirmDialog title="¿Eliminar cliente?" message={`Esto eliminará a "${confirmDelete.name}" junto con todos sus eventos y cotizaciones. Esta acción no se puede deshacer.`} onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
     </div>
-  );
+  )
 }

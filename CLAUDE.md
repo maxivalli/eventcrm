@@ -1,8 +1,8 @@
-# CLAUDE.md — Haus-CRM
+# CLAUDE.md — EventCRM (Haus-CRM)
 
 ## Descripción del proyecto
 
-CRM para gestión integral de eventos de producción (empresa "Haus"). Aplicación fullstack con autenticación JWT, separada en dos servicios independientes: `backend/` y `frontend/`. Incluye integración con WhatsApp vía Evolution API para mensajes automáticos y manuales a clientes.
+CRM para gestión de eventos de producción ("Haus"). Aplicación fullstack con autenticación JWT, separada en dos servicios independientes: `backend/` y `frontend/`.
 
 ---
 
@@ -14,25 +14,19 @@ eventcrm-main/
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── migrations/
-│   ├── data/
-│   │   └── templates.json        # Plantillas de WhatsApp persistidas en disco
 │   └── src/
-│       ├── index.js              # Entry point, registra rutas, middlewares y cron
+│       ├── index.js              # Entry point, registra rutas y middlewares
 │       ├── prisma.js             # Singleton PrismaClient
 │       ├── seed.js               # Crea usuario admin por defecto
 │       ├── cloudinary.js         # Config Cloudinary para uploads
 │       ├── upload.js             # Multer + Cloudinary storage
 │       ├── controllers/          # Lógica de negocio (un archivo por entidad)
 │       ├── routes/               # Definición de rutas (un archivo por entidad)
-│       ├── services/
-│       │   ├── evolution.js      # Cliente HTTP para Evolution API (WhatsApp)
-│       │   ├── templates.js      # CRUD de plantillas de mensajes (JSON en disco)
-│       │   └── cron.js           # Cron job diario 09:00 — mensajes automáticos
 │       └── middleware/
 │           └── auth.js           # JWT verify middleware
 └── frontend/         # React 19 + Vite 7 + React Router 7
     └── src/
-        ├── App.jsx               # Router principal con rutas protegidas
+        ├── App.jsx               # Router principal con rutas protegidas + ruta pública /portal/:token
         ├── main.jsx
         ├── index.css             # Variables CSS globales (temas dark/light)
         ├── api/
@@ -55,11 +49,12 @@ eventcrm-main/
             ├── Payments.jsx
             ├── SupplierPayments.jsx
             ├── Budget.jsx
-            ├── Catering.jsx
-            ├── Recetario.jsx
-            ├── Contacts.jsx      # Agenda de contactos independiente
-            ├── Users.jsx
-            └── WhatsApp.jsx      # Configuración y envío de mensajes WhatsApp
+            ├── Catering.jsx        # Gestión de insumos de catering por evento
+            ├── Recetario.jsx       # CRUD de platos con ingredientes
+            ├── Contacts.jsx        # Agenda de contactos independiente
+            ├── WhatsApp.jsx        # Automatizaciones de WhatsApp con Evolution API
+            ├── ClientPortal.jsx    # Portal público para clientes (sin auth)
+            └── Users.jsx
 ```
 
 ---
@@ -72,7 +67,6 @@ eventcrm-main/
 - **ORM**: Prisma 5 con PostgreSQL (`pg`)
 - **Auth**: JWT (`jsonwebtoken`) + bcrypt (`bcryptjs`)
 - **Uploads**: Multer + Cloudinary v1
-- **WhatsApp**: Evolution API v1.8.7 (via HTTP)
 - **Dev**: Nodemon
 
 ### Frontend
@@ -81,7 +75,7 @@ eventcrm-main/
 - **Router**: React Router 7
 - **HTTP**: Axios con interceptors
 - **UI**: Inline styles + variables CSS (sin framework de UI externo)
-- **Iconos**: Lucide React
+- **Iconos**: Lucide React (nunca emojis como íconos de UI)
 - **Charts**: Recharts
 
 ---
@@ -91,23 +85,23 @@ eventcrm-main/
 | Modelo | Relaciones clave |
 |---|---|
 | `User` | Independiente (gestión de acceso) |
-| `Client` | tiene muchos `Event`; campos: `birthdate` (para cron de cumpleaños) |
-| `Event` | pertenece a `Client`; tiene `Quote[]`, `Payment[]`, `SupplierPayment[]`, `ChecklistItem[]`, `EventFile[]`, `CateringItem[]`, `EventMenuSection[]` |
-| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`, `QuoteDish[]` |
-| `QuoteItem` | pertenece a `Quote` |
-| `QuoteDish` | pertenece a `Quote` y a `Dish` |
+| `Client` | tiene muchos `Event`; status default `'Inactivo'`, se activa automáticamente al crear evento |
+| `Event` | pertenece a `Client`; tiene `Quote[]`, `Payment[]`, `SupplierPayment[]`, `ChecklistItem[]`, `EventFile[]`, `CateringItem[]`, `EventMenuSection[]`; campo `portalToken` UUID único para portal público |
+| `Quote` | pertenece a `Event`; tiene `QuoteItem[]`, `QuoteDish[]`; campos: `kind`, `status`, `menu`, `covers`, `pricePerCover` |
+| `QuoteItem` | pertenece a `Quote`; campos: `description`, `quantity`, `unitPrice` |
+| `QuoteDish` | pertenece a `Quote` y a `Dish`; campos: `nota` |
 | `Payment` | pertenece a `Event` (cobros al cliente) |
-| `Supplier` | tiene `SupplierPayment[]`, `CateringItem[]` |
-| `SupplierPayment` | pertenece a `Supplier` y a `Event` |
-| `ChecklistItem` | pertenece a `Event` |
-| `EventFile` | pertenece a `Event` |
-| `CateringItem` | pertenece a `Event` y opcionalmente a `Supplier` |
-| `Dish` | tiene `DishIngredient[]`, `EventMenuItem[]`, `QuoteDish[]` |
-| `DishIngredient` | pertenece a `Dish`; campos: `cantidad` (por persona), `unidad`, `categoria` |
-| `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]` |
-| `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish` |
-| `Contact` | Independiente — agenda de contactos separada de clientes |
-| `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` |
+| `Supplier` | tiene `SupplierPayment[]`, `CateringItem[]`; campos: `category`, `rating`, `status`, `alias` |
+| `SupplierPayment` | pertenece a `Supplier` y a `Event`; campos: `method`, `status` |
+| `ChecklistItem` | pertenece a `Event`; campos: `title`, `done`, `order` |
+| `EventFile` | pertenece a `Event`; campos: `name`, `url`, `publicId`, `resourceType` |
+| `CateringItem` | pertenece a `Event` y opcionalmente a `Supplier`; campos: `categoria`, `descripcion`, `cantidad`, `unidad`, `precioUnitario`, `proveedorLibre`, `nota` |
+| `Dish` | tiene `DishIngredient[]`, `EventMenuItem[]`, `QuoteDish[]`; campos: `name`, `seccion`, `descripcion` |
+| `DishIngredient` | pertenece a `Dish`; campos: `nombre`, `cantidad` (por persona), `unidad`, `categoria` |
+| `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]`; campos: `nombre`, `orden` |
+| `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish`; campos: `nota` |
+| `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` (JSON string) |
+| `Contact` | Independiente; campos: `name`, `phone`, `email` |
 
 ---
 
@@ -121,10 +115,10 @@ CORS_ORIGIN=http://localhost:5173
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-ANTHROPIC_API_KEY=...                # Para sugerencia de ingredientes con IA
-EVOLUTION_API_URL=https://...        # URL pública de Evolution API
-EVOLUTION_API_KEY=...                # Global API Key de Evolution API
-EVOLUTION_INSTANCE=haus-crm          # Nombre de la instancia (default: haus-crm)
+ANTHROPIC_API_KEY=...
+EVOLUTION_API_URL=...
+EVOLUTION_API_KEY=...
+EVOLUTION_INSTANCE=...
 PORT=3001
 ```
 
@@ -139,23 +133,16 @@ VITE_API_URL=http://localhost:3001
 
 ```bash
 # Backend
-cd backend
-npm install
-npm run dev          # nodemon src/index.js
+cd backend && npm install && npm run dev
 
 # Frontend
-cd frontend
-npm install
-npm run dev          # vite dev server en :5173
-npm run build
-npm run lint
+cd frontend && npm install && npm run dev
 
 # Base de datos
-cd backend
 npx prisma generate
 npx prisma migrate dev
 npx prisma migrate deploy
-node src/seed.js     # crear usuario admin (admin@eventcrm.com / admin123)
+node src/seed.js
 npx prisma studio
 ```
 
@@ -163,194 +150,156 @@ npx prisma studio
 
 ## Rutas de la API
 
-Todas las rutas (excepto `/api/auth`) requieren `Authorization: Bearer <token>`.
-
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/api/auth/login` | Login, retorna JWT |
-| GET/POST | `/api/clients` | Listar / crear clientes |
-| GET/PUT/DELETE | `/api/clients/:id` | Obtener / editar / eliminar |
-| GET/POST | `/api/events` | Listar / crear eventos |
-| GET/PUT/DELETE | `/api/events/:id` | Obtener / editar / eliminar |
-| GET/POST | `/api/quotes` | Listar / crear cotizaciones |
-| GET/PUT/DELETE | `/api/quotes/:id` | Obtener / editar / eliminar |
-| GET/POST | `/api/suppliers` | Listar / crear proveedores |
-| GET/PUT/DELETE | `/api/suppliers/:id` | Obtener / editar / eliminar |
-| GET/POST | `/api/payments` | Cobros al cliente |
-| GET/POST | `/api/supplier-payments` | Pagos a proveedores |
-| GET/POST | `/api/checklist` | Items de checklist |
-| PUT/DELETE | `/api/checklist/:id` | Editar / eliminar item |
-| GET/POST | `/api/event-files` | Archivos por evento |
-| DELETE | `/api/event-files/:id` | Eliminar archivo |
-| GET/POST | `/api/users` | Usuarios del sistema |
-| PUT/DELETE | `/api/users/:id` | Editar / eliminar usuario |
-| GET/POST/PUT/DELETE | `/api/catering` | Insumos de catering |
-| GET/POST/PUT/DELETE | `/api/dishes` | Platos del recetario |
-| GET/POST/PUT/DELETE | `/api/menu` | Menú por evento |
-| GET/POST/PUT/DELETE | `/api/contacts` | Agenda de contactos |
-| DELETE | `/api/contacts/all` | Eliminar todos los contactos |
-| GET | `/api/activity` | Log de actividad |
-| POST | `/api/ai/suggest-ingredients` | Sugerir ingredientes con IA |
-| GET | `/api/whatsapp/status` | Estado de la instancia WhatsApp |
-| GET | `/api/whatsapp/qr` | Obtener QR para vincular |
-| POST | `/api/whatsapp/instance` | Crear instancia Evolution API |
-| GET | `/api/whatsapp/templates` | Listar plantillas de mensajes |
-| PUT | `/api/whatsapp/templates/:id` | Actualizar plantilla |
-| GET | `/api/whatsapp/templates/preview` | Preview renderizado de plantilla |
-| POST | `/api/whatsapp/send/event/:eventId` | Enviar mensaje a cliente de un evento |
-| POST | `/api/whatsapp/send/client/:clientId` | Enviar mensaje a un cliente |
-| POST | `/api/whatsapp/jobs/:jobId/run` | Ejecutar cron job manualmente |
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| POST | `/api/auth/login` | ❌ | Login, retorna JWT |
+| GET | `/api/portal/:token` | ❌ | Portal público del cliente |
+| POST | `/api/events/:id/portal-token` | ✅ | Generar/regenerar token del portal |
+| GET/POST | `/api/clients` | ✅ | Listar / crear clientes |
+| GET/PUT/DELETE | `/api/clients/:id` | ✅ | Obtener / editar / eliminar |
+| GET/POST | `/api/events` | ✅ | Listar / crear eventos |
+| GET/PUT/DELETE | `/api/events/:id` | ✅ | Obtener / editar / eliminar |
+| GET/POST | `/api/quotes` | ✅ | Cotizaciones |
+| GET/POST | `/api/suppliers` | ✅ | Proveedores |
+| GET/POST | `/api/payments` | ✅ | Cobros al cliente |
+| GET/POST | `/api/supplier-payments` | ✅ | Pagos a proveedores |
+| GET/POST | `/api/checklist` | ✅ | Items de checklist |
+| GET/POST | `/api/event-files` | ✅ | Archivos por evento |
+| GET/POST | `/api/users` | ✅ | Usuarios del sistema |
+| GET/POST/PUT/DELETE | `/api/catering` | ✅ | Insumos de catering |
+| GET/POST/PUT/DELETE | `/api/dishes` | ✅ | Platos del recetario |
+| GET/POST/PUT/DELETE | `/api/menu` | ✅ | Menú por evento |
+| GET/POST | `/api/schedule/event/:eventId` | ✅ | Cronograma por evento |
+| GET | `/api/activity` | ✅ | Log de actividad |
+| GET/POST/DELETE | `/api/contacts` | ✅ | Agenda de contactos |
+| POST | `/api/ai/suggest-ingredients` | ✅ | Sugerir ingredientes con IA |
+| POST | `/api/ai/suggest-dish-info` | ✅ | Generar descripción de plato con IA |
 
 **Health check**: `GET /health` → `{ status: "ok" }`
 
 ---
 
-## Integración WhatsApp (Evolution API)
+## Portal del cliente
 
-### Servicios (`src/services/`)
+Cada evento puede tener un portal público accesible sin login.
 
-**`evolution.js`** — cliente HTTP para Evolution API v1.8.7:
-- `sendText(phone, text)` — envía mensaje. Normaliza teléfonos argentinos automáticamente.
-- `getInstanceStatus()` — estado de conexión. Devuelve `{ instance: { state } }` en v1.8.7.
-- `getQRCode()` — QR para vincular. El base64 está en `data.base64` en v1.8.7.
-- `createInstance()` — crea la instancia en Evolution API.
-- `normalizePhone(phone)` — convierte a formato `549XXXXXXXXXX`.
+**Flujo:**
+1. Detalle del evento → "🔗 Portal cliente" genera UUID único (`portalToken`)
+2. Botón cambia a "Enviar por WA" (abre WhatsApp con el cliente prellenado) + "🔗" (copiar link)
+3. El cliente accede a `/portal/:token` sin login
 
-**`templates.js`** — plantillas persistidas en `data/templates.json`:
-- IDs fijos: `reminder`, `thanks`, `birthday`
-- Variables disponibles: `{{nombre}}`, `{{evento}}`, `{{lugar}}`, `{{fecha}}`
-- El archivo JSON tiene prioridad sobre los defaults del código.
-- Si se editan desde la UI, se persisten en disco automáticamente.
+**Contenido:**
+- Cuenta regresiva en tiempo real (días, horas, minutos, segundos)
+- Datos del evento (fecha, hora, venue, tipo, invitados)
+- Servicios contratados con desglose de precios (cotizaciones aprobadas)
+  - Catering: precio base por cubierto + extras con precios individuales
+  - General/otros: ítems con precios unitarios
+- Menú del evento por secciones
+- Estado de cuenta: barra de progreso + historial de pagos + saldo pendiente
+- Datos de contacto de Haus
 
-**`cron.js`** — cron job diario a las 09:00:
-- `jobDayBefore()` — eventos confirmados mañana → plantilla `reminder`
-- `jobDayAfter()` — eventos de ayer confirmados/realizados → plantilla `thanks`
-- `jobBirthday()` — clientes con cumpleaños en 30 días → plantilla `birthday`
-- Solo arranca si `EVOLUTION_API_URL` y `EVOLUTION_API_KEY` están configuradas.
-- Se puede disparar manualmente con `POST /api/whatsapp/jobs/:jobId/run`.
+**Seguridad:** UUID v4 (128 bits). Regenerar para invalidar el link anterior.
 
-### Formato de mensajes (v1.8.7)
-```js
-// Body correcto para v1.8.7
-{ number: '549XXXXXXXXXX', textMessage: { text: 'mensaje' } }
-// NO usar: { number, text }
-```
-
-### Estado de conexión (v1.8.7)
-```js
-// La respuesta de /instance/connectionState/:instance es:
-{ instance: { instanceName: '...', state: 'open' } }
-// El estado conectado es state === 'open'
-```
+**Archivos clave:**
+- `backend/src/routes/portal.js` — `publicRouter` (GET sin auth) y `protectedRouter` (POST con auth)
+- `frontend/src/pages/ClientPortal.jsx` — página sin Layout ni auth
+- `frontend/src/App.jsx` — ruta `/portal/:token` fuera del bloque PrivateRoute
 
 ---
 
-## Agenda de contactos (`Contact`)
+## WhatsApp (Evolution API v1.8.7)
 
-Entidad independiente, separada de `Client`. No tiene relación con eventos.
+```
+EVOLUTION_API_URL  = https://evolution-api-production-xxxx.up.railway.app
+EVOLUTION_API_KEY  = eventcrm_clave_secreta_2026
+EVOLUTION_INSTANCE = eventcrm
+```
 
-- Importación masiva desde archivos `.vcf` / `.vcard` con parser propio.
-- Detección de duplicados por email, teléfono (solo dígitos) y nombre.
-- Selección múltiple con checkboxes + barra flotante para eliminar seleccionados.
-- El checkbox del header selecciona/deselecciona solo los contactos visibles en el filtro.
-- La selección se limpia automáticamente al cambiar el término de búsqueda.
+**Quirks importantes:**
+- Estado de conexión: `data.instance.state` (no `data.state`)
+- Enviar mensaje: `{ number, textMessage: { text } }` (no `{ number, text }`)
+- QR code: `data.base64`
+- Requiere `CHECK_IS_CONTACT=false` en Evolution API o los envíos fallan
+
+Cron en `backend/src/services/cron.js` — corre a las 09:00 todos los días.
 
 ---
 
-## Patrones de código establecidos
+## Integración con IA (Anthropic Claude Haiku)
 
-### Backend — Controllers
-```js
-exports.create = async (req, res) => {
-  try {
-    // 1. Desestructurar body
-    // 2. Validaciones con early return en español
-    // 3. Operación Prisma
-    // 4. res.status(201).json(result)
-  } catch (e) {
-    console.error('Error [acción] [entidad]:', e)
-    if (e.code === 'P2025') return res.status(404).json({ error: 'No encontrado' })
-    res.status(500).json({ error: e.message })
-  }
-}
-```
+| Endpoint | Input | Output |
+|---|---|---|
+| `POST /api/ai/suggest-ingredients` | `{ name, seccion }` | `{ ingredients: DishIngredient[] }` |
+| `POST /api/ai/suggest-dish-info` | `{ name, ingredients, seccion }` | `{ descripcion }` |
 
-Fechas: siempre normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)`.
-
-### Frontend — Estilos
-- Sin Tailwind, sin CSS modules. Usar inline styles + variables CSS.
-- Variables: `var(--bg-base)`, `var(--bg-surface)`, `var(--bg-sunken)`, `var(--border)`, `var(--text-primary)`, `var(--text-secondary)`, `var(--text-muted)`, `var(--text-label)`, `var(--gold)`, `var(--gold-light)`, `var(--gold-bg)`
-- Fuente base: `'DM Sans', sans-serif`; títulos: `'Playfair Display', serif`
-- Iconos: siempre usar Lucide React. No usar emojis como iconos de UI.
-
-### Frontend — Formateo
-```js
-const fmt = (n) =>
-  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0)
-
-const fmtDate = (str) =>
-  new Date(str).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
-```
+**Contexto de prompts**: usar productos industrializados donde sea posible (tapas de empanada compradas, pasta fresca comprada, masa de tarta comprada). Solo from-scratch para rellenos, salsas y aderezos.
 
 ---
 
 ## Estados de las entidades
 
 ```js
-// Event.status
-["Propuesta", "Confirmado", "En producción", "Finalizado"]
+// Event.status — "En producción" eliminado
+["Propuesta", "Confirmado", "Finalizado"]
 
-// Event.type
-["Corporativo", "Cultural", "Social"]
+// Client.status — "Prospecto" eliminado, default "Inactivo"
+["Activo", "Inactivo"]
 
-// Quote.status
-["Pendiente", "Aprobado", "Rechazado", "Revisión"]
+// Secciones de menú/recetario — "Entrada fría" renombrado a "Entrada"
+["Entrada", "Plato principal", "Guarnición", "Bebidas", "Postre", "Trasnoche", "Otros"]
 
 // Quote.kind
 ["General", "Catering", "Audiovisual", "Decoración", "Otros"]
 
-// Client.status / Supplier.status
-["Activo", "Inactivo"]
+// Quote.status
+["Pendiente", "Aprobado", "Rechazado", "Revisión"]
 
 // SupplierPayment.method
 ["Efectivo", "Transferencia", "Cheque", "Tarjeta"]
 
 // SupplierPayment.status
 ["Pendiente", "Pagado", "Cancelado"]
-
-// WhatsApp template triggers
-["day_before", "day_after", "birthday_30days"]
 ```
+
+---
+
+## Patrones de código
+
+### Backend — Rutas con dos routers (patrón portal)
+```js
+const { Router } = require('express')
+const publicRouter = Router()
+const protectedRouter = Router()
+module.exports = { publicRouter, protectedRouter }
+```
+En `index.js`:
+```js
+const { publicRouter: miPublic, protectedRouter: miProtected } = require('./routes/miRuta')
+app.use('/api', miPublic)                    // sin auth — registrar ANTES del bloque protegido
+app.use('/api', authMiddleware, miProtected) // con auth
+```
+
+### Frontend — Iconos
+Siempre Lucide React. En `<option>` tags solo texto (no componentes React).
+
+### Frontend — Páginas públicas
+```jsx
+// App.jsx — FUERA del PrivateRoute
+<Route path="/portal/:token" element={<ClientPortal />} />
+```
+Usar `axios` directo (no `api/axios.js` que requiere token).
 
 ---
 
 ## Convenciones importantes
 
-1. **Idioma**: Todo el código, mensajes y UI en **español**.
-2. **Módulos**: Backend CommonJS (`require`). Frontend ESM (`import`).
-3. **Cascada**: `onDelete: Cascade` en todas las relaciones Prisma.
-4. **IDs**: Siempre `Number(req.params.id)` al usar params.
-5. **Toast**: `useToast()` para feedback. Nunca `alert()`.
-6. **ConfirmDialog**: Para toda eliminación. Nunca eliminar sin confirmación.
-7. **ActivityLog**: Fire-and-forget con `log()`. Nunca `await log()`.
-8. **Iconos**: Lucide React en toda la UI. No emojis como iconos.
-9. **WhatsApp body v1.8.7**: Usar `textMessage: { text }`, no `text` directo.
-10. **Teléfonos**: Normalizar a `549XXXXXXXXXX` antes de enviar a Evolution API.
-
----
-
-## Despliegue (Railway)
-
-Tres servicios en Railway:
-- **Backend** — Node.js. Script `start`: `prisma generate && prisma migrate deploy && node src/seed.js; node src/index.js`
-- **Frontend** — Vite build. Config en `frontend/railway.toml`. Variable `VITE_API_URL`.
-- **Evolution API** — Docker image `atendai/evolution-api:v1.8.7`. Variables: `SERVER_URL`, `AUTHENTICATION_API_KEY`, `AUTHENTICATION_TYPE=apikey`, `DATABASE_ENABLED=true`, `DATABASE_PROVIDER=sqlite`.
-
----
-
-## Usuario por defecto
-
-```
-Email:    admin@eventcrm.com
-Password: admin123
-```
+1. **Idioma**: Todo en **español** (código, UI, errores).
+2. **Módulos**: Backend CommonJS, Frontend ESM.
+3. **Cascada**: `onDelete: Cascade` en todas las relaciones de Event.
+4. **IDs**: Siempre `Number(req.params.id)`.
+5. **Toast**: `useToast()`, nunca `alert()`.
+6. **ConfirmDialog**: Para todas las eliminaciones.
+7. **ActivityLog**: Fire-and-forget con `log()`, nunca `await`.
+8. **Client.status**: Default `'Inactivo'`; se activa automáticamente al crear evento.
+9. **Event.portalToken**: Generado on-demand, nunca incluir en listados públicos.
+10. **Fechas**: Normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)`.

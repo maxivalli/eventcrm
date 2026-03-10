@@ -1,6 +1,6 @@
-# Haus-CRM
+# Haus CRM — EventCRM
 
-CRM para gestión integral de eventos de producción. Permite administrar clientes, eventos, cotizaciones, proveedores, pagos, catering, recetario, agenda de contactos y comunicación vía WhatsApp, todo en una sola aplicación.
+CRM para gestión integral de eventos de producción. Permite administrar clientes, eventos, cotizaciones, proveedores, pagos, catering, recetario y documentos, con portal de seguimiento para clientes y automatizaciones de WhatsApp.
 
 ---
 
@@ -12,46 +12,32 @@ CRM para gestión integral de eventos de producción. Permite administrar client
 | Frontend | React 19 · Vite 7 · React Router 7 · Axios |
 | Auth | JWT + bcryptjs |
 | Archivos | Multer + Cloudinary v1 |
-| WhatsApp | Evolution API v1.8.7 |
 | IA | Anthropic Claude Haiku |
+| WhatsApp | Evolution API v1.8.7 |
 | Deploy | Railway |
 
 ---
 
 ## Funcionalidades
 
-### Gestión de eventos
-- **Clientes** — CRUD con estado activo/inactivo y fecha de cumpleaños.
-- **Eventos** — CRUD vinculado a clientes. Estados: Propuesta → Confirmado → En producción → Finalizado.
-- **Cotizaciones** — Por evento. Tipos: General, Catering, Audiovisual, Decoración. Ítems de línea y platos del recetario.
+- **Clientes** — CRUD con estado activo/inactivo. Se activan automáticamente al crear un evento.
+- **Eventos** — CRUD vinculado a clientes. Estados: Propuesta → Confirmado → Finalizado. Ordenamiento por fecha, venue y estado. Badge "Ya pasó" para eventos sin finalizar con fecha vencida.
+- **Portal del cliente** — Link público por evento con cuenta regresiva, menú, servicios contratados con desglose de precios, y estado de cuenta en tiempo real. Se comparte por WhatsApp directamente desde el sistema.
+- **Cotizaciones** — Por evento. Tipos: General, Catering, Audiovisual, Decoración, Otros. Incluye ítems de línea y platos del recetario.
+- **Proveedores** — CRUD con categoría, rating (1–5) y alias corto.
+- **Pagos al cliente** — Registro de cobros por evento.
+- **Pagos a proveedores** — Seguimiento de pagos con método y estado.
+- **Presupuesto** — Vista consolidada del balance financiero por evento.
+- **Catering** — Gestión de insumos por evento con cantidad, unidad y proveedor.
+- **Recetario** — Platos con ingredientes por persona. Sugerencia de ingredientes con IA. Generación de descripción para el menú con IA.
+- **Menú por evento** — Armado de menú con secciones y platos del recetario.
+- **Cronograma** — Timeline del evento con horarios y categorías. Generación automática con IA.
 - **Checklist** — Tareas pendientes por evento con orden arrastrable.
 - **Archivos** — Subida y descarga de documentos por evento (Cloudinary).
-
-### Finanzas
-- **Cobros** — Registro de pagos recibidos por evento.
-- **Pagos a proveedores** — Seguimiento con método y estado.
-- **Presupuesto** — Vista consolidada del balance financiero por evento.
-
-### Catering
-- **Menú por evento** — Armado de menú con secciones y platos del recetario.
-- **Insumos** — Gestión de insumos de catering por evento con cantidades y proveedores.
-- **Recetario** — Platos con ingredientes por persona. Sugerencia automática con IA.
-
-### Contactos y comunicación
-- **Agenda de contactos** — Independiente de clientes. Importación masiva desde VCF.
-- **Detección de duplicados** — Por email, teléfono y nombre al importar.
-- **Selección múltiple** — Checkboxes + barra flotante para eliminar en lote.
-- **WhatsApp** — Mensajes manuales y automáticos vía Evolution API:
-  - Recordatorio el día anterior a eventos confirmados
-  - Agradecimiento el día después del evento
-  - Propuesta de cumpleaños 30 días antes
-  - Plantillas editables desde la UI, persistidas en disco
-
-### Sistema
-- **Dashboard** — KPIs, eventos próximos y feed de actividad reciente.
-- **Proveedores** — CRUD con categoría, rating y alias.
+- **Contactos** — Agenda de contactos independiente.
+- **WhatsApp** — Automatizaciones de mensajería con triggers configurables (Evolution API). Cron diario a las 09:00.
 - **Usuarios** — Gestión de acceso al sistema.
-- **Log de actividad** — Registro de todas las acciones del equipo.
+- **Log de actividad** — Feed de todas las acciones recientes del equipo.
 - **Tema dark / light** — Switcher global persistente.
 
 ---
@@ -59,21 +45,20 @@ CRM para gestión integral de eventos de producción. Permite administrar client
 ## Requisitos previos
 
 - Node.js ≥ 18
-- PostgreSQL
+- PostgreSQL (local o en la nube)
 - Cuenta en [Cloudinary](https://cloudinary.com)
-- API Key de [Anthropic](https://console.anthropic.com) (opcional)
-- Instancia de [Evolution API](https://github.com/EvolutionAPI/evolution-api) v1.8.7 (opcional)
+- API Key de [Anthropic](https://console.anthropic.com) (opcional — IA)
+- Evolution API (opcional — WhatsApp)
 
 ---
 
-## Instalación local
+## Instalación y desarrollo local
 
 ```bash
-# 1. Clonar
-git clone <repo-url>
-cd eventcrm-main
+# Clonar
+git clone <repo-url> && cd eventcrm-main
 
-# 2. Backend
+# Backend
 cd backend
 cp .env.example .env   # completar variables
 npm install
@@ -82,8 +67,8 @@ npx prisma migrate dev
 node src/seed.js       # crea usuario admin
 npm run dev            # http://localhost:3001
 
-# 3. Frontend
-cd ../frontend
+# Frontend (nueva terminal)
+cd frontend
 # Crear .env con: VITE_API_URL=http://localhost:3001
 npm install
 npm run dev            # http://localhost:5173
@@ -94,6 +79,7 @@ npm run dev            # http://localhost:5173
 ## Variables de entorno
 
 ### `backend/.env`
+
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/dbname
 JWT_SECRET=tu_secreto_jwt
@@ -102,32 +88,16 @@ CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 ANTHROPIC_API_KEY=...
-EVOLUTION_API_URL=https://...
+EVOLUTION_API_URL=...
 EVOLUTION_API_KEY=...
-EVOLUTION_INSTANCE=haus-crm
+EVOLUTION_INSTANCE=...
 PORT=3001
 ```
 
 ### `frontend/.env`
+
 ```env
 VITE_API_URL=http://localhost:3001
-```
-
----
-
-## Comandos útiles
-
-```bash
-# Backend
-npm run dev                   # desarrollo con nodemon
-npx prisma studio             # GUI para la base de datos
-npx prisma migrate dev        # nueva migración
-node src/seed.js              # (re)crear usuario admin
-
-# Frontend
-npm run dev                   # desarrollo
-npm run build                 # producción
-npm run lint
 ```
 
 ---
@@ -145,13 +115,11 @@ Password: admin123
 
 ## Despliegue en Railway
 
-El proyecto usa tres servicios:
+Dos servicios independientes:
 
-| Servicio | Tipo | Configuración |
-|---|---|---|
-| Backend | Node.js | `prisma generate && prisma migrate deploy && node src/seed.js; node src/index.js` |
-| Frontend | Static (Vite) | `railway.toml` + variable `VITE_API_URL` |
-| Evolution API | Docker `atendai/evolution-api:v1.8.7` | Variables: `SERVER_URL`, `AUTHENTICATION_API_KEY`, `DATABASE_PROVIDER=sqlite` |
+**Backend** — script `start`: `prisma generate && prisma migrate deploy && node src/seed.js && node src/index.js`
+
+**Frontend** — configuración en `frontend/railway.toml`. Variable `VITE_API_URL` apuntando al backend en producción.
 
 ---
 
@@ -159,30 +127,29 @@ El proyecto usa tres servicios:
 
 ```
 eventcrm-main/
-├── CLAUDE.md                  # Guía técnica para desarrollo con IA
+├── CLAUDE.md          # Guía técnica para desarrollo con IA
 ├── README.md
 ├── backend/
 │   ├── prisma/schema.prisma
-│   ├── data/templates.json    # Plantillas WhatsApp (auto-generado)
 │   └── src/
-│       ├── index.js
-│       ├── controllers/
-│       ├── routes/
-│       ├── services/          # evolution.js · templates.js · cron.js
+│       ├── index.js              # Entry point
+│       ├── controllers/          # Lógica de negocio
+│       ├── routes/               # Rutas (portal.js usa dos routers: public + protected)
+│       ├── services/             # cron.js (WhatsApp), evolution.js, templates.js
 │       ├── middleware/auth.js
 │       ├── utils/activity.js
-│       └── seed.js
+│       └── ...
 └── frontend/
     └── src/
-        ├── App.jsx
+        ├── App.jsx               # Router: rutas protegidas + /portal/:token pública
         ├── api/axios.js
         ├── components/
         ├── contexts/
-        └── pages/
+        └── pages/                # Una página por módulo + ClientPortal.jsx
 ```
 
 ---
 
 ## Licencia
 
-Uso interno. Todos los derechos reservados — Haus, Organización y producción de eventos.
+Uso interno. Todos los derechos reservados.

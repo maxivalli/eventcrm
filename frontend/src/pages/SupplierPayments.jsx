@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Check, Clock } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -179,7 +180,10 @@ export default function SupplierPayments() {
                         <td style={td}><Badge label={p.method} color={methodColors[p.method] || '#6b7280'} /></td>
                         <td style={td}>
                           <button onClick={() => handleToggleStatus(p)} style={{ background: p.status === 'Pagado' ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${p.status === 'Pagado' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`, color: p.status === 'Pagado' ? '#22c55e' : '#f59e0b', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' }}>
-                            {p.status === 'Pagado' ? '✓ Pagado' : '⏳ Pendiente'}
+                            {p.status === 'Pagado'
+                              ? <><Check size={11} style={{ marginRight: 4 }} />Pagado</>
+                              : <><Clock size={11} style={{ marginRight: 4 }} />Pendiente</>
+                            }
                           </button>
                         </td>
                         <td style={{ ...td, color: 'var(--text-muted)' }}>{p.note || '—'}</td>
