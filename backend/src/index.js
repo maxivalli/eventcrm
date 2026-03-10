@@ -17,9 +17,11 @@ const cateringRoutes   = require('./routes/catering')
 const dishRoutes       = require('./routes/dishes')
 const eventMenuRoutes  = require('./routes/eventMenu')
 const aiRoutes         = require('./routes/ai')
-const activityRoutes   = require('./routes/activity')
+const activityRoutes   = require('./routes/activity-route')
 const contactRoutes    = require('./routes/contacts')
+const scheduleRoutes = require('./routes/schedule')
 const whatsappRoutes   = require('./routes/whatsapp')
+const { publicRouter: portalPublic, protectedRouter: portalProtected } = require('./routes/portal')
 const cron             = require('./services/cron')
 
 const app = express();
@@ -36,6 +38,7 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // Rutas públicas
 app.use("/api/auth", authRoutes);
+app.use("/api", portalPublic);   // GET /api/portal/:token — sin auth
 
 // Rutas protegidas
 app.use("/api/clients", authMiddleware, clientRoutes);
@@ -53,7 +56,9 @@ app.use('/api/menu',        authMiddleware, eventMenuRoutes)
 app.use('/api/ai',          authMiddleware, aiRoutes)
 app.use('/api/activity',    authMiddleware, activityRoutes)
 app.use('/api/contacts',   authMiddleware, contactRoutes)
+app.use('/api/schedule', authMiddleware, scheduleRoutes)
 app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
+app.use('/api',            authMiddleware, portalProtected)  // POST /api/events/:id/portal-token
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

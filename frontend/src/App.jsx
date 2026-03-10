@@ -15,6 +15,7 @@ import CateringPage from "./pages/Catering";
 import Recetario from "./pages/Recetario";
 import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
+import ClientPortal from "./pages/ClientPortal";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -88,6 +89,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/portal/:token" element={<ClientPortal />} />
         <Route
           path="/"
           element={

@@ -37,7 +37,7 @@ exports.create = async (req, res) => {
     if (!phone?.trim())   return res.status(400).json({ error: 'El teléfono es requerido' })
 
     const client = await prisma.client.create({
-      data: { name: name.trim(), contact: contact.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null, status }
+      data: { name: name.trim(), contact: contact.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), birthdate: birthdate ? new Date(`${birthdate.slice(0,10)}T12:00:00`) : null, status: status || 'Inactivo' }
     })
     log({ action: 'create', entity: 'client', entityId: client.id, label: `Cliente creado: ${client.name}`, detail: client.email })
     res.status(201).json(client)

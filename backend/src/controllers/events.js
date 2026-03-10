@@ -42,6 +42,7 @@ exports.create = async (req, res) => {
       data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, client: { connect: { id: Number(clientId) } } },
       include: { client: { select: { name: true } } }
     })
+    await prisma.client.update({ where: { id: Number(clientId) }, data: { status: 'Activo' } })
     log({ action: 'create', entity: 'event', entityId: event.id, label: `Evento creado: ${event.name}`, detail: `Cliente: ${event.client?.name} · ${event.type} · ${Number(guests)} invitados` })
     res.status(201).json(event)
   } catch (e) {

@@ -1,3 +1,4 @@
+import { MessageCircle } from "lucide-react"
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import api from "../api/axios";
@@ -13,6 +14,31 @@ const statusColors = {
   Propuesta:        "#f59e0b",
   Finalizado:       "#8b5cf6",
 };
+
+const isPastEvent = (ev) => {
+  if (ev.status === 'Finalizado') return false
+  const eventDate = new Date(ev.date)
+  if (ev.time) {
+    const [h, m] = ev.time.split(':')
+    eventDate.setHours(Number(h), Number(m), 0, 0)
+  } else {
+    eventDate.setHours(23, 59, 0, 0)
+  }
+  return eventDate < new Date()
+}
+
+// Inyectar keyframe una sola vez
+if (!document.getElementById('past-event-style')) {
+  const style = document.createElement('style')
+  style.id = 'past-event-style'
+  style.textContent = `
+    @keyframes pulse-past {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+  `
+  document.head.appendChild(style)
+}
 const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const sortSections = (sections) =>
   [...sections].sort((a, b) => {
@@ -311,6 +337,26 @@ function EventDetail({ event, onClose, onEdit }) {
   const [cateringTotal, setCateringTotal] = useState(null);
   const [menuSections, setMenuSections]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [portalToken, setPortalToken] = useState(event.portalToken || null);
+  const [portalCopied, setPortalCopied] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : null;
+
+  const handleGeneratePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const res = await api.post(`/api/events/${event.id}/portal-token`)
+      setPortalToken(res.data.portalToken)
+    } catch { /* silencioso */ }
+    finally { setPortalLoading(false) }
+  }
+
+  const handleCopyPortal = () => {
+    navigator.clipboard.writeText(portalUrl)
+    setPortalCopied(true)
+    setTimeout(() => setPortalCopied(false), 2000)
+  }
 
   useEffect(() => {
     Promise.all([
@@ -367,6 +413,24 @@ function EventDetail({ event, onClose, onEdit }) {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Badge label={event.type} color={typeColors[event.type] || "var(--text-muted)"} />
             <Badge label={event.status} color={statusColors[event.status] || "var(--text-muted)"} />
+            {portalUrl ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => {
+                  const phone = event.client?.phone?.replace(/\D/g, '')
+                  const msg = encodeURIComponent(`Hola ${event.client?.name}, te comparto el seguimiento de tu evento "${event.name}" 🎉\n\n${portalUrl}`)
+                  window.open(`https://wa.me/${phone ? `54${phone.slice(-10)}` : ''}?text=${msg}`, '_blank')
+                }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid rgba(37,211,102,0.4)", borderRadius: 8, background: "rgba(37,211,102,0.08)", color: "#25d366", fontSize: 12, cursor: "pointer" }}>
+                  <MessageCircle size={13} /> Enviar por WA
+                </button>
+                <button onClick={handleCopyPortal} style={{ padding: "7px 10px", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 8, background: portalCopied ? "rgba(34,197,94,0.1)" : "rgba(201,168,76,0.06)", color: portalCopied ? "#22c55e" : "var(--gold)", fontSize: 12, cursor: "pointer" }}>
+                  {portalCopied ? "✓" : "🔗"}
+                </button>
+              </div>
+            ) : (
+              <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
+                {portalLoading ? "Generando..." : "🔗 Portal cliente"}
+              </button>
+            )}
             <button onClick={() => onEdit(event)} style={{ marginLeft: 6, padding: "7px 16px", border: "none", borderRadius: 8, background: "linear-gradient(135deg,#c9a84c,#e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Editar</button>
             <button onClick={onClose} style={{ padding: "7px 13px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>✕</button>
           </div>
@@ -585,6 +649,9 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("Todos");
+  const [filterTime, setFilterTime] = useState("Todos");
+  const [sortBy, setSortBy]   = useState("date");
+  const [sortDir, setSortDir] = useState("asc");
   const [modal, setModal]     = useState(null);
   const [selected, setSelected]       = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -607,8 +674,27 @@ export default function Events() {
   const filtered = events.filter(e => {
     const ms = e.name.toLowerCase().includes(search.toLowerCase()) || e.client?.name.toLowerCase().includes(search.toLowerCase());
     const mf = filter === "Todos" || e.status === filter;
-    return ms && mf;
-  });
+    const past = isPastEvent(e)
+    const mt = filterTime === "Todos" || (filterTime === "Pasaron" && past) || (filterTime === "Próximos" && !past)
+    return ms && mf && mt;
+  }).sort((a, b) => {
+    let va, vb
+    if (sortBy === "date")   { va = new Date(a.date); vb = new Date(b.date) }
+    if (sortBy === "venue")  { va = a.venue?.toLowerCase(); vb = b.venue?.toLowerCase() }
+    if (sortBy === "status") { const o = ["Propuesta","Confirmado","Finalizado"]; va = o.indexOf(a.status); vb = o.indexOf(b.status) }
+    if (va < vb) return sortDir === "asc" ? -1 : 1
+    if (va > vb) return sortDir === "asc" ? 1 : -1
+    return 0
+  })
+
+  const toggleSort = (col) => {
+    if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc")
+    else { setSortBy(col); setSortDir("asc") }
+  }
+  const SortIcon = ({ col }) => {
+    if (sortBy !== col) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>
+    return <span style={{ marginLeft: 4, color: "var(--gold)" }}>{sortDir === "asc" ? "↑" : "↓"}</span>
+  }
 
   const handleSave = async (form) => {
     try {
@@ -668,12 +754,27 @@ export default function Events() {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {ESTADOS.map(e => <button key={e} onClick={() => setFilter(e)} style={fbtn(filter === e)}>{e}</button>)}
         </div>
+        <div style={{ width: 1, height: 20, background: "var(--border)", flexShrink: 0 }} />
+        <div style={{ display: "flex", gap: 6 }}>
+          {["Todos", "Próximos", "Pasaron"].map(t => (
+            <button key={t} onClick={() => setFilterTime(t)} style={{
+              ...fbtn(filterTime === t),
+              ...(t === "Pasaron" && filterTime === t ? { background: "rgba(239,68,68,0.12)", color: "#ef4444", borderColor: "rgba(239,68,68,0.3)" } : {}),
+            }}>{t === "Pasaron" ? "● Ya pasaron" : t}</button>
+          ))}
+        </div>
       </div>
 
       {/* Tabla */}
       <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
-          <span>Evento</span><span>Cliente</span><span>Fecha</span><span>Venue</span><span>Pres. estimado</span><span>Estado</span><span/>
+          <span>Evento</span>
+          <span>Cliente</span>
+          <span onClick={() => toggleSort("date")} style={{ cursor: "pointer", userSelect: "none" }}>Fecha<SortIcon col="date" /></span>
+          <span onClick={() => toggleSort("venue")} style={{ cursor: "pointer", userSelect: "none" }}>Venue<SortIcon col="venue" /></span>
+          <span>Pres. estimado</span>
+          <span onClick={() => toggleSort("status")} style={{ cursor: "pointer", userSelect: "none" }}>Estado<SortIcon col="status" /></span>
+          <span/>
         </div>
         {filtered.length === 0
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
@@ -687,6 +788,17 @@ export default function Events() {
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{ev.name}</span>
                   {ev._count?.files > 0 && <span title={`${ev._count.files} adjunto${ev._count.files !== 1 ? "s" : ""}`} style={{ fontSize: 12, color: "var(--text-label)" }}>📎</span>}
+                  {isPastEvent(ev) && (
+                    <span style={{
+                      fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 700,
+                      background: "rgba(239,68,68,0.15)", color: "#ef4444",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      animation: "pulse-past 1.5s ease-in-out infinite",
+                      whiteSpace: "nowrap",
+                    }}>
+                      ● Ya pasó
+                    </span>
+                  )}
                 </div>
                 <Badge label={ev.type} color={typeColors[ev.type] || "var(--text-muted)"} />
               </div>
