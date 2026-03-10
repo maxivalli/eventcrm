@@ -111,6 +111,12 @@ export default function ClientPortal() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
+  const [chatOpen, setChatOpen]     = useState(false)
+  const [chatInput, setChatInput]   = useState('')
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', text: '¡Hola! Soy el asistente de Haus. Podés preguntarme sobre tu evento, el menú o el estado de cuenta 😊' }
+  ])
+  const [chatLoading, setChatLoading] = useState(false)
 
   useEffect(() => {
     axios.get(`${API}/api/portal/${token}`)
@@ -133,6 +139,25 @@ export default function ClientPortal() {
   )
 
   const { event, payments, menuSections, schedule, services, finance } = data
+
+  const sendChat = async () => {
+    const q = chatInput.trim()
+    if (!q || chatLoading) return
+    setChatInput('')
+    setChatMessages(prev => [...prev, { role: 'user', text: q }])
+    setChatLoading(true)
+    try {
+      const res = await axios.post(`${API}/api/ai/portal-chat`, {
+        question: q,
+        context: { event, menu: menuSections, payments, finance, services },
+      })
+      setChatMessages(prev => [...prev, { role: 'assistant', text: res.data.answer }])
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: 'No pude responder eso ahora. Por favor contactá a Haus directamente.' }])
+    } finally {
+      setChatLoading(false)
+    }
+  }
   const sc = statusInfo[event.status] || statusInfo.Propuesta
 
   const sortedSections = [...menuSections].sort((a, b) => {
@@ -361,6 +386,75 @@ export default function ClientPortal() {
         </div>
 
       </div>
+
+      {/* Chatbot flotante */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+
+        {/* Ventana del chat */}
+        {chatOpen && (
+          <div style={{ width: 320, background: '#12121A', border: '1px solid #2A2A3A', borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ padding: '14px 16px', background: '#09090F', borderBottom: '1px solid #1A1A28', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#E8E8F0' }}>Asistente Haus</div>
+                <div style={{ fontSize: 10, color: '#606078', marginTop: 2 }}>Respondemos tus dudas sobre el evento</div>
+              </div>
+              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#606078', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Mensajes */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 340 }}>
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '82%', padding: '10px 12px', borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                    background: m.role === 'user' ? 'rgba(201,168,76,0.15)' : '#1A1A28',
+                    border: `1px solid ${m.role === 'user' ? 'rgba(201,168,76,0.25)' : '#2A2A3A'}`,
+                    fontSize: 12, color: '#E8E8F0', lineHeight: 1.6,
+                  }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ padding: '10px 14px', borderRadius: '12px 12px 12px 2px', background: '#1A1A28', border: '1px solid #2A2A3A', fontSize: 18, color: '#606078', letterSpacing: 4 }}>
+                    ···
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '10px 12px', borderTop: '1px solid #1A1A28', display: 'flex', gap: 8 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Escribí tu pregunta..."
+                style={{ flex: 1, background: '#09090F', border: '1px solid #2A2A3A', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#E8E8F0', outline: 'none' }}
+              />
+              <button
+                onClick={sendChat}
+                disabled={chatLoading || !chatInput.trim()}
+                style={{ padding: '8px 14px', background: chatInput.trim() ? 'linear-gradient(135deg,#c9a84c,#e8c97a)' : '#1A1A28', border: 'none', borderRadius: 8, color: chatInput.trim() ? '#09090F' : '#606078', fontSize: 13, fontWeight: 700, cursor: chatInput.trim() ? 'pointer' : 'default', transition: 'all 0.15s' }}>
+                →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Botón flotante */}
+        <button
+          onClick={() => setChatOpen(o => !o)}
+          style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', cursor: 'pointer', fontSize: 22, boxShadow: '0 4px 20px rgba(201,168,76,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          {chatOpen ? '✕' : '💬'}
+        </button>
+      </div>
+
     </div>
   )
 }

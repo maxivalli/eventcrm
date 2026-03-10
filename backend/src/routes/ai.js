@@ -262,3 +262,160 @@ Reglas:
 })
 
 module.exports = router
+
+// ── Briefing del evento para el equipo ─────────────────────────────────────
+router.post('/event-briefing', async (req, res) => {
+  const { event, menu, payments, quotes } = req.body
+  if (!event) return res.status(400).json({ error: 'Datos del evento requeridos' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+  const fmtDate = (str) => new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
+  const totalPaid = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const totalQuotes = (quotes || []).reduce((a, q) => {
+    const items = (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+    const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
+    return a + items + catering
+  }, 0)
+  const balance = totalQuotes - totalPaid
+
+  const menuText = (menu || []).map(s =>
+    `${s.nombre}: ${(s.items || []).map(i => i.dish?.name || i.name).join(', ')}`
+  ).join('\n')
+
+  const serviciosText = (quotes || []).map(q =>
+    `- ${q.kind}: ${fmtARS(q.kind === 'Catering' ? (q.covers||0)*(q.pricePerCover||0) + (q.items||[]).reduce((a,i)=>a+i.quantity*i.unitPrice,0) : (q.items||[]).reduce((a,i)=>a+i.quantity*i.unitPrice,0))}`
+  ).join('\n')
+
+  const prompt = `Sos un coordinador de eventos de Haus, empresa de organización de eventos en Argentina. Generá un briefing profesional y conciso para compartir con el equipo de trabajo antes del evento.
+
+DATOS DEL EVENTO:
+- Nombre: ${event.name}
+- Cliente: ${event.clientName || event.client?.name || 'N/A'}
+- Fecha: ${fmtDate(event.date)}
+- Hora: ${event.time || 'A confirmar'}
+- Venue: ${event.venue}
+- Tipo: ${event.type}
+- Invitados: ${event.guests}
+- Estado: ${event.status}
+
+SERVICIOS CONTRATADOS:
+${serviciosText || 'Sin cotizaciones aprobadas'}
+
+MENÚ:
+${menuText || 'Sin menú cargado'}
+
+ESTADO FINANCIERO:
+- Total cotizado: ${fmtARS(totalQuotes)}
+- Cobrado: ${fmtARS(totalPaid)}
+- Saldo pendiente: ${fmtARS(balance)}
+
+Generá un briefing en español, claro y profesional, con secciones bien definidas. Incluí:
+1. Un encabezado con los datos clave del evento
+2. Resumen del menú y servicios
+3. Estado financiero
+4. Puntos de atención o recordatorios importantes para el equipo
+
+Usá un tono profesional pero directo. Formato con emojis para facilitar la lectura rápida. El texto debe poder copiarse y enviarse por WhatsApp al equipo.`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+
+    const briefing = data.content?.map(b => b.text || '').join('') || ''
+    res.json({ briefing })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo generar el briefing' })
+  }
+})
+
+// ── Chatbot del portal del cliente ─────────────────────────────────────────
+router.post('/portal-chat', async (req, res) => {
+  const { question, context } = req.body
+  if (!question) return res.status(400).json({ error: 'Pregunta requerida' })
+  if (!context) return res.status(400).json({ error: 'Contexto requerido' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+  const fmtDate = (str) => new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
+  const { event, menu, payments, finance, services } = context
+
+  const menuText = (menu || []).map(s =>
+    `${s.nombre}: ${(s.items || []).map(i => i.dish?.name || i.name).join(', ')}`
+  ).join('\n')
+
+  const systemPrompt = `Sos el asistente virtual de Haus, empresa de organización de eventos en Argentina. Estás en el portal de seguimiento del evento del cliente.
+
+Tu rol es responder preguntas del cliente sobre su evento de forma amable, clara y profesional. Usá un tono cálido y cercano, tuteando al cliente.
+
+INFORMACIÓN DEL EVENTO:
+- Nombre: ${event?.name}
+- Fecha: ${event?.date ? fmtDate(event.date) : 'N/A'}
+- Hora: ${event?.time || 'A confirmar'}
+- Venue: ${event?.venue}
+- Tipo: ${event?.type}
+- Invitados: ${event?.guests}
+- Estado: ${event?.status}
+
+MENÚ:
+${menuText || 'Sin menú cargado aún'}
+
+ESTADO DE CUENTA:
+- Total: ${fmtARS(finance?.totalQuotes)}
+- Pagado: ${fmtARS(finance?.totalPaid)}
+- Saldo pendiente: ${fmtARS(finance?.balance)}
+- Pagos registrados: ${(payments || []).length}
+
+REGLAS IMPORTANTES:
+- Solo respondé preguntas relacionadas al evento
+- Si te preguntan algo que no está en la información disponible, decí que consultarás con el equipo
+- No inventes información que no tenés
+- Si preguntan por formas de pago o quieren abonar, indicales que se comuniquen con Haus directamente
+- Respuestas cortas y concretas, máximo 3 párrafos
+- No uses markdown, solo texto plano con emojis si es necesario`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question }],
+      }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+
+    const answer = data.content?.map(b => b.text || '').join('') || ''
+    res.json({ answer })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo procesar la pregunta' })
+  }
+})
