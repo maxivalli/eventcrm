@@ -18,8 +18,9 @@ router.post('/portal-chat', async (req, res) => {
     `${s.nombre}: ${(s.items || []).map(i => i.dish?.name || i.name).join(', ')}`
   ).join('\n')
 
-  const dietaryText = (dietaryOptions || []).length > 0
-    ? (dietaryOptions).map(d => `- ${d.label}${d.cantidad ? `: ${d.cantidad} personas` : ''}`).join('\n')
+  const dietaryArr = Array.isArray(dietaryOptions) ? dietaryOptions : []
+  const dietaryText = dietaryArr.length > 0
+    ? dietaryArr.map(d => `- ${d.label}${d.cantidad ? `: ${d.cantidad} personas` : ''}`).join('\n')
     : 'Sin necesidades alimentarias especiales registradas'
 
   const systemPrompt = `Sos el asistente virtual de Haus, empresa de organización de eventos en Argentina. Estás en el portal de seguimiento del evento del cliente.
@@ -80,7 +81,7 @@ REGLAS IMPORTANTES:
     let answer = data.content?.map(b => b.text || '').join('') || ''
 
     // Si el bot marcó que necesita consulta, guardarla en la DB y limpiar el tag
-    if (answer.startsWith('[CONSULTA_PENDIENTE]')) {
+    if (answer.includes("[CONSULTA_PENDIENTE]")) {
       answer = answer.replace('[CONSULTA_PENDIENTE]', '').trim()
       if (context?.event?.id) {
         try {
