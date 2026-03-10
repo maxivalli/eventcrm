@@ -15,4 +15,18 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/activity/client-decisions — decisiones del cliente no leídas
+router.get('/client-decisions', async (req, res) => {
+  try {
+    const since = req.query.since ? new Date(req.query.since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    const logs = await prisma.activityLog.findMany({
+      where: { action: 'client_decision', createdAt: { gte: since } },
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(logs)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 module.exports = router

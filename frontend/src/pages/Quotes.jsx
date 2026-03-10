@@ -74,7 +74,7 @@ function ItemsEditor({ items, onChange, label = 'Ítems' }) {
 // Selector de platos del recetario agrupado por sección
 
 const emptyGeneral  = { clientId: '', eventId: '', kind: 'General',  date: '', status: 'Pendiente', items: [] }
-const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', status: 'Pendiente', menu: '', covers: '', pricePerCover: '', items: [], dishes: [] }
+const emptyCatering = { clientId: '', eventId: '', kind: 'Catering', date: '', status: 'Pendiente', covers: '', pricePerCover: '', items: [], menuId: null }
 
 function QuoteForm({ initial, events, clients, onSave, onClose }) {
   const initialClientId  = initial ? String(events.find(ev => ev.id === initial.eventId)?.client?.id ?? '') : ''
@@ -95,32 +95,32 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
   const setClient = (clientId) => { setForm(f => ({ ...f, clientId, eventId: '', date: '' })); setErrors(e => ({ ...e, clientId: '', eventId: '' })) }
   const clientEvents = form.clientId ? events.filter(ev => String(ev.client?.id) === form.clientId) : []
 
-  const [menuSections, setMenuSections] = useState([])
-  const [loadingMenu,  setLoadingMenu]  = useState(false)
+  const [allMenus, setAllMenus]       = useState([])
+  const [loadingMenus, setLoadingMenus] = useState(false)
 
-  // Al editar una cotización Catering existente, cargar el menú del evento inicial
+  // Cargar menús globales siempre al montar (se usan si kind=Catering)
   useEffect(() => {
-    const eventId = form.eventId
-    if (form.kind !== 'Catering' || !eventId) return
-    setLoadingMenu(true)
-    api.get(`/api/menu/event/${eventId}`)
-      .then(res => setMenuSections(res.data))
-      .catch(() => setMenuSections([]))
-      .finally(() => setLoadingMenu(false))
-  }, []) // solo al montar
+    setLoadingMenus(true)
+    api.get('/api/menus')
+      .then(res => {
+        setAllMenus(res.data)
+        if (initial?.menus?.length) {
+          setForm(f => ({ ...f, menuId: initial.menus[0].menuId }))
+        }
+      })
+      .catch(() => setAllMenus([]))
+      .finally(() => setLoadingMenus(false))
+  }, [])
 
-  const setEvent = async (eventId) => {
+  const setEvent = (eventId) => {
     const ev = clientEvents.find(e => String(e.id) === eventId)
     const date = ev?.date ? ev.date.slice(0, 10) : ''
     setForm(f => ({ ...f, eventId, date }))
     setErrors(e => ({ ...e, eventId: '' }))
-    if (!eventId) { setMenuSections([]); return }
-    setLoadingMenu(true)
-    try {
-      const res = await api.get(`/api/menu/event/${eventId}`)
-      setMenuSections(res.data)
-    } catch { setMenuSections([]) }
-    finally { setLoadingMenu(false) }
+  }
+
+  const selectMenu = (menuId) => {
+    setForm(f => ({ ...f, menuId: f.menuId === menuId ? null : menuId }))
   }
 
   const itemsTotal   = (form.items || []).reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
@@ -228,51 +228,49 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
               </div>
             )}
 
-            {/* Menú del evento (solo lectura desde Catering → Menú) */}
+            {/* Selector de menús globales */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 700 }}>
-                Menú del evento
+              <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, fontWeight: 700 }}>
+                Menú
               </div>
-              {!form.eventId ? (
-                <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '12px 14px', border: '1px solid var(--border)' }}>
-                  Seleccioná un evento para ver su menú.
-                </div>
-              ) : loadingMenu ? (
-                <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '12px 0' }}>Cargando menú...</div>
-              ) : menuSections.length === 0 ? (
+              {loadingMenus ? (
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '10px 0' }}>Cargando menús...</div>
+              ) : allMenus.length === 0 ? (
                 <div style={{ fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '12px 14px', border: '1px dashed var(--border-strong)' }}>
-                  Este evento todavía no tiene menú cargado. Podés armarlo desde <strong style={{ color: 'var(--text-label)' }}>Catering → Menú</strong>.
+                  No hay menús cargados. Creá uno desde <strong style={{ color: 'var(--text-label)' }}>Menús</strong>.
                 </div>
               ) : (
-                <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-                  <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>Menú cargado</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{menuSections.reduce((a, s) => a + s.items.length, 0)} platos · {menuSections.length} secciones</span>
-                  </div>
-                  {sortSections(menuSections).map((section, si) => (
-                    <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
-                        <span style={{ fontSize: 10, fontWeight: 700, color: SECCION_COLORS[section.nombre] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{section.nombre}</span>
-                      </div>
-                      {section.items.map(item => (
-                        <div key={item.id} style={{ padding: '5px 14px 5px 28px', fontSize: 12, color: 'var(--text-secondary)' }}>
-                          {item.dish?.name}
-                          {item.dish?.descripcion && <span style={{ color: 'var(--text-faint)', marginLeft: 6, fontSize: 11 }}>— {item.dish.descripcion}</span>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {allMenus.map(menu => {
+                    const isSelected = form.menuId === menu.id
+                    const totalDishes = (menu.sections || []).reduce((a, s) => a + (s.items || []).length, 0)
+                    return (
+                      <div key={menu.id} onClick={() => selectMenu(menu.id)} style={{ cursor: 'pointer', padding: '12px 14px', borderRadius: 10, border: `1px solid ${isSelected ? 'var(--gold-border)' : 'var(--border)'}`, background: isSelected ? 'var(--gold-bg)' : 'var(--bg-sunken)', transition: 'all 0.15s', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${isSelected ? 'var(--gold)' : 'var(--border-strong)'}`, flexShrink: 0, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                          {isSelected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)' }} />}
                         </div>
-                      ))}
-                    </div>
-                  ))}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: isSelected ? 'var(--gold-light)' : 'var(--text-primary)', marginBottom: 3 }}>{menu.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                            {(menu.sections || []).length} sección{(menu.sections || []).length !== 1 ? 'es' : ''} · {totalDishes} plato{totalDishes !== 1 ? 's' : ''}
+                            {menu.description && ` · ${menu.description}`}
+                          </div>
+                          {isSelected && (menu.sections || []).length > 0 && (
+                            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {(menu.sections || []).flatMap(s => s.items || []).slice(0, 6).map((item, i) => (
+                                <span key={i} style={{ fontSize: 10, background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', padding: '2px 8px', borderRadius: 20 }}>{item.dish?.name}</span>
+                              ))}
+                              {(menu.sections || []).flatMap(s => s.items || []).length > 6 && (
+                                <span style={{ fontSize: 10, color: 'var(--text-faint)', padding: '2px 6px' }}>+{(menu.sections || []).flatMap(s => s.items || []).length - 6} más</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
-            </div>
-
-            {/* Notas generales */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={lbl}>Notas generales del menú (opcional)</label>
-              <textarea rows={2} value={form.menu || ''} onChange={e => set('menu', e.target.value)}
-                placeholder="Ej: Servicio de mesa, vajilla incluida, horario de montaje..."
-                style={{ width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
 
             {/* Extras */}
@@ -298,15 +296,8 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
 function QuoteDetail({ quote, onClose, onEdit }) {
   const total = calcTotal(quote)
   const cateringBase = quote.kind === 'Catering' ? (quote.covers || 0) * (quote.pricePerCover || 0) : 0
-  const [menuSections, setMenuSections] = useState([])
-
-  useEffect(() => {
-    const eventId = quote.event?.id
-    if (quote.kind !== 'Catering' || !eventId) return
-    api.get(`/api/menu/event/${eventId}`)
-      .then(r => setMenuSections(r.data))
-      .catch(() => {})
-  }, [quote.event?.id, quote.kind])
+  // Los menús vienen embebidos en quote.menus (QuoteMenu[])
+  const quotedMenus = (quote.menus || []).map(qm => qm.menu).filter(Boolean)
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -339,41 +330,38 @@ function QuoteDetail({ quote, onClose, onEdit }) {
               ))}
             </div>
 
-            {/* Menú del evento (desde Catering → Menú) */}
-            {menuSections.length > 0 && (
+            {/* Menús incluidos */}
+            {quotedMenus.length > 0 ? (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menú</div>
-                <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-                  {sortSections(menuSections).map((section, si) => (
-                    <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 4px', background: 'var(--bg-hover)' }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
-                        <span style={{ fontSize: 10, fontWeight: 700, color: SECCION_COLORS[section.nombre] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{section.nombre}</span>
+                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Menús incluidos</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {quotedMenus.map(menu => (
+                    <div key={menu.id} style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                      <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--gold-bg)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold-light)' }}>{menu.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{(menu.sections || []).reduce((a,s) => a+(s.items||[]).length, 0)} platos</span>
                       </div>
-                      {section.items.map(item => (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 14px 7px 28px', borderTop: '1px solid var(--border-row)' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{item.dish?.name}</div>
-                            {item.dish?.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{item.dish.descripcion}</div>}
+                      {(menu.sections || []).map((section, si) => (
+                        <div key={section.id} style={{ borderTop: si > 0 ? '1px solid var(--border-row)' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px 3px', background: 'var(--bg-hover)' }}>
+                            <div style={{ width: 6, height: 6, borderRadius: '50%', background: SECCION_COLORS[section.nombre] || '#6b7280', flexShrink: 0 }} />
+                            <span style={{ fontSize: 10, fontWeight: 700, color: SECCION_COLORS[section.nombre] || 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>{section.nombre}</span>
                           </div>
+                          {(section.items || []).map(item => (
+                            <div key={item.id} style={{ padding: '5px 14px 5px 28px', borderTop: '1px solid var(--border-row)' }}>
+                              <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{item.dish?.name}</div>
+                              {item.dish?.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{item.dish.descripcion}</div>}
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-            {menuSections.length === 0 && (
+            ) : (
               <div style={{ marginBottom: 16, fontSize: 12, color: 'var(--text-faint)', background: 'var(--bg-sunken)', borderRadius: 8, padding: '10px 14px', border: '1px dashed var(--border-strong)' }}>
-                Sin menú cargado para este evento.
-              </div>
-            )}
-
-            {/* Notas generales */}
-            {quote.menu && (
-              <div style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Notas</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{quote.menu}</div>
+                Sin menús seleccionados.
               </div>
             )}
           </div>
@@ -437,7 +425,11 @@ export default function Quotes() {
     } catch { toast('Error al cargar cotizaciones') }
     finally { setLoading(false) }
   }
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+    // Marcar decisiones del cliente como vistas
+    localStorage.setItem('lastSeenDecisions', new Date().toISOString())
+  }, [])
 
   const filtered = quotes.filter(q => {
     const ms = q.event?.name.toLowerCase().includes(search.toLowerCase()) || q.event?.client?.name.toLowerCase().includes(search.toLowerCase())
@@ -450,11 +442,10 @@ export default function Quotes() {
     try {
       const payload = {
         kind: form.kind, eventId: Number(form.eventId), date: form.date || undefined, status: form.status,
-        menu: form.kind === 'Catering' ? (form.menu || null) : null,
         covers: form.kind === 'Catering' ? Number(form.covers) : null,
         pricePerCover: form.kind === 'Catering' ? Number(form.pricePerCover) : null,
+        menuIds: form.kind === 'Catering' && form.menuId ? [form.menuId] : [],
         items: (form.items || []).map(({ description, quantity, unitPrice }) => ({ description, quantity: Number(quantity), unitPrice: Number(unitPrice) })),
-        dishes: [],
       }
       if (modal === 'new') { await api.post('/api/quotes', payload); toast('Cotización creada correctamente', 'success') }
       else { await api.put(`/api/quotes/${selected.id}`, payload); toast('Cotización actualizada', 'success') }

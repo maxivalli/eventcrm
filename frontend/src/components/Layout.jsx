@@ -21,6 +21,7 @@ import {
   BookUser,
   MessageCircle,
   MessageSquareMore,
+  Bell,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -39,7 +40,7 @@ const NAV_GROUPS = [
   {
     label: "Catering",
     items: [
-      { path: "/catering", label: "Menú", Icon: UtensilsCrossed },
+      { path: "/catering", label: "Menús", Icon: UtensilsCrossed },
       { path: "/recetario", label: "Recetario", Icon: ChefHat },
     ],
   },
@@ -69,6 +70,25 @@ const NAV_GROUPS = [
 export default function Layout() {
   const [open, setOpen] = useState(true);
   const [pendingQueries, setPendingQueries] = useState(0);
+  const [clientDecisions, setClientDecisions] = useState(0);
+  const [lastSeenDecisions, setLastSeenDecisions] = useState(() =>
+    localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
+  );
+
+  // Escuchar cambios de localStorage desde otras partes de la app
+  useEffect(() => {
+    const onStorage = () => {
+      const val = localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
+      setLastSeenDecisions(val)
+    }
+    window.addEventListener('storage', onStorage)
+    // También chequeamos directamente (para la misma pestaña)
+    const interval = setInterval(() => {
+      const val = localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
+      setLastSeenDecisions(prev => prev !== val ? val : prev)
+    }, 3000)
+    return () => { window.removeEventListener('storage', onStorage); clearInterval(interval) }
+  }, []);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -82,6 +102,16 @@ export default function Layout() {
     const interval = setInterval(load, 5000)
     return () => clearInterval(interval)
   }, []);
+
+  useEffect(() => {
+    const load = () =>
+      api.get(`/api/activity/client-decisions?since=${lastSeenDecisions}`)
+        .then(res => setClientDecisions(res.data.length))
+        .catch(() => {})
+    load()
+    const interval = setInterval(load, 5000)
+    return () => clearInterval(interval)
+  }, [lastSeenDecisions]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -227,6 +257,18 @@ export default function Layout() {
                         {pendingQueries}
                       </div>
                     )}
+                    {path === "/quotes" && clientDecisions > 0 && (
+                      <div style={{
+                        position: "absolute", top: -5, right: -6,
+                        background: "#22c55e", color: "#09090f",
+                        borderRadius: 20, fontSize: 9, fontWeight: 800,
+                        minWidth: 14, height: 14, display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        padding: "0 3px", lineHeight: 1,
+                      }}>
+                        {clientDecisions}
+                      </div>
+                    )}
                   </div>
                   {open && (
                     <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>
@@ -240,6 +282,15 @@ export default function Layout() {
                       padding: "1px 7px",
                     }}>
                       {pendingQueries}
+                    </div>
+                  )}
+                  {open && path === "/quotes" && clientDecisions > 0 && (
+                    <div style={{
+                      background: "rgba(34,197,94,0.15)", color: "#22c55e",
+                      borderRadius: 20, fontSize: 10, fontWeight: 700,
+                      padding: "1px 7px",
+                    }}>
+                      {clientDecisions} nuevo{clientDecisions !== 1 ? "s" : ""}
                     </div>
                   )}
                 </NavLink>

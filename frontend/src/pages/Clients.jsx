@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Phone, Mail } from 'lucide-react'
+import { Phone, Mail, Plus, Search } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -14,7 +14,7 @@ const formatDate = (str) => {
 }
 
 function Badge({ label, color }) {
-  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, background: `${color}20`, color }}>{label}</span>
+  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40`, whiteSpace: 'nowrap', letterSpacing: 0.3 }}>{label}</span>
 }
 
 const inp  = (err) => ({ width: '100%', background: 'var(--bg-sunken)', border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' })
@@ -348,7 +348,14 @@ export default function Clients() {
 
   const openDetail = c => { setSelected(c); setModal('detail') }
   const openEdit   = c => { setSelected(c); setModal('edit') }
-  const fbtn = (active) => ({ padding: '6px 14px', borderRadius: 20, border: '1px solid', fontSize: 12, cursor: 'pointer', transition: 'all 0.2s', borderColor: active ? 'var(--gold)' : 'var(--border)', background: active ? 'var(--gold-bg)' : 'transparent', color: active ? 'var(--gold)' : 'var(--text-muted)' })
+  const estadoColor = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8', 'Todos': 'var(--gold)' }
+  const fbtn = (active, estado) => {
+    const c = estadoColor[estado] || 'var(--gold)'
+    return { padding: '6px 14px', borderRadius: 99, border: '1px solid', fontSize: 12, fontWeight: active ? 700 : 400, cursor: 'pointer', transition: 'all 0.15s',
+      borderColor: active ? `${c}60` : 'var(--border)',
+      background:  active ? `${c}15` : 'transparent',
+      color:       active ? c : 'var(--text-faint)' }
+  }
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>Cargando clientes...</div>
 
@@ -357,16 +364,19 @@ export default function Clients() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Clientes</div>
-          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} clientes encontrados</div>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} cliente{filtered.length !== 1 ? 's' : ''}{filtered.length !== clients.length ? ` de ${clients.length}` : ''}</div>
         </div>
-        <button onClick={() => setModal('new')} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nuevo cliente</button>
+        <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo cliente</button>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o contacto..."
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: 280 }} />
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o contacto..."
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px 9px 32px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: 280 }} />
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {ESTADOS.map(e => <button key={e} onClick={() => setFilterEstado(e)} style={fbtn(filterEstado === e)}>{e}</button>)}
+          {ESTADOS.map(e => <button key={e} onClick={() => setFilterEstado(e)} style={fbtn(filterEstado === e, e)}>{e}</button>)}
         </div>
       </div>
 
@@ -379,7 +389,7 @@ export default function Clients() {
           : filtered.map((client, i) => (
             <div key={client.id} onClick={() => openDetail(client)}
               style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1fr 130px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-sunken)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div>
@@ -392,8 +402,8 @@ export default function Clients() {
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(client.birthdate)}</div>
               <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={e => { e.stopPropagation(); openEdit(client) }} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 6, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Editar</button>
-                <button onClick={e => { e.stopPropagation(); setConfirmDelete(client) }} style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>Eliminar</button>
+                <button onClick={e => { e.stopPropagation(); openEdit(client) }} style={{ padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Editar</button>
+                <button onClick={e => { e.stopPropagation(); setConfirmDelete(client) }} style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 7, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>✕</button>
               </div>
             </div>
           ))

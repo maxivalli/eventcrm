@@ -11,7 +11,7 @@ import Budget from "./pages/Budget";
 import Payments from "./pages/Payments";
 import SupplierPayments from "./pages/SupplierPayments";
 import Users from "./pages/Users";
-import CateringPage from "./pages/Catering";
+import MenusPage from "./pages/Menus";
 import Recetario from "./pages/Recetario";
 import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
@@ -110,7 +110,7 @@ export default function App() {
           <Route path="budget" element={<Budget />} />
           <Route path="payments" element={<Payments />} />
           <Route path="supplier-payments" element={<SupplierPayments />} />
-          <Route path="catering" element={<CateringPage />} />
+          <Route path="catering" element={<MenusPage />} />
           <Route path="recetario" element={<Recetario />} />
           <Route path="contacts" element={<Contacts />} />
           <Route path="whatsapp" element={<WhatsApp />} />

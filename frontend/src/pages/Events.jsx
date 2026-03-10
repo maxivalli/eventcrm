@@ -374,22 +374,134 @@ function EventForm({ initial, clients, onSave, onClose }) {
   );
 }
 
+
+function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false }) {
+  const total      = calcTotal(quote)
+  const menu       = quote.menus?.[0]?.menu || null
+  const sections   = menu?.sections || []
+  const isConfirmed = quote.clientStatus === 'Aprobado'
+
+  const kindLabel = { Catering: 'Catering', General: 'Servicio' }[quote.kind] || quote.kind
+  const kindIcon  = { Catering: '🍽', General: '✦' }[quote.kind] || '◇'
+
+  return (
+    <div style={{
+      border: `1px solid ${isConfirmed ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`,
+      borderRadius: 14, overflow: 'hidden',
+      background: isConfirmed ? 'rgba(34,197,94,0.03)' : 'var(--bg-sunken)',
+      opacity: muted ? 0.7 : 1,
+    }}>
+      {/* Header */}
+      <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16 }}>{kindIcon}</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{kindLabel}</div>
+            {quote.kind === 'Catering' && quote.covers && (
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 1 }}>{quote.covers} personas · {fmt(quote.pricePerCover)} por cubierto</div>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {isConfirmed && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', padding: '3px 10px', borderRadius: 99 }}>✓ Confirmado</span>
+          )}
+          <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--gold)' }}>{fmt(total)}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: sections.length > 0 ? '1fr 1fr' : '1fr', gap: 0 }}>
+
+        {/* Menú */}
+        {sections.length > 0 && (
+          <div style={{ borderRight: '1px solid var(--border)', padding: '14px 18px' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>
+              {menu.name}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {sections.map(sec => {
+                const c = SECCION_COLORS[sec.nombre] || '#6b7280'
+                return (
+                  <div key={sec.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: c }} />
+                      <span style={{ fontSize: 10, fontWeight: 800, color: c, textTransform: 'uppercase', letterSpacing: 1 }}>{sec.nombre}</span>
+                    </div>
+                    {(sec.items || []).map(item => (
+                      <div key={item.id} style={{ paddingLeft: 13, marginBottom: 4 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{item.dish?.name}</div>
+                        {item.dish?.descripcion && (
+                          <div style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>{item.dish.descripcion}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Extras / items */}
+        <div style={{ padding: '14px 18px' }}>
+          {/* Cubiertos */}
+          {quote.kind === 'Catering' && quote.covers && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Base</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Servicio por persona</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{quote.covers} × {fmt(quote.pricePerCover)}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt((quote.covers||0)*(quote.pricePerCover||0))}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Items extras */}
+          {(quote.items || []).length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>
+                {quote.kind === 'Catering' ? 'Extras' : 'Items'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {(quote.items || []).map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.description}</div>
+                      {item.quantity > 1 && <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>Cantidad: {item.quantity}</div>}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{fmt(item.quantity * item.unitPrice)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(quote.items || []).length === 0 && quote.kind !== 'Catering' && (
+            <div style={{ fontSize: 12, color: 'var(--text-faint)', fontStyle: 'italic' }}>Sin items detallados</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EventDetail({ event, onClose, onEdit }) {
   const navigate = useNavigate();
-  const [quotes, setQuotes]   = useState([]);
-  const [payments, setPayments] = useState([]);
+  const [tab, setTab]             = useState('info');
+  const [quotes, setQuotes]       = useState([]);
+  const [payments, setPayments]   = useState([]);
   const [spPayments, setSpPayments] = useState([]);
-  const [summary, setSummary] = useState({ totalQuotes: 0, totalPaid: 0, balance: 0 });
+  const [summary, setSummary]     = useState({ totalQuotes: 0, totalPaid: 0, balance: 0 });
   const [spSummary, setSpSummary] = useState({ totalPaid: 0, totalPending: 0 });
-  const [cateringTotal, setCateringTotal] = useState(null);
-  const [menuSections, setMenuSections]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [portalToken, setPortalToken] = useState(event.portalToken || null);
+  const [loading, setLoading]     = useState(true);
+  const [portalToken, setPortalToken]   = useState(event.portalToken || null);
   const [portalCopied, setPortalCopied] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [briefing, setBriefing] = useState(null);
+  const [briefing, setBriefing]         = useState(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
-  const [briefingCopied, setBriefingCopied] = useState(false);
+  const [briefingCopied, setBriefingCopied]   = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
 
   const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : null;
@@ -399,41 +511,33 @@ function EventDetail({ event, onClose, onEdit }) {
     try {
       const res = await api.post(`/api/events/${event.id}/portal-token`)
       setPortalToken(res.data.portalToken)
-    } catch { /* silencioso */ }
-    finally { setPortalLoading(false) }
+    } catch { } finally { setPortalLoading(false) }
   }
-
   const handleCopyPortal = () => {
     navigator.clipboard.writeText(portalUrl)
-    setPortalCopied(true)
-    setTimeout(() => setPortalCopied(false), 2000)
+    setPortalCopied(true); setTimeout(() => setPortalCopied(false), 2000)
   }
-
   const handleBriefing = async () => {
-    setShowBriefing(true)
-    if (briefing) return
+    setShowBriefing(true); if (briefing) return
     setBriefingLoading(true)
     try {
       const res = await api.post('/api/ai/event-briefing', {
         event: { ...event, clientName: event.client?.name },
-        menu: menuSections,
-        payments,
-        quotes,
+        menu: quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado').flatMap(q => (q.menus||[]).map(qm => qm.menu).filter(Boolean)).flatMap(m => m.sections||[]),
+        payments, quotes,
       })
       setBriefing(res.data.briefing)
     } catch { setBriefing('No se pudo generar el briefing. Intentá de nuevo.') }
     finally { setBriefingLoading(false) }
   }
-
   const handleCopyBriefing = () => {
     navigator.clipboard.writeText(briefing)
-    setBriefingCopied(true)
-    setTimeout(() => setBriefingCopied(false), 2000)
+    setBriefingCopied(true); setTimeout(() => setBriefingCopied(false), 2000)
   }
 
   useEffect(() => {
     Promise.all([
-      api.get("/api/quotes"),
+      api.get('/api/quotes'),
       api.get(`/api/payments?eventId=${event.id}`),
       api.get(`/api/supplier-payments/by-event/${event.id}`),
     ]).then(([qRes, pRes, spRes]) => {
@@ -443,328 +547,348 @@ function EventDetail({ event, onClose, onEdit }) {
       setSpPayments(spRes.data.payments || []);
       setSpSummary({ totalPaid: spRes.data.totalPaid || 0, totalPending: spRes.data.totalPending || 0 });
     }).catch(console.error).finally(() => setLoading(false));
-
-    api.get(`/api/menu/event/${event.id}`)
-      .then(res => setMenuSections(res.data || []))
-      .catch(() => setMenuSections([]));
   }, [event.id]);
 
   const calcQuoteTotal = q => {
     const items    = (q.items || []).reduce((a, i) => a + i.quantity * i.unitPrice, 0);
-    const catering = q.kind === "Catering" ? (q.covers || 0) * (q.pricePerCover || 0) : 0;
+    const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0;
     return catering + items;
   };
 
   const totalProveedores = spSummary.totalPaid + spSummary.totalPending;
-  const utilidad = summary.totalQuotes - totalProveedores;
+  const utilidad  = summary.totalQuotes - totalProveedores;
   const balanceMax = Math.max(summary.totalQuotes, summary.totalPaid, totalProveedores, 1);
 
-  const SL = { fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, fontWeight: 600 };
+  const SL = { fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 14, fontWeight: 800 };
   const Card = ({ children, style = {} }) => (
-    <div style={{ background: "var(--bg-sunken)", borderRadius: 12, border: "1px solid var(--border)", overflow: "hidden", ...style }}>{children}</div>
+    <div style={{ background: 'var(--bg-sunken)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', ...style }}>{children}</div>
   );
-  const Row = ({ label, value, color = "var(--text-primary)", last = false }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "11px 16px", borderBottom: last ? "none" : "1px solid var(--border-row)" }}>
-      <span style={{ fontSize: 12, color: "var(--text-label)" }}>{label}</span>
-      <span style={{ fontSize: 13, color, fontWeight: color !== "var(--text-primary)" ? 600 : 400 }}>{value}</span>
+  const Row = ({ label, value, color = 'var(--text-primary)', last = false }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 16px', borderBottom: last ? 'none' : '1px solid var(--border-row)' }}>
+      <span style={{ fontSize: 12, color: 'var(--text-label)' }}>{label}</span>
+      <span style={{ fontSize: 13, color, fontWeight: color !== 'var(--text-primary)' ? 600 : 400 }}>{value}</span>
     </div>
   );
 
+  const SECCION_COLORS = { 'Entrada': '#3b82f6', 'Plato principal': '#8b5cf6', 'Guarnición': '#22c55e', 'Bebidas': '#06b6d4', 'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280' };
+
+  // Cotizaciones agrupadas por tipo
+  const confirmedQuotes = quotes.filter(q => q.clientStatus === 'Aprobado');
+  const pendingQuotes   = quotes.filter(q => !q.clientStatus);
+  const cateringConfirmed = quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado');
+
+  const TABS = [
+    { id: 'info',      label: 'Info',      icon: '📋' },
+    { id: 'servicios', label: 'Servicios', icon: '✦', badge: confirmedQuotes.length },
+    { id: 'finanzas',  label: 'Finanzas',  icon: '💳' },
+  ];
+
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 20,
-        width: "100%", maxWidth: 1100, maxHeight: "90vh",
-        display: "flex", flexDirection: "column", overflow: "hidden",
+        background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 20,
+        width: '100%', maxWidth: 1200, height: '92vh',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
-        {/* Header */}
-        <div style={{ padding: "22px 32px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "var(--text-primary)" }}>{event.name}</div>
-            <div style={{ fontSize: 12, color: "var(--text-label)", marginTop: 3 }}>{event.client?.name}</div>
+
+        {/* ── Header ── */}
+        <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.2 }}>{event.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 3 }}>
+                {event.client?.name} · {fmtDate(event.date)}{event.time ? ` · ${event.time}` : ''}
+              </div>
+            </div>
+            <Badge label={event.status} color={statusColors[event.status] || 'var(--text-muted)'} />
+            <Badge label={event.type}   color={typeColors[event.type]   || 'var(--text-muted)'} />
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Badge label={event.type} color={typeColors[event.type] || "var(--text-muted)"} />
-            <Badge label={event.status} color={statusColors[event.status] || "var(--text-muted)"} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {portalUrl ? (
-              <div style={{ display: "flex", gap: 6 }}>
+              <>
                 <button onClick={() => {
                   const phone = event.client?.phone?.replace(/\D/g, '')
                   const msg = encodeURIComponent(`Hola ${event.client?.name}, te comparto el seguimiento de tu evento "${event.name}" 🎉\n\n${portalUrl}`)
                   window.open(`https://wa.me/${phone ? `54${phone.slice(-10)}` : ''}?text=${msg}`, '_blank')
-                }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid rgba(37,211,102,0.4)", borderRadius: 8, background: "rgba(37,211,102,0.08)", color: "#25d366", fontSize: 12, cursor: "pointer" }}>
-                  <MessageCircle size={13} /> Enviar por WA
+                }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(37,211,102,0.4)', borderRadius: 8, background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, cursor: 'pointer' }}>
+                  <MessageCircle size={13} /> WA
                 </button>
-                <button onClick={handleCopyPortal} style={{ padding: "7px 10px", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 8, background: portalCopied ? "rgba(34,197,94,0.1)" : "rgba(201,168,76,0.06)", color: portalCopied ? "#22c55e" : "var(--gold)", fontSize: 12, cursor: "pointer" }}>
-                  {portalCopied ? "✓" : "🔗"}
+                <button onClick={handleCopyPortal} style={{ padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
+                  {portalCopied ? '✓ Copiado' : '🔗 Portal'}
                 </button>
-              </div>
+              </>
             ) : (
-              <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
-                {portalLoading ? "Generando..." : <><Link2 size={13} /> Portal cliente</>}
+              <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                {portalLoading ? 'Generando...' : <><Link2 size={13} /> Portal</>}
               </button>
             )}
-            <button onClick={handleBriefing} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
+            <button onClick={handleBriefing} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
               <ClipboardList size={13} /> Briefing
             </button>
-            <button onClick={() => onEdit(event)} style={{ marginLeft: 6, padding: "7px 16px", border: "none", borderRadius: 8, background: "linear-gradient(135deg,#c9a84c,#e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Editar</button>
-            <button onClick={onClose} style={{ padding: "7px 13px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>✕</button>
+            <button onClick={() => onEdit(event)} style={{ padding: '7px 16px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Editar</button>
+            <button onClick={onClose} style={{ padding: '7px 13px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
           </div>
         </div>
 
-        {/* Modal Briefing */}
+        {/* ── Tabs ── */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', flexShrink: 0, paddingLeft: 28 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              padding: '14px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+              fontSize: 13, fontWeight: tab === t.id ? 700 : 400,
+              color: tab === t.id ? 'var(--gold)' : 'var(--text-muted)',
+              borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              marginBottom: -1, display: 'flex', alignItems: 'center', gap: 7, transition: 'all 0.15s',
+            }}>
+              <span>{t.icon}</span> {t.label}
+              {t.badge > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 800, background: '#22c55e', color: '#fff', borderRadius: 99, padding: '1px 6px' }}>{t.badge}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Briefing modal ── */}
         {showBriefing && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => e.target === e.currentTarget && setShowBriefing(false)}>
-            <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={15} /> Briefing del evento</div>
-                <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={15} /> Briefing del evento</div>
+                <div style={{ display: 'flex', gap: 8 }}>
                   {briefing && !briefingLoading && (
                     <>
-                      <button onClick={handleCopyBriefing} style={{ padding: "6px 12px", border: "1px solid var(--border)", borderRadius: 8, background: briefingCopied ? "rgba(34,197,94,0.1)" : "transparent", color: briefingCopied ? "#22c55e" : "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
-                        {briefingCopied ? "✓ Copiado" : "Copiar"}
+                      <button onClick={handleCopyBriefing} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: briefingCopied ? 'rgba(34,197,94,0.1)' : 'transparent', color: briefingCopied ? '#22c55e' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                        {briefingCopied ? '✓ Copiado' : 'Copiar'}
                       </button>
-                      <button onClick={() => { setBriefing(null); handleBriefing() }} style={{ padding: "6px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
-                        Regenerar
-                      </button>
+                      <button onClick={() => { setBriefing(null); handleBriefing() }} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Regenerar</button>
                     </>
                   )}
-                  <button onClick={() => setShowBriefing(false)} style={{ padding: "6px 10px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>✕</button>
+                  <button onClick={() => setShowBriefing(false)} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
                 </div>
               </div>
-              <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
-                {briefingLoading ? (
-                  <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-label)", fontSize: 13 }}>
-                    Generando briefing con IA...
-                  </div>
-                ) : (
-                  <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.7, color: "var(--text-primary)" }}>
-                    {briefing}
-                  </pre>
-                )}
+              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+                {briefingLoading
+                  ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Generando briefing con IA...</div>
+                  : <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.7, color: 'var(--text-primary)' }}>{briefing}</pre>
+                }
               </div>
             </div>
           </div>
         )}
 
-        {/* Body — 2 columnas */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", flex: 1, overflow: "hidden" }}>
+        {/* ── Tab body ── */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
 
-          {/* ── Columna izquierda ── */}
-          <div style={{ overflowY: "auto", padding: "28px 32px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 26 }}>
+          {/* ═══════════════ TAB: INFO ═══════════════ */}
+          {tab === 'info' && (
+            <div style={{ height: '100%', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
 
-            {/* Datos */}
-            <section>
-              <div style={SL}>Datos del evento</div>
-              <Card>
-                <Row label="Fecha"          value={fmtDate(event.date)} />
-                <Row label="Hora"           value={event.time || "—"} />
-                <Row label="Venue"          value={event.venue} />
-                <Row label="Invitados"      value={`${event.guests} personas`} />
-                <Row label="Pres. estimado" value={fmt(event.budget)} last={!(event.dietaryOptions)} />
-                {(() => {
-                  const opts = (() => { try { return typeof event.dietaryOptions === 'string' ? JSON.parse(event.dietaryOptions) : (event.dietaryOptions || []) } catch { return [] } })()
-                  if (!opts.length) return null
-                  return (
-                    <div style={{ padding: "10px 0 4px" }}>
-                      <div style={{ fontSize: 10, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Necesidades alimentarias</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {opts.map(o => (
-                          <div key={o.key} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", fontSize: 12 }}>
-                            <span>{DIETARY_OPTIONS.find(d => d.key === o.key)?.icon}</span>
-                            <span style={{ color: "var(--text-secondary)" }}>{o.label}</span>
-                            {o.cantidad && <span style={{ color: "var(--gold)", fontWeight: 700 }}>× {o.cantidad}</span>}
+              {/* Columna izquierda */}
+              <div style={{ padding: '28px 32px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+                {/* Datos del evento */}
+                <section>
+                  <div style={SL}>Datos del evento</div>
+                  <Card>
+                    <Row label="Fecha"          value={fmtDate(event.date)} />
+                    <Row label="Hora"           value={event.time || '—'} />
+                    <Row label="Venue"          value={event.venue} />
+                    <Row label="Invitados"      value={`${event.guests} personas`} />
+                    <Row label="Pres. estimado" value={fmt(event.budget)} last={!event.dietaryOptions} />
+                    {(() => {
+                      const raw = (() => { try { return typeof event.dietaryOptions === 'string' ? JSON.parse(event.dietaryOptions) : (event.dietaryOptions || []) } catch { return [] } })()
+                      const opts = Array.isArray(raw) ? raw : []
+                      if (!opts.length) return null
+                      return (
+                        <div style={{ padding: '12px 16px' }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Necesidades alimentarias</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {opts.map(o => (
+                              <div key={o.key} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)', fontSize: 12 }}>
+                                <span>{DIETARY_OPTIONS.find(d => d.key === o.key)?.icon}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>{o.label}</span>
+                                {o.cantidad && <span style={{ color: 'var(--gold)', fontWeight: 700 }}>× {o.cantidad}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </Card>
+                </section>
+
+                {/* Cronograma */}
+                <section>
+                  <div style={SL}>Cronograma del día</div>
+                  <Cronograma event={event} />
+                </section>
+              </div>
+
+              {/* Columna derecha */}
+              <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+                <section>
+                  <div style={SL}>Checklist</div>
+                  <Checklist eventId={event.id} event={event} />
+                </section>
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════ TAB: SERVICIOS ═══════════════ */}
+          {tab === 'servicios' && (
+            <div style={{ height: '100%', overflowY: 'auto', padding: '28px 36px' }}>
+              {loading ? (
+                <div style={{ color: 'var(--text-faint)', fontSize: 13 }}>Cargando...</div>
+              ) : quotes.length === 0 ? (
+                <div style={{ color: 'var(--text-faint)', fontSize: 13 }}>Sin cotizaciones cargadas.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+                  {/* Servicios confirmados */}
+                  {confirmedQuotes.length > 0 && (
+                    <section>
+                      <div style={{ ...SL, color: '#22c55e' }}>✓ Confirmados por el cliente</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {confirmedQuotes.map(q => (
+                          <QuoteDetailCard key={q.id} quote={q} calcTotal={calcQuoteTotal} SECCION_COLORS={SECCION_COLORS} fmt={fmt} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Servicios pendientes de decisión */}
+                  {pendingQuotes.length > 0 && (
+                    <section>
+                      <div style={{ ...SL, color: 'var(--text-faint)' }}>Pendientes de confirmación</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {pendingQuotes.map(q => (
+                          <QuoteDetailCard key={q.id} quote={q} calcTotal={calcQuoteTotal} SECCION_COLORS={SECCION_COLORS} fmt={fmt} muted />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Rechazadas (colapsadas) */}
+                  {quotes.filter(q => q.clientStatus === 'Rechazado').length > 0 && (
+                    <section>
+                      <div style={{ ...SL, color: '#ef4444' }}>Rechazadas</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {quotes.filter(q => q.clientStatus === 'Rechazado').map(q => (
+                          <div key={q.id} style={{ padding: '11px 16px', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.5 }}>
+                            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{q.kind}</span>
+                            <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>{fmt(calcQuoteTotal(q))}</span>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )
-                })()}
-              </Card>
-            </section>
-
-            {/* Cotizaciones */}
-            <section>
-              <div style={SL}>Cotizaciones</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : quotes.length === 0
-                ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin cotizaciones</div>
-                : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                    {quotes.map(q => (
-                      <div key={q.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{q.kind}</div>
-                          <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{fmtDate(q.date)}</div>
-                        </div>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <Badge label={q.status} color={quoteStatusColors[q.status] || "var(--text-muted)"} />
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--gold-light)" }}>{fmt(calcQuoteTotal(q))}</span>
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 15px", background: "rgba(201,168,76,0.06)", borderRadius: 8, border: "1px solid rgba(201,168,76,0.15)" }}>
-                      <span style={{ fontSize: 12, color: "var(--text-label)" }}>Total aprobadas</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--gold-light)" }}>{fmt(summary.totalQuotes)}</span>
-                    </div>
-                  </div>
-                )
-              }
-            </section>
-
-            {/* Cobros */}
-            <section>
-              <div style={SL}>Cobros al cliente</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {payments.length === 0
-                    ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin cobros registrados</div>
-                    : payments.map(p => (
-                      <div key={p.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{fmt(p.amount)}</div>
-                          {p.note && <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{p.note}</div>}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{fmtDate(p.date)}</div>
-                      </div>
-                    ))
-                  }
-                  <Card>
-                    <Row label="Total cobrado"         value={fmt(summary.totalPaid)} color="#22c55e" />
-                    <Row label="Saldo pendiente"        value={fmt(summary.balance)}  color={summary.balance > 0 ? "#ef4444" : "#22c55e"} last />
-                  </Card>
+                    </section>
+                  )}
                 </div>
               )}
-            </section>
+            </div>
+          )}
 
-            {/* Pagos a proveedores */}
-            <section>
-              <div style={SL}>Pagos a proveedores</div>
-              {loading ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Cargando...</div> : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  {spPayments.length === 0
-                    ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin pagos registrados</div>
-                    : spPayments.map(p => (
-                      <div key={p.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, padding: "11px 15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>{p.supplier?.name}</div>
-                          {p.note && <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 2 }}>{p.note}</div>}
-                        </div>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <Badge label={p.status} color={p.status === "Pagado" ? "#22c55e" : "#f59e0b"} />
-                          <span style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{fmt(p.amount)}</span>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  <Card>
-                    <Row label="Pagado a proveedores"   value={fmt(spSummary.totalPaid)}    color="#ef4444" />
-                    <Row label="Pendiente proveedores"  value={fmt(spSummary.totalPending)} color="#f59e0b" last />
-                  </Card>
-                </div>
-              )}
-            </section>
+          {/* ═══════════════ TAB: FINANZAS ═══════════════ */}
+          {tab === 'finanzas' && (
+            <div style={{ height: '100%', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
 
-            {/* Balance del evento */}
-            {!loading && (
-              <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-                <div style={SL}>Balance del evento</div>
-                <div style={{ background: "var(--bg-sunken)", borderRadius: 14, border: "1px solid var(--border)", padding: "20px 22px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
-                    {[
-                      { label: "Ingresos aprobados", value: summary.totalQuotes,    color: "var(--gold)" },
-                      { label: "Cobrado al cliente",  value: summary.totalPaid,      color: "#22c55e" },
-                      { label: "Pagado proveedores",  value: spSummary.totalPaid,    color: "#ef4444" },
-                      { label: "Pend. proveedores",   value: spSummary.totalPending, color: "#f59e0b" },
-                    ].map(item => (
-                      <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}25`, borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ fontSize: 10, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 5 }}>{item.label}</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes} max={balanceMax} color="var(--gold)" />
-                    <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}   max={balanceMax} color="#22c55e" />
-                    <BalanceBar label="Total proveedores"   value={totalProveedores}     max={balanceMax} color="#ef4444" />
-                  </div>
-                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border-row)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontSize: 12, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>Utilidad estimada</div>
-                      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>Ingresos − total proveedores</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: utilidad >= 0 ? "#22c55e" : "#ef4444" }}>{fmt(utilidad)}</div>
-                      {summary.totalQuotes > 0 && (
-                        <div style={{ fontSize: 11, color: "var(--text-label)" }}>
-                          {Math.round((utilidad / summary.totalQuotes) * 100)}% del ingreso
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-          </div>
+              {/* Columna izquierda */}
+              <div style={{ padding: '28px 32px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-          {/* ── Columna derecha ── */}
-          <div style={{ overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 26 }}>
-
-            {/* Catering — resumen */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={SL}>Menú de catering</div>
-                <button
-                  onClick={() => { onClose(); navigate("/catering"); }}
-                  style={{ padding: "4px 12px", border: "1px solid var(--border)", borderRadius: 20, background: "transparent", color: "var(--text-muted)", fontSize: 11, cursor: "pointer" }}
-                >
-                  Gestionar →
-                </button>
-              </div>
-              {!loading && (
-                menuSections.length === 0
-                  ? <div style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin menú cargado. Hacé click en Gestionar para armarlo.</div>
-                  : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {sortSections(menuSections).map(sec => (
-                        <div key={sec.id} style={{ background: "var(--bg-sunken)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-                          <div style={{ padding: "8px 14px", borderBottom: sec.items.length > 0 ? "1px solid var(--border-row)" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{sec.nombre}</span>
-                            <span style={{ fontSize: 11, color: "var(--text-faint)" }}>{sec.items.length} plato{sec.items.length !== 1 ? "s" : ""}</span>
-                          </div>
-                          {sec.items.map((item, i) => (
-                            <div key={item.id} style={{ padding: "7px 14px", borderBottom: i < sec.items.length - 1 ? "1px solid var(--border-row)" : "none" }}>
-                              <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{item.dish.name}</div>
-                              {item.dish.descripcion && (
-                                <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 1 }}>{item.dish.descripcion}</div>
-                              )}
+                <section>
+                  <div style={SL}>Cobros al cliente</div>
+                  {loading ? <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Cargando...</div> : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {payments.length === 0
+                        ? <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Sin cobros registrados</div>
+                        : payments.map(p => (
+                          <div key={p.id} style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{fmt(p.amount)}</div>
+                              {p.note && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{p.note}</div>}
                             </div>
-                          ))}
+                            <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{fmtDate(p.date)}</div>
+                          </div>
+                        ))
+                      }
+                      <Card>
+                        <Row label="Total cobrado"   value={fmt(summary.totalPaid)}  color="#22c55e" />
+                        <Row label="Saldo pendiente" value={fmt(summary.balance)}    color={summary.balance > 0 ? '#ef4444' : '#22c55e'} last />
+                      </Card>
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <div style={SL}>Pagos a proveedores</div>
+                  {loading ? <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Cargando...</div> : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      {spPayments.length === 0
+                        ? <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Sin pagos registrados</div>
+                        : spPayments.map(p => (
+                          <div key={p.id} style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{p.supplier?.name}</div>
+                              {p.note && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{p.note}</div>}
+                            </div>
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                              <Badge label={p.status} color={p.status === 'Pagado' ? '#22c55e' : '#f59e0b'} />
+                              <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>{fmt(p.amount)}</span>
+                            </div>
+                          </div>
+                        ))
+                      }
+                      <Card>
+                        <Row label="Pagado a proveedores"  value={fmt(spSummary.totalPaid)}    color="#ef4444" />
+                        <Row label="Pendiente proveedores" value={fmt(spSummary.totalPending)} color="#f59e0b" last />
+                      </Card>
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* Columna derecha — Balance */}
+              <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+                {!loading && (
+                  <section>
+                    <div style={SL}>Balance del evento</div>
+                    <div style={{ background: 'var(--bg-sunken)', borderRadius: 14, border: '1px solid var(--border)', padding: '22px 24px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+                        {[
+                          { label: 'Ingresos aprobados', value: summary.totalQuotes,    color: 'var(--gold)' },
+                          { label: 'Cobrado al cliente',  value: summary.totalPaid,      color: '#22c55e' },
+                          { label: 'Pagado proveedores',  value: spSummary.totalPaid,    color: '#ef4444' },
+                          { label: 'Pend. proveedores',   value: spSummary.totalPending, color: '#f59e0b' },
+                        ].map(item => (
+                          <div key={item.label} style={{ background: `${item.color}08`, border: `1px solid ${item.color}25`, borderRadius: 10, padding: '14px 16px' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>{item.label}</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: item.color }}>{fmt(item.value)}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                        <BalanceBar label="Ingresos aprobados" value={summary.totalQuotes} max={balanceMax} color="var(--gold)" />
+                        <BalanceBar label="Cobrado al cliente"  value={summary.totalPaid}   max={balanceMax} color="#22c55e" />
+                        <BalanceBar label="Total proveedores"   value={totalProveedores}     max={balanceMax} color="#ef4444" />
+                      </div>
+                      <div style={{ paddingTop: 18, borderTop: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 12, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>Utilidad estimada</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>Ingresos − total proveedores</div>
                         </div>
-                      ))}
-                      <div style={{ fontSize: 11, color: "var(--text-faint)", textAlign: "right" }}>
-                        {menuSections.reduce((t, s) => t + s.items.length, 0)} platos · {event.guests} invitados
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 26, fontWeight: 800, color: utilidad >= 0 ? '#22c55e' : '#ef4444' }}>{fmt(utilidad)}</div>
+                          {summary.totalQuotes > 0 && (
+                            <div style={{ fontSize: 11, color: 'var(--text-label)' }}>{Math.round((utilidad / summary.totalQuotes) * 100)}% del ingreso</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )
-              )}
-            </section>
-
-            {/* Cronograma IA */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <Cronograma event={event} />
-            </section>
-
-            {/* Checklist */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <Checklist eventId={event.id} event={event} />
-            </section>
-
-            {/* Archivos */}
-            <section style={{ paddingTop: 20, borderTop: "1px solid var(--border)" }}>
-              <EventFiles eventId={event.id} />
-            </section>
-          </div>
+                  </section>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

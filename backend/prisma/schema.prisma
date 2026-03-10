@@ -39,6 +39,7 @@ model Event {
   budget           Float
   dietaryOptions   String?   // JSON: [{ key, label, cantidad }]
   portalToken      String?           @unique
+  budgetPublished  Boolean           @default(false)
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId         Int
   quotes           Quote[]
@@ -47,25 +48,25 @@ model Event {
   createdAt        DateTime          @default(now())
   checklist      ChecklistItem[]
   files          EventFile[]
-  cateringItems  CateringItem[]
-  menuSections   EventMenuSection[]
   portalQueries  PortalQuery[]
   scheduleItems  ScheduleItem[]
 }
 
 model Quote {
-  id            Int         @id @default(autoincrement())
-  kind          String      @default("General")
-  date          DateTime    @default(now())
-  status        String      @default("Pendiente")
-  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId       Int
-  menu          String?
-  covers        Int?
-  pricePerCover Float?
-  items         QuoteItem[]
-  dishes        QuoteDish[]
-  createdAt     DateTime    @default(now())
+  id              Int         @id @default(autoincrement())
+  kind            String      @default("General")
+  date            DateTime    @default(now())
+  status          String      @default("Pendiente")
+  clientStatus    String?
+  clientDecidedAt DateTime?
+  event           Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId         Int
+  covers          Int?
+  pricePerCover   Float?
+  items           QuoteItem[]
+  dishes          QuoteDish[]
+  menus           QuoteMenu[]
+  createdAt       DateTime    @default(now())
 }
 
 model QuoteItem {
@@ -112,7 +113,6 @@ model Supplier {
   status           String            @default("Activo")
   alias            String?
   supplierPayments SupplierPayment[]
-  cateringItems    CateringItem[]
   createdAt        DateTime          @default(now())
 }
 
@@ -137,33 +137,18 @@ model EventFile {
   createdAt    DateTime @default(now())
 }
 
-model CateringItem {
-  id             Int       @id @default(autoincrement())
-  eventId        Int
-  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  categoria      String
-  descripcion    String
-  cantidad       Float
-  unidad         String    @default("unidad")
-  precioUnitario Float     @default(0)
-  proveedorId    Int?
-  proveedor      Supplier? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
-  proveedorLibre String?
-  nota           String?
-  createdAt      DateTime  @default(now())
-}
 
 // ── Recetario ──────────────────────────────────────────────
 
 model Dish {
-  id          Int              @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   name        String
-  seccion     String           // "Entrada fría", "Plato principal", etc.
+  seccion     String
   descripcion String?
   ingredients DishIngredient[]
-  menuItems   EventMenuItem[]
+  menuItems   MenuSectionItem[]
   quoteDishes QuoteDish[]
-  createdAt   DateTime         @default(now())
+  createdAt   DateTime          @default(now())
 }
 
 model DishIngredient {
@@ -176,27 +161,6 @@ model DishIngredient {
   categoria    String @default("Otros") // "Carnes", "Lácteos", "Verduras", "Bebidas", etc.
 }
 
-// ── Menú por evento ───────────────────────────────────────
-
-model EventMenuSection {
-  id        Int             @id @default(autoincrement())
-  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId   Int
-  nombre    String          // "Entrada fría", "Plato principal", etc.
-  orden     Int             @default(0)
-  items     EventMenuItem[]
-  createdAt DateTime        @default(now())
-}
-
-model EventMenuItem {
-  id        Int              @id @default(autoincrement())
-  section   EventMenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  sectionId Int
-  dish      Dish             @relation(fields: [dishId], references: [id], onDelete: Cascade)
-  dishId    Int
-  nota      String?
-  createdAt DateTime         @default(now())
-}
 // ── Contactos (agenda independiente) ─────────────────────
 
 model Contact {
@@ -205,6 +169,20 @@ model Contact {
   phone     String   @default("")
   email     String   @default("")
   createdAt DateTime @default(now())
+}
+
+// ── Cronograma del evento ─────────────────────────────────
+
+model ScheduleItem {
+  id          Int      @id @default(autoincrement())
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     Int
+  hora        String
+  titulo      String
+  descripcion String?
+  categoria   String   @default("Protocolo")
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
 }
 
 // ── Consultas del portal del cliente ─────────────────────
@@ -242,14 +220,41 @@ model QuoteDish {
   nota    String?
 }
 
-model ScheduleItem {
-  id          Int      @id @default(autoincrement())
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId     Int
-  hora        String
-  titulo      String
-  descripcion String?
-  categoria   String   @default("Protocolo")
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now())
+// ── Menús globales (independientes de eventos) ────────────
+
+model Menu {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  sections    MenuSection[]
+  quotes      QuoteMenu[]
+  createdAt   DateTime      @default(now())
+}
+
+model MenuSection {
+  id        Int               @id @default(autoincrement())
+  menu      Menu              @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menuId    Int
+  nombre    String
+  orden     Int               @default(0)
+  items     MenuSectionItem[]
+  createdAt DateTime          @default(now())
+}
+
+model MenuSectionItem {
+  id        Int         @id @default(autoincrement())
+  section   MenuSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId Int
+  dish      Dish        @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  dishId    Int
+  nota      String?
+  createdAt DateTime    @default(now())
+}
+
+model QuoteMenu {
+  id      Int   @id @default(autoincrement())
+  quote   Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId Int
+  menu    Menu  @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  menuId  Int
 }

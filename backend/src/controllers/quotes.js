@@ -6,6 +6,7 @@ const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency:
 const INCLUDE_FULL = {
   items: true,
   dishes: { include: { dish: { include: { ingredients: true } } } },
+  menus: { include: { menu: { include: { sections: { orderBy: { orden: 'asc' }, include: { items: { include: { dish: true } } } } } } } },
   event: { select: { id: true, name: true, client: { select: { name: true } } } }
 }
 
@@ -32,7 +33,7 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { eventId, kind = 'General', items, dishes, date, status, menu, covers, pricePerCover } = req.body
+    const { eventId, kind = 'General', items, menuIds, date, status, covers, pricePerCover } = req.body
     if (!eventId) return res.status(400).json({ error: 'El evento es requerido' })
 
     if (kind === 'General') {
@@ -49,7 +50,6 @@ exports.create = async (req, res) => {
         kind, status: status || 'Pendiente',
         date: date ? new Date(`${date.slice(0,10)}T12:00:00`) : new Date(),
         event: { connect: { id: Number(eventId) } },
-        menu: kind === 'Catering' ? (menu?.trim() || null) : null,
         covers: kind === 'Catering' ? Number(covers) : null,
         pricePerCover: kind === 'Catering' ? Number(pricePerCover) : null,
         items: {
@@ -57,11 +57,8 @@ exports.create = async (req, res) => {
             description: description.trim(), quantity: Number(quantity), unitPrice: Number(unitPrice)
           }))
         },
-        dishes: kind === 'Catering' ? {
-          create: (dishes || []).map(({ dishId, nota }) => ({
-            dish: { connect: { id: Number(dishId) } },
-            nota: nota?.trim() || null,
-          }))
+        menus: kind === 'Catering' && menuIds?.length ? {
+          create: menuIds.map(id => ({ menu: { connect: { id: Number(id) } } }))
         } : undefined,
       },
       include: INCLUDE_FULL,
@@ -71,10 +68,10 @@ exports.create = async (req, res) => {
       ? Number(covers) * Number(pricePerCover) + (items || []).reduce((a, i) => a + Number(i.quantity) * Number(i.unitPrice), 0)
       : (items || []).reduce((a, i) => a + Number(i.quantity) * Number(i.unitPrice), 0)
 
-    const dishNames = (dishes || []).length > 0 ? ` · ${dishes.length} platos` : ''
+    const menuNames = (menuIds || []).length > 0 ? ` · ${menuIds.length} menú(s)` : ''
     log({ action: 'create', entity: 'quote', entityId: quote.id,
           label: `Cotización creada: ${quote.event?.name || '—'}`,
-          detail: `${kind} · ${quote.event?.client?.name} · ${fmt(total)}${dishNames}` })
+          detail: `${kind} · ${quote.event?.client?.name} · ${fmt(total)}${menuNames}` })
 
     res.status(201).json(quote)
   } catch (e) {
@@ -86,7 +83,7 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { eventId, kind = 'General', items, dishes, date, status, menu, covers, pricePerCover } = req.body
+    const { eventId, kind = 'General', items, menuIds, date, status, covers, pricePerCover } = req.body
     if (!eventId) return res.status(400).json({ error: 'El evento es requerido' })
 
     if (kind === 'General') {
@@ -100,9 +97,10 @@ exports.update = async (req, res) => {
 
     const id = Number(req.params.id)
 
-    // Reemplazar items y dishes
+    // Reemplazar items, dishes y menus
     await prisma.quoteItem.deleteMany({ where: { quoteId: id } })
     await prisma.quoteDish.deleteMany({ where: { quoteId: id } })
+    await prisma.quoteMenu.deleteMany({ where: { quoteId: id } })
 
     const quote = await prisma.quote.update({
       where: { id },
@@ -110,7 +108,6 @@ exports.update = async (req, res) => {
         kind, status: status || 'Pendiente',
         date: date ? new Date(`${date.slice(0,10)}T12:00:00`) : new Date(),
         event: { connect: { id: Number(eventId) } },
-        menu: kind === 'Catering' ? (menu?.trim() || null) : null,
         covers: kind === 'Catering' ? Number(covers) : null,
         pricePerCover: kind === 'Catering' ? Number(pricePerCover) : null,
         items: {
@@ -118,11 +115,8 @@ exports.update = async (req, res) => {
             description: description.trim(), quantity: Number(quantity), unitPrice: Number(unitPrice)
           }))
         },
-        dishes: kind === 'Catering' ? {
-          create: (dishes || []).map(({ dishId, nota }) => ({
-            dish: { connect: { id: Number(dishId) } },
-            nota: nota?.trim() || null,
-          }))
+        menus: kind === 'Catering' && menuIds?.length ? {
+          create: menuIds.map(id => ({ menu: { connect: { id: Number(id) } } }))
         } : undefined,
       },
       include: INCLUDE_FULL,

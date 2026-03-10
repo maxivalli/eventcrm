@@ -15,9 +15,8 @@ const authMiddleware = require("./middleware/auth");
 const userRoutes = require("./routes/users");
 const checklistRoutes  = require('./routes/checklist')
 const eventFileRoutes  = require('./routes/eventFiles')
-const cateringRoutes   = require('./routes/catering')
+const menusRoutes      = require('./routes/menus')
 const dishRoutes       = require('./routes/dishes')
-const eventMenuRoutes  = require('./routes/eventMenu')
 const aiRoutes         = require('./routes/ai')
 const aiPublicRoutes   = require('./routes/ai-public')
 const activityRoutes   = require('./routes/activity-route')
@@ -82,9 +81,8 @@ app.use("/api/supplier-payments", authMiddleware, supplierPaymentRoutes);
 app.use("/api/users", authMiddleware, userRoutes);
 app.use('/api/checklist',    authMiddleware, checklistRoutes)
 app.use('/api/event-files', authMiddleware, eventFileRoutes)
-app.use('/api/catering',    authMiddleware, cateringRoutes)
+app.use('/api/menus',       authMiddleware, menusRoutes)
 app.use('/api/dishes',      authMiddleware, dishRoutes)
-app.use('/api/menu',        authMiddleware, eventMenuRoutes)
 app.use('/api/ai',          portalLimiter, aiPublicRoutes)  // rutas públicas (portal cliente)
 app.use('/api/ai',          aiLimiter, authMiddleware, aiRoutes)
 app.use('/api/portal-queries', portalLimiter, portalQueriesRoutes)
@@ -94,20 +92,34 @@ app.use('/api/contacts',   authMiddleware, contactRoutes)
 app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
 app.use('/api',            authMiddleware, portalProtected)  // POST /api/events/:id/portal-token
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, async () => {
-  console.log(`Backend corriendo en http://localhost:${PORT}`)
-  if (process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY) {
-    cron.start()
-  } else {
-    console.log('[WhatsApp Cron] Desactivado — configurá EVOLUTION_API_URL y EVOLUTION_API_KEY')
-  }
-  // Auto-seed: crea el usuario admin si no existe
+async function start() {
+  // Correr migraciones antes de levantar el servidor
   try {
-    const { main: seed } = require('./seed')
-    await seed()
-    console.log('[Seed] Usuario admin verificado')
+    const { execSync } = require('child_process')
+    console.log('[Migrations] Aplicando migraciones...')
+    execSync('npx prisma migrate deploy', { stdio: 'inherit', timeout: 30000 })
+    console.log('[Migrations] OK')
   } catch (e) {
-    console.error('[Seed] Error:', e.message)
+    console.error('[Migrations] Error:', e.message)
   }
-})
+
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, async () => {
+    console.log(`Backend corriendo en http://localhost:${PORT}`)
+    if (process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY) {
+      cron.start()
+    } else {
+      console.log('[WhatsApp Cron] Desactivado — configurá EVOLUTION_API_URL y EVOLUTION_API_KEY')
+    }
+    // Auto-seed: crea el usuario admin si no existe
+    try {
+      const { main: seed } = require('./seed')
+      await seed()
+      console.log('[Seed] Usuario admin verificado')
+    } catch (e) {
+      console.error('[Seed] Error:', e.message)
+    }
+  })
+}
+
+start()

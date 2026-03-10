@@ -469,8 +469,9 @@ export default function CateringPage() {
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>📍 {selectedEvent.venue}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', marginTop: 8 }}>👥 {selectedEvent.guests} invitados</div>
                 {(() => {
-                  const opts = (() => { try { return typeof selectedEvent.dietaryOptions === 'string' ? JSON.parse(selectedEvent.dietaryOptions) : (selectedEvent.dietaryOptions || []) } catch { return [] } })()
-                  if (!opts.length) return null
+                  const raw = (() => { try { return typeof selectedEvent.dietaryOptions === 'string' ? JSON.parse(selectedEvent.dietaryOptions) : (selectedEvent.dietaryOptions || []) } catch { return [] } })()
+                  const opts = Array.isArray(raw) ? raw : [];
+                  if (!opts.length) return null;
                   const ICONS = { celiac: '🌾', vegan: '🌱', vegetarian: '🥦', diabetic: '🩺', kosher: '✡️', lactose: '🥛' }
                   return (
                     <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10 }}>
