@@ -95,11 +95,19 @@ app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
 app.use('/api',            authMiddleware, portalProtected)  // POST /api/events/:id/portal-token
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Backend corriendo en http://localhost:${PORT}`)
   if (process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_KEY) {
     cron.start()
   } else {
     console.log('[WhatsApp Cron] Desactivado — configurá EVOLUTION_API_URL y EVOLUTION_API_KEY')
+  }
+  // Auto-seed: crea el usuario admin si no existe
+  try {
+    const { main: seed } = require('./seed')
+    await seed()
+    console.log('[Seed] Usuario admin verificado')
+  } catch (e) {
+    console.error('[Seed] Error:', e.message)
   }
 })

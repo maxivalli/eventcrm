@@ -15,6 +15,11 @@ async function main() {
   console.log('✅ Usuario creado:', user.email)
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect())
+module.exports = { main }
+
+// Solo corre solo si se ejecuta directamente (node src/seed.js)
+if (require.main === module) {
+  main()
+    .catch(console.error)
+    .finally(() => prisma.$disconnect())
+}
