@@ -29,6 +29,9 @@ const cron             = require('./services/cron')
 
 const app = express();
 
+// Confiar en el proxy de Railway (necesario para express-rate-limit)
+app.set('trust proxy', 1)
+
 // Seguridad — headers HTTP
 app.use(helmet())
 
