@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { KeyRound } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -297,7 +298,7 @@ export default function Users() {
                   padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
                   background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
                 }}
-              >🔑</button>
+              ><KeyRound size={13} /></button>
               {user.id !== currentUser.id && (
                 <button
                   onClick={() => setConfirmDelete(user)}

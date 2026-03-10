@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
+import { Image, FileText, Sheet, Archive, Paperclip, Loader2 } from 'lucide-react'
 import api from '../api/axios'
 import ConfirmDialog from './ConfirmDialog'
 
 const getIcon = (name) => {
   const ext = name.split('.').pop().toLowerCase()
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼️'
-  if (['pdf'].includes(ext)) return '📄'
-  if (['doc', 'docx'].includes(ext)) return '📝'
-  if (['xls', 'xlsx'].includes(ext)) return '📊'
-  if (['zip', 'rar'].includes(ext)) return '🗜️'
-  return '📎'
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return <Image size={18} />
+  if (['pdf'].includes(ext)) return <FileText size={18} />
+  if (['doc', 'docx'].includes(ext)) return <FileText size={18} />
+  if (['xls', 'xlsx'].includes(ext)) return <Sheet size={18} />
+  if (['zip', 'rar'].includes(ext)) return <Archive size={18} />
+  return <Paperclip size={18} />
 }
 
 const formatDate = (str) =>
@@ -90,7 +91,9 @@ export default function EventFiles({ eventId }) {
           transition: 'all 0.2s',
         }}
       >
-        <div style={{ fontSize: 22, marginBottom: 6 }}>{uploading ? '⏳' : '📎'}</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+          {uploading ? <Loader2 size={22} style={{ color: 'var(--gold)', animation: 'spin 1s linear infinite' }} /> : <Paperclip size={22} style={{ color: 'var(--text-faint)' }} />}
+        </div>
         <div style={{ fontSize: 13, color: uploading ? 'var(--gold)' : 'var(--text-label)' }}>
           {uploading ? 'Subiendo archivo...' : 'Hacé clic o arrastrá un archivo acá'}
         </div>
@@ -108,7 +111,7 @@ export default function EventFiles({ eventId }) {
                 padding: '10px 12px', borderRadius: 8,
                 background: 'var(--bg-sunken)', border: '1px solid var(--border)',
               }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{getIcon(file.name)}</span>
+                <span style={{ fontSize: 20, flexShrink: 0, display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>{getIcon(file.name)}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {file.name}

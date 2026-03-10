@@ -37,6 +37,7 @@ model Event {
   status           String            @default("Propuesta")
   guests           Int
   budget           Float
+  dietaryOptions   String?   // JSON: [{ key, label, cantidad }]
   portalToken      String?           @unique
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId         Int

@@ -468,6 +468,28 @@ export default function CateringPage() {
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>📅 {fmtDate(selectedEvent.date)}{selectedEvent.time ? ` · ${selectedEvent.time}` : ''}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>📍 {selectedEvent.venue}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gold)', marginTop: 8 }}>👥 {selectedEvent.guests} invitados</div>
+                {(() => {
+                  const opts = (() => { try { return typeof selectedEvent.dietaryOptions === 'string' ? JSON.parse(selectedEvent.dietaryOptions) : (selectedEvent.dietaryOptions || []) } catch { return [] } })()
+                  if (!opts.length) return null
+                  const ICONS = { celiac: '🌾', vegan: '🌱', vegetarian: '🥦', diabetic: '🩺', kosher: '✡️', lactose: '🥛' }
+                  return (
+                    <div style={{ marginTop: 12, padding: '10px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>⚠️ Menús especiales</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {opts.map(o => (
+                          <div key={o.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span>{ICONS[o.key]}</span>{o.label}
+                            </span>
+                            {o.cantidad && (
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b' }}>{o.cantidad} pers.</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
             {sections.length > 0 && (

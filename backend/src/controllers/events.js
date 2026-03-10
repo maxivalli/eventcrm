@@ -30,7 +30,7 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
+    const { name, clientId, date, time, venue, type, status, guests, budget, dietaryOptions } = req.body
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
     if (!date)           return res.status(400).json({ error: 'La fecha es requerida' })
@@ -39,7 +39,7 @@ exports.create = async (req, res) => {
     if (!budget || Number(budget) <= 0) return res.status(400).json({ error: 'El presupuesto debe ser mayor a 0' })
 
     const event = await prisma.event.create({
-      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, client: { connect: { id: Number(clientId) } } },
+      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, dietaryOptions: dietaryOptions ? JSON.stringify(dietaryOptions) : null, client: { connect: { id: Number(clientId) } } },
       include: { client: { select: { name: true } } }
     })
     await prisma.client.update({ where: { id: Number(clientId) }, data: { status: 'Activo' } })
@@ -54,7 +54,7 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, clientId, date, time, venue, type, status, guests, budget } = req.body
+    const { name, clientId, date, time, venue, type, status, guests, budget, dietaryOptions } = req.body
     if (!name?.trim())   return res.status(400).json({ error: 'El nombre es requerido' })
     if (!clientId)       return res.status(400).json({ error: 'El cliente es requerido' })
     if (!date)           return res.status(400).json({ error: 'La fecha es requerida' })
@@ -65,7 +65,7 @@ exports.update = async (req, res) => {
     const prev = await prisma.event.findUnique({ where: { id: Number(req.params.id) }, select: { status: true, name: true } })
     const event = await prisma.event.update({
       where: { id: Number(req.params.id) },
-      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, client: { connect: { id: Number(clientId) } } }
+      data: { name: name.trim(), venue: venue.trim(), type, status, guests: Number(guests), budget: Number(budget), date: new Date(`${date.slice(0,10)}T12:00:00`), time: time || null, dietaryOptions: dietaryOptions ? JSON.stringify(dietaryOptions) : null, client: { connect: { id: Number(clientId) } } }
     })
 
     if (prev?.status !== status) {

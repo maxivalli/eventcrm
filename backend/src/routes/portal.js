@@ -89,6 +89,7 @@ publicRouter.get("/portal/:token", async (req, res) => {
         status: event.status,
         guests: event.guests,
         clientName: event.client?.name,
+        dietaryOptions: event.dietaryOptions ?? null,
       },
       payments: event.payments,
       menuSections: event.menuSections,

@@ -83,7 +83,8 @@ export default function App() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  if (isMobile) return <MobileBlock />;
+  const isPortal = window.location.pathname.startsWith('/portal/')
+  if (isMobile && !isPortal) return <MobileBlock />;
 
   return (
     <BrowserRouter>

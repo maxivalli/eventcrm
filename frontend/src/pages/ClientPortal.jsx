@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
+import { MapPin, CheckCircle, UtensilsCrossed, Clock, CreditCard, Phone, Lock, Zap, Music2, Sparkles, ClipboardList, Package, Volume2 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
@@ -26,11 +27,11 @@ const categoriaColors = {
 }
 
 const serviceIcons = {
-  General:     '⚡',
-  Catering:    '🍽️',
-  Audiovisual: '🎵',
-  Decoración:  '✨',
-  Otros:       '📋',
+  General:     <Zap size={18} />,
+  Catering:    <UtensilsCrossed size={18} />,
+  Audiovisual: <Music2 size={18} />,
+  Decoración:  <Sparkles size={18} />,
+  Otros:       <ClipboardList size={18} />,
 }
 
 const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
@@ -71,11 +72,11 @@ function Countdown({ date, time, status }) {
   )
 
   return (
-    <div style={{ borderBottom: '1px solid #1A1A28', padding: '32px 24px' }}>
+    <div style={{ borderBottom: '1px solid #1A1A28', padding: 'clamp(20px, 5vw, 32px) 16px' }}>
       <div style={{ fontSize: 10, color: '#606078', textTransform: 'uppercase', letterSpacing: 2, textAlign: 'center', marginBottom: 20 }}>
         Tiempo para el evento
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, maxWidth: 380, margin: '0 auto' }}>
+      <div className="portal-countdown-grid" style={{ display: 'grid', gap: 10, margin: '0 auto' }}>
         {[
           { v: diff.days,    l: diff.days === 1 ? 'día' : 'días' },
           { v: diff.hours,   l: diff.hours === 1 ? 'hora' : 'horas' },
@@ -96,9 +97,9 @@ function Countdown({ date, time, status }) {
 
 function Section({ title, icon, children }) {
   return (
-    <div style={{ padding: '32px 24px', borderBottom: '1px solid #1A1A28' }}>
+    <div className="portal-section" style={{ borderBottom: '1px solid #1A1A28' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        {icon && <span style={{ fontSize: 15 }}>{icon}</span>}
+        {icon && <span style={{ display: 'flex', alignItems: 'center', color: '#606078' }}>{icon}</span>}
         <span style={{ fontSize: 11, color: '#606078', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }}>{title}</span>
       </div>
       {children}
@@ -149,7 +150,7 @@ export default function ClientPortal() {
     try {
       const res = await axios.post(`${API}/api/ai/portal-chat`, {
         question: q,
-        context: { event, menu: menuSections, payments, finance, services },
+        context: { event, menu: menuSections, payments, finance, services, dietaryOptions: (() => { try { return typeof event.dietaryOptions === 'string' ? JSON.parse(event.dietaryOptions) : (event.dietaryOptions || []) } catch { return [] } })() },
       })
       setChatMessages(prev => [...prev, { role: 'assistant', text: res.data.answer }])
     } catch {
@@ -169,6 +170,52 @@ export default function ClientPortal() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#09090F', fontFamily: "'DM Sans', sans-serif", color: '#E8E8F0' }}>
+      <style>{`
+        .portal-hero-title { font-size: 34px; }
+        .portal-countdown-grid { grid-template-columns: repeat(4, 1fr); max-width: 380px; }
+        .portal-details-grid { grid-template-columns: 1fr 1fr; }
+        .portal-chat-window { width: 380px; }
+        .portal-chat-wrap { bottom: 24px; right: 24px; }
+        .portal-section { padding: 32px 24px; }
+        .robot-tooltip {
+          position: absolute;
+          right: 78px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: #1A1A28;
+          border: 1px solid #2A2A3A;
+          color: #E8E8F0;
+          font-size: 12px;
+          font-family: 'DM Sans', sans-serif;
+          padding: 7px 13px;
+          border-radius: 20px;
+          white-space: nowrap;
+          pointer-events: none;
+          transition: opacity 0.2s;
+        }
+        .robot-tooltip::after {
+          content: '';
+          position: absolute;
+          right: -6px;
+          top: 50%;
+          transform: translateY(-50%);
+          border: 6px solid transparent;
+          border-right: none;
+          border-left-color: #2A2A3A;
+        }
+        @keyframes robotFloat {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-8px); }
+        }
+          .portal-hero-title { font-size: 26px !important; }
+          .portal-countdown-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; }
+          .portal-details-grid { grid-template-columns: 1fr !important; }
+          .portal-chat-window { width: calc(100vw - 32px) !important; }
+          .portal-chat-wrap { bottom: 16px !important; right: 16px !important; }
+          .portal-section { padding: 24px 16px !important; }
+          .portal-catering-covers { flex-direction: column !important; align-items: flex-start !important; gap: 2px !important; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ borderBottom: '1px solid #1A1A28', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -179,12 +226,12 @@ export default function ClientPortal() {
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
 
         {/* Hero */}
-        <div style={{ padding: '48px 24px 32px', borderBottom: '1px solid #1A1A28' }}>
+        <div style={{ padding: 'clamp(28px, 6vw, 48px) clamp(16px, 5vw, 24px) 32px', borderBottom: '1px solid #1A1A28' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 20, marginBottom: 20, background: sc.bg, border: `1px solid ${sc.border}` }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc.color }} />
             <span style={{ fontSize: 11, fontWeight: 700, color: sc.color, letterSpacing: 1, textTransform: 'uppercase' }}>{sc.label}</span>
           </div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, fontWeight: 900, lineHeight: 1.15, marginBottom: 12 }}>
+          <div className="portal-hero-title" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, lineHeight: 1.15, marginBottom: 12 }}>
             {event.name}
           </div>
           <div style={{ fontSize: 14, color: '#A0A0B8' }}>
@@ -196,8 +243,8 @@ export default function ClientPortal() {
         <Countdown date={event.date} time={event.time} status={event.status} />
 
         {/* Datos del evento */}
-        <Section title="Detalles del evento" icon="📍">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Section title="Detalles del evento" icon={<MapPin size={15} />}>
+          <div className="portal-details-grid" style={{ display: 'grid', gap: 8 }}>
             {[
               { label: 'Fecha', value: fmtDate(event.date) },
               { label: 'Hora', value: event.time || 'A confirmar' },
@@ -215,7 +262,7 @@ export default function ClientPortal() {
 
         {/* Servicios contratados */}
         {services && services.length > 0 && (
-          <Section title="Servicios contratados" icon="✅">
+          <Section title="Servicios contratados" icon={<CheckCircle size={15} />}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {services.map((s, i) => {
                 const isCatering = s.kind === 'Catering'
@@ -225,7 +272,7 @@ export default function ClientPortal() {
                     {/* Header del servicio */}
                     <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1A1A28' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 18 }}>{serviceIcons[s.kind] || '📋'}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', color: '#A0906A' }}>{serviceIcons[s.kind] || <Package size={18} />}</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: '#E8E8F0' }}>{s.kind}</span>
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#C9A84C' }}>{fmt(s.total)}</span>
@@ -261,7 +308,7 @@ export default function ClientPortal() {
 
         {/* Menú */}
         {sortedSections.length > 0 && (
-          <Section title="Menú del evento" icon="🍽️">
+          <Section title="Menú del evento" icon={<UtensilsCrossed size={15} />}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sortedSections.map(sec => (
                 <div key={sec.id} style={{ background: '#12121A', border: '1px solid #1A1A28', borderRadius: 10, overflow: 'hidden' }}>
@@ -285,7 +332,7 @@ export default function ClientPortal() {
 
         {/* Cronograma */}
         {schedule && schedule.length > 0 && (
-          <Section title="Cronograma del evento" icon="🕐">
+          <Section title="Cronograma del evento" icon={<Clock size={15} />}>
             <div style={{ position: 'relative', paddingLeft: 8 }}>
               <div style={{ position: 'absolute', left: 46, top: 6, bottom: 6, width: 1, background: '#1A1A28' }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -315,9 +362,9 @@ export default function ClientPortal() {
         )}
 
         {/* Estado de cuenta */}
-        <Section title="Estado de cuenta" icon="💳">
+        <Section title="Estado de cuenta" icon={<CreditCard size={15} />}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)', marginBottom: 10 }}>
-            <span style={{ fontSize: 14 }}>🔒</span>
+            <Lock size={14} style={{ color: '#A0906A', flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: '#A0906A' }}>Esta información es confidencial y está destinada exclusivamente a vos.</span>
           </div>
           <div style={{ background: '#12121A', border: '1px solid #1A1A28', borderRadius: 10, overflow: 'hidden' }}>
@@ -363,7 +410,7 @@ export default function ClientPortal() {
         </Section>
 
         {/* Contacto */}
-        <Section title="Contacto" icon="📞">
+        <Section title="Contacto" icon={<Phone size={15} />}>
           <div style={{ background: '#12121A', border: '1px solid #1A1A28', borderRadius: 10, overflow: 'hidden' }}>
             {[
               { label: 'WhatsApp', value: '+54 9 11 0000-0000', href: 'https://wa.me/5491100000000' },
@@ -388,11 +435,11 @@ export default function ClientPortal() {
       </div>
 
       {/* Chatbot flotante */}
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+      <div className="portal-chat-wrap" style={{ position: 'fixed', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
 
         {/* Ventana del chat */}
         {chatOpen && (
-          <div style={{ width: 320, background: '#12121A', border: '1px solid #2A2A3A', borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column' }}>
+          <div className="portal-chat-window" style={{ background: '#12121A', border: '1px solid #2A2A3A', borderRadius: 16, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div style={{ padding: '14px 16px', background: '#09090F', borderBottom: '1px solid #1A1A28', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -446,12 +493,66 @@ export default function ClientPortal() {
 
         {/* Botón flotante */}
         <button
+          className="robot-btn"
           onClick={() => setChatOpen(o => !o)}
-          style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', cursor: 'pointer', fontSize: 22, boxShadow: '0 4px 20px rgba(201,168,76,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          style={{ position: 'relative', width: 72, height: 72, background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'drop-shadow(0 6px 18px rgba(201,168,76,0.45))', animation: chatOpen ? 'none' : 'robotFloat 3s ease-in-out infinite', transition: 'filter 0.2s' }}
         >
-          {chatOpen ? '✕' : '💬'}
+          {!chatOpen && <span className="robot-tooltip" style={{ opacity: 1 }}>¿Tenés dudas? 💬</span>}
+          {chatOpen ? (
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="11" fill="#1A1A28" stroke="#2A2A3A" strokeWidth="1"/>
+              <line x1="7" y1="7" x2="17" y2="17" stroke="#E8E8F0" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="17" y1="7" x2="7" y2="17" stroke="#E8E8F0" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg width="50" height="50" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="hbody" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#E8C97A"/>
+                  <stop offset="100%" stopColor="#A0732A"/>
+                </linearGradient>
+                <linearGradient id="hface" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2A1F0A"/>
+                  <stop offset="100%" stopColor="#1A1208"/>
+                </linearGradient>
+              </defs>
+
+              {/* Antena — palo */}
+              <rect x="30.5" y="4" width="3" height="10" rx="1.5" fill="#C9A84C"/>
+              {/* Antena — bolita pulsante */}
+              <circle cx="32" cy="4" r="3.5" fill="#E8C97A">
+                <animate attributeName="r" values="3.5;5;3.5" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+                <animate attributeName="opacity" values="1;0.4;1" dur="1.8s" repeatCount="indefinite"/>
+              </circle>
+
+              {/* Cabeza */}
+              <rect x="10" y="14" width="44" height="38" rx="13" fill="url(#hbody)"/>
+              {/* Panel interior cara */}
+              <rect x="13" y="17" width="38" height="32" rx="10" fill="url(#hface)"/>
+
+              {/* Ojo izquierdo — parpadeo */}
+              <rect x="17" y="26" width="12" height="12" rx="4" fill="#E8C97A">
+                <animate attributeName="height" values="12;1;12" dur="3.8s" repeatCount="indefinite"
+                  keyTimes="0;0.07;0.14" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+                <animate attributeName="y" values="26;31.5;26" dur="3.8s" repeatCount="indefinite"
+                  keyTimes="0;0.07;0.14" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+              </rect>
+              <circle cx="21" cy="29" r="2" fill="white" opacity="0.55"/>
+
+              {/* Ojo derecho — parpadeo */}
+              <rect x="35" y="26" width="12" height="12" rx="4" fill="#E8C97A">
+                <animate attributeName="height" values="12;1;12" dur="3.8s" repeatCount="indefinite"
+                  keyTimes="0;0.07;0.14" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+                <animate attributeName="y" values="26;31.5;26" dur="3.8s" repeatCount="indefinite"
+                  keyTimes="0;0.07;0.14" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+              </rect>
+              <circle cx="39" cy="29" r="2" fill="white" opacity="0.55"/>
+
+              {/* Orejas */}
+              <rect x="5" y="24" width="5" height="10" rx="2.5" fill="url(#hbody)"/>
+              <rect x="54" y="24" width="5" height="10" rx="2.5" fill="url(#hbody)"/>
+            </svg>
+          )}
         </button>
       </div>
 

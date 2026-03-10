@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react'
+import { Volume2, UtensilsCrossed, Flower2, Shield, Clapperboard, Truck, Package } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 
 const statusColors = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8' }
-const categoryIcons = { 'Técnica': '🔊', 'Catering': '🍽️', 'Decoración': '💐', 'Seguridad': '🛡️', 'Audiovisual': '🎬', 'Logística': '🚛' }
+const categoryIcons = {
+  'Técnica':     <Volume2 size={16} />,
+  'Catering':    <UtensilsCrossed size={16} />,
+  'Decoración':  <Flower2 size={16} />,
+  'Seguridad':   <Shield size={16} />,
+  'Audiovisual': <Clapperboard size={16} />,
+  'Logística':   <Truck size={16} />,
+}
 const CATEGORIAS = ['Todas', 'Técnica', 'Catering', 'Decoración', 'Seguridad', 'Audiovisual', 'Logística']
 const ESTADOS    = ['Todos', 'Activo', 'Inactivo']
 
@@ -172,8 +180,8 @@ function SupplierDetail({ supplier, onClose, onEdit }) {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--bg-sunken)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-              {categoryIcons[supplier.category] || '📦'}
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--bg-sunken)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              {categoryIcons[supplier.category] || <Package size={22} />}
             </div>
             <div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--text-primary)' }}>{supplier.name}</div>
@@ -289,7 +297,11 @@ export default function Suppliers() {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nombre o contacto..."
           style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: 280 }} />
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {CATEGORIAS.map(c => <button key={c} onClick={() => setFilterCat(c)} style={fbtn(filterCat === c)}>{categoryIcons[c] || ''} {c}</button>)}
+          {CATEGORIAS.map(c => (
+            <button key={c} onClick={() => setFilterCat(c)} style={fbtn(filterCat === c)}>
+              {categoryIcons[c] && <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>{categoryIcons[c]}</span>}{c}
+            </button>
+          ))}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {ESTADOS.map(e => <button key={e} onClick={() => setFilterEstado(e)} style={fbtn(filterEstado === e)}>{e}</button>)}
@@ -309,7 +321,7 @@ export default function Suppliers() {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span style={{ fontSize: 18 }}>{categoryIcons[s.category] || '📦'}</span>
+                <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)' }}>{categoryIcons[s.category] || <Package size={16} />}</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{s.name}</span>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.category}</div>

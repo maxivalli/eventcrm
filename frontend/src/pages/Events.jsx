@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip } from "lucide-react";
+import { MessageCircle, Paperclip, ClipboardList, Link2 } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -227,11 +227,20 @@ function DatePicker({ value, onChange, hasError }) {
   );
 }
 
-const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "" };
+const DIETARY_OPTIONS = [
+  { key: 'celiac',     label: 'Celíacos',     icon: '🌾' },
+  { key: 'vegan',      label: 'Veganos',       icon: '🌱' },
+  { key: 'vegetarian', label: 'Vegetarianos',  icon: '🥦' },
+  { key: 'diabetic',   label: 'Diabéticos',    icon: '🩺' },
+  { key: 'kosher',     label: 'Kosher',        icon: '✡️' },
+  { key: 'lactose',    label: 'Sin lactosa',   icon: '🥛' },
+]
+
+const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "", dietaryOptions: [] };
 
 function EventForm({ initial, clients, onSave, onClose }) {
   const [form, setForm] = useState(
-    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "" } : emptyForm
+    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "", dietaryOptions: (() => { try { return typeof initial.dietaryOptions === 'string' ? JSON.parse(initial.dietaryOptions) : (initial.dietaryOptions || []) } catch { return [] } })() } : emptyForm
   );
   const [errors, setErrors] = useState({});
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })) };
@@ -315,6 +324,45 @@ function EventForm({ initial, clients, onSave, onClose }) {
             <label style={lbl}>Presupuesto estimado (ARS) *</label>
             <input type="number" style={inp(errors.budget)} value={form.budget} onChange={e => set("budget", e.target.value)} />
             {errors.budget && <div style={err}>{errors.budget}</div>}
+          </div>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={lbl}>Necesidades alimentarias</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+              {DIETARY_OPTIONS.map(opt => {
+                const current = (form.dietaryOptions || []).find(d => d.key === opt.key)
+                const checked = !!current
+                const toggle = () => {
+                  const next = checked
+                    ? (form.dietaryOptions || []).filter(d => d.key !== opt.key)
+                    : [...(form.dietaryOptions || []), { key: opt.key, label: opt.label, cantidad: "" }]
+                  set("dietaryOptions", next)
+                }
+                const setCantidad = (val) => {
+                  set("dietaryOptions", (form.dietaryOptions || []).map(d => d.key === opt.key ? { ...d, cantidad: val } : d))
+                }
+                return (
+                  <div key={opt.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: checked ? "rgba(201,168,76,0.06)" : "var(--bg-sunken)", border: `1px solid ${checked ? "rgba(201,168,76,0.25)" : "var(--border)"}`, borderRadius: 8, transition: "all 0.15s" }}>
+                    <input type="checkbox" id={`diet-${opt.key}`} checked={checked} onChange={toggle}
+                      style={{ width: 15, height: 15, accentColor: "#c9a84c", cursor: "pointer", flexShrink: 0 }} />
+                    <label htmlFor={`diet-${opt.key}`} style={{ fontSize: 13, color: "var(--text-secondary)", cursor: "pointer", flex: 1, display: "flex", alignItems: "center", gap: 7 }}>
+                      <span>{opt.icon}</span> {opt.label}
+                    </label>
+                    {checked && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <input
+                          type="number" min="1" placeholder="Cant."
+                          value={current.cantidad}
+                          onChange={e => setCantidad(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ width: 70, padding: "5px 8px", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontSize: 12, outline: "none", textAlign: "center" }}
+                        />
+                        <span style={{ fontSize: 11, color: "var(--text-faint)" }}>pers.</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
@@ -453,11 +501,11 @@ function EventDetail({ event, onClose, onEdit }) {
               </div>
             ) : (
               <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
-                {portalLoading ? "Generando..." : "🔗 Portal cliente"}
+                {portalLoading ? "Generando..." : <><Link2 size={13} /> Portal cliente</>}
               </button>
             )}
             <button onClick={handleBriefing} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }}>
-              📋 Briefing
+              <ClipboardList size={13} /> Briefing
             </button>
             <button onClick={() => onEdit(event)} style={{ marginLeft: 6, padding: "7px 16px", border: "none", borderRadius: 8, background: "linear-gradient(135deg,#c9a84c,#e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Editar</button>
             <button onClick={onClose} style={{ padding: "7px 13px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>✕</button>
@@ -470,7 +518,7 @@ function EventDetail({ event, onClose, onEdit }) {
             onClick={e => e.target === e.currentTarget && setShowBriefing(false)}>
             <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
               <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>📋 Briefing del evento</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={15} /> Briefing del evento</div>
                 <div style={{ display: "flex", gap: 8 }}>
                   {briefing && !briefingLoading && (
                     <>
@@ -514,7 +562,25 @@ function EventDetail({ event, onClose, onEdit }) {
                 <Row label="Hora"           value={event.time || "—"} />
                 <Row label="Venue"          value={event.venue} />
                 <Row label="Invitados"      value={`${event.guests} personas`} />
-                <Row label="Pres. estimado" value={fmt(event.budget)} last />
+                <Row label="Pres. estimado" value={fmt(event.budget)} last={!(event.dietaryOptions)} />
+                {(() => {
+                  const opts = (() => { try { return typeof event.dietaryOptions === 'string' ? JSON.parse(event.dietaryOptions) : (event.dietaryOptions || []) } catch { return [] } })()
+                  if (!opts.length) return null
+                  return (
+                    <div style={{ padding: "10px 0 4px" }}>
+                      <div style={{ fontSize: 10, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Necesidades alimentarias</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {opts.map(o => (
+                          <div key={o.key} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 20, background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.2)", fontSize: 12 }}>
+                            <span>{DIETARY_OPTIONS.find(d => d.key === o.key)?.icon}</span>
+                            <span style={{ color: "var(--text-secondary)" }}>{o.label}</span>
+                            {o.cantidad && <span style={{ color: "var(--gold)", fontWeight: 700 }}>× {o.cantidad}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </Card>
             </section>
 
