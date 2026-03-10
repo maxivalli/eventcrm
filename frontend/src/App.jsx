@@ -16,6 +16,7 @@ import Recetario from "./pages/Recetario";
 import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
 import ClientPortal from "./pages/ClientPortal";
+import PortalQueries from "./pages/PortalQueries";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -113,6 +114,7 @@ export default function App() {
           <Route path="recetario" element={<Recetario />} />
           <Route path="contacts" element={<Contacts />} />
           <Route path="whatsapp" element={<WhatsApp />} />
+          <Route path="portal-queries" element={<PortalQueries />} />
         </Route>
       </Routes>
     </BrowserRouter>

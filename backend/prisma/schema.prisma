@@ -49,6 +49,8 @@ model Event {
   files          EventFile[]
   cateringItems  CateringItem[]
   menuSections   EventMenuSection[]
+  portalQueries  PortalQuery[]
+  scheduleItems  ScheduleItem[]
 }
 
 model Quote {
@@ -205,6 +207,17 @@ model Contact {
   createdAt DateTime @default(now())
 }
 
+// ── Consultas del portal del cliente ─────────────────────
+
+model PortalQuery {
+  id        Int      @id @default(autoincrement())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   Int
+  question  String
+  status    String   @default("pending") // pending | resolved
+  createdAt DateTime @default(now())
+}
+
 // ── Log de actividad ──────────────────────────────────────
 
 model ActivityLog {
@@ -227,4 +240,16 @@ model QuoteDish {
   dish    Dish  @relation(fields: [dishId], references: [id], onDelete: Cascade)
   dishId  Int
   nota    String?
+}
+
+model ScheduleItem {
+  id          Int      @id @default(autoincrement())
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     Int
+  hora        String
+  titulo      String
+  descripcion String?
+  categoria   String   @default("Protocolo")
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
 }

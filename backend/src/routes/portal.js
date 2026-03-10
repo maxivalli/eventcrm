@@ -81,6 +81,7 @@ publicRouter.get("/portal/:token", async (req, res) => {
 
     res.json({
       event: {
+        id: event.id,
         name: event.name,
         date: event.date,
         time: event.time,

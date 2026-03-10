@@ -49,7 +49,9 @@ ESTADO DE CUENTA:
 
 REGLAS IMPORTANTES:
 - Solo respondé preguntas relacionadas al evento
-- Si te preguntan algo que no está en la información disponible, decí que consultarás con el equipo
+- Cuando la información está en los datos de arriba, respondé con TOTAL CONFIANZA y en forma afirmativa. No digas que "vas a consultar" si ya tenés el dato.
+- Las necesidades alimentarias especiales YA ESTÁN CONFIRMADAS Y REGISTRADAS — si te preguntan, afirmalo directamente: "Sí, tenemos registrados X veganos y X celíacos para tu evento."
+- Si genuinamente no podés responder con los datos disponibles, respondé con exactamente este formato al INICIO de tu respuesta (en la primera línea, sin nada antes): [CONSULTA_PENDIENTE] y luego tu mensaje al cliente explicando que lo vas a derivar al equipo.
 - No inventes información que no tenés
 - Si preguntan por formas de pago o quieren abonar, indicales que se comuniquen con Haus directamente
 - Respuestas cortas y concretas, máximo 3 párrafos
@@ -74,7 +76,24 @@ REGLAS IMPORTANTES:
     const data = await response.json()
     if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
 
-    const answer = data.content?.map(b => b.text || '').join('') || ''
+    let answer = data.content?.map(b => b.text || '').join('') || ''
+
+    // Si el bot marcó que necesita consulta, guardarla en la DB y limpiar el tag
+    if (answer.startsWith('[CONSULTA_PENDIENTE]')) {
+      answer = answer.replace('[CONSULTA_PENDIENTE]', '').trim()
+      if (context?.event?.id) {
+        try {
+          await fetch(`${process.env.INTERNAL_API_URL || 'http://localhost:3001'}/api/portal-queries`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId: context.event.id, question }),
+          })
+        } catch (e) {
+          console.error('Error guardando consulta pendiente:', e.message)
+        }
+      }
+    }
+
     res.json({ answer })
   } catch (e) {
     res.status(502).json({ error: 'No se pudo procesar la pregunta' })

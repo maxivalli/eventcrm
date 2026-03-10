@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import api from "../api/axios";
 import {
   LayoutDashboard,
   Users,
@@ -19,6 +20,7 @@ import {
   ChefHat,
   BookUser,
   MessageCircle,
+  MessageSquareMore,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -49,6 +51,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: "Portal",
+    items: [
+      { path: "/portal-queries", label: "Consultas", Icon: MessageSquareMore },
+    ],
+  },
+  {
     label: "Configuración",
     items: [
       { path: "/whatsapp",  label: "WhatsApp",    Icon: MessageCircle },
@@ -60,9 +68,20 @@ const NAV_GROUPS = [
 
 export default function Layout() {
   const [open, setOpen] = useState(true);
+  const [pendingQueries, setPendingQueries] = useState(0);
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  useEffect(() => {
+    const load = () =>
+      api.get("/api/portal-queries")
+        .then(res => setPendingQueries(res.data.filter(q => q.status === "pending").length))
+        .catch(() => {})
+    load()
+    const interval = setInterval(load, 5000)
+    return () => clearInterval(interval)
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -194,15 +213,34 @@ export default function Layout() {
                     textDecoration: "none",
                   })}
                 >
-                  <Icon
-                    size={18}
-                    strokeWidth={1.75}
-                    style={{ flexShrink: 0 }}
-                  />
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <Icon size={18} strokeWidth={1.75} />
+                    {path === "/portal-queries" && pendingQueries > 0 && (
+                      <div style={{
+                        position: "absolute", top: -5, right: -6,
+                        background: "#f59e0b", color: "#09090f",
+                        borderRadius: 20, fontSize: 9, fontWeight: 800,
+                        minWidth: 14, height: 14, display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        padding: "0 3px", lineHeight: 1,
+                      }}>
+                        {pendingQueries}
+                      </div>
+                    )}
+                  </div>
                   {open && (
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>
                       {label}
                     </span>
+                  )}
+                  {open && path === "/portal-queries" && pendingQueries > 0 && (
+                    <div style={{
+                      background: "rgba(245,158,11,0.15)", color: "#f59e0b",
+                      borderRadius: 20, fontSize: 10, fontWeight: 700,
+                      padding: "1px 7px",
+                    }}>
+                      {pendingQueries}
+                    </div>
                   )}
                 </NavLink>
               ))}
