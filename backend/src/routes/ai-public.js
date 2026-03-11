@@ -37,12 +37,13 @@ router.post('/portal-chat', async (req, res) => {
     ? dietaryArr.map(d => `- ${d.label}${d.cantidad ? `: ${d.cantidad} personas` : ''}`).join('\n')
     : 'Sin necesidades alimentarias especiales registradas'
 
-  const mayores = guestsArr.filter(g => g.tipo === 'Mayor')
-  const menores = guestsArr.filter(g => g.tipo === 'Menor')
-  const pagaron = guestsArr.filter(g => g.pagado)
+  const mayores  = guestsArr.filter(g => g.tipo === 'Mayor')
+  const menores  = guestsArr.filter(g => g.tipo === 'Menor')
+  const pagaron  = guestsArr.filter(g => g.pagado)
+  const ingresaron = guestsArr.filter(g => g.ingreso)
   const guestsText = guestsArr.length === 0
     ? 'No hay invitados cargados en el sistema todavía.'
-    : `Total cargados: ${guestsArr.length} (${mayores.length} mayores, ${menores.length} menores)\nPagaron tarjeta: ${pagaron.length} — Sin pagar: ${guestsArr.length - pagaron.length}\nLista: ${guestsArr.map(g => `${g.name} (${g.tipo}${g.pagado ? ', pagó' : ''})`).join(', ')}`
+    : `Total cargados: ${guestsArr.length} (${mayores.length} mayores, ${menores.length} menores)\nPagaron tarjeta: ${pagaron.length} — Sin pagar: ${guestsArr.length - pagaron.length}\nYa ingresaron al evento: ${ingresaron.length} — Aún no ingresaron: ${guestsArr.length - ingresaron.length}\nLista: ${guestsArr.map(g => `${g.name} (${g.tipo}${g.pagado ? ', pagó' : ''}${g.ingreso ? ', ingresó' : ''})`).join(', ')}`
 
   const systemPrompt = `Sos el asistente virtual de Haus, empresa de organización de eventos en Argentina. Estás en el portal de seguimiento del evento del cliente.
 
