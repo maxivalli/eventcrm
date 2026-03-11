@@ -122,30 +122,28 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
       transition: 'all 0.3s',
     }}>
       {/* ── Header ── */}
-      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: col.text }}>
+      <div style={{ padding: '12px 16px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexShrink: 1 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: col.text, flexShrink: 0 }}>
             {quote.kind === 'Catering' ? 'Catering' : 'Servicio'}
           </span>
           {quote.kind === 'Catering' && quote.covers && (
-            <span style={{ fontSize: 11, color: col.faint, background: col.border, padding: '2px 8px', borderRadius: 20 }}>
-              {quote.covers} personas
+            <span style={{ fontSize: 10, color: col.faint, background: col.border, padding: '2px 7px', borderRadius: 20, flexShrink: 0 }}>
+              {quote.covers} pers.
             </span>
           )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {cs && (
             <span style={{
-              fontSize: 10, fontWeight: 800, letterSpacing: 0.8, padding: '3px 10px', borderRadius: 20,
+              fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: '2px 8px', borderRadius: 20, flexShrink: 0,
               background: isApproved ? col.greenBg : col.redBg,
               color: isApproved ? col.green : col.red,
               border: `1px solid ${isApproved ? col.greenBorder : col.redBorder}`,
             }}>
-              {isApproved ? '✓ Confirmado' : '✕ Rechazado'}
+              {isApproved ? '✓' : '✕'} {isApproved ? 'Confirmado' : 'Rechazado'}
             </span>
           )}
-          <span style={{ fontSize: 16, fontWeight: 800, color: col.gold }}>{fmt(total)}</span>
         </div>
+        <span style={{ fontSize: 15, fontWeight: 800, color: col.gold, flexShrink: 0 }}>{fmt(total)}</span>
       </div>
 
       {/* ── Subtotal cubiertos ── */}
@@ -391,6 +389,10 @@ export default function ClientPortal() {
           60%       { transform: rotate(-5deg); }
           80%       { transform: rotate(5deg); }
         }
+        @media (max-width: 420px) {
+          .portal-tab-label { display: none; }
+          .portal-tab { padding: 14px 4px !important; }
+        }
       `}</style>
 
       {/* Header */}
@@ -401,23 +403,25 @@ export default function ClientPortal() {
 
       {/* Tabs */}
       <div style={{ borderBottom: `1px solid ${col.border}`, background: col.bg, position: 'sticky', top: 57, zIndex: 19 }}>
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4, overflowX: 'auto' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex' }}>
           {[
-            { id: 'resumen',       label: 'Mi evento',       Icon: CalendarDays },
-            { id: 'estado_cuenta', label: 'Estado de cuenta', Icon: CreditCard,   show: hasApproved || hasPayments },
-            { id: 'cronograma',    label: 'Cronograma',       Icon: Clock,        show: hasSchedule },
-            { id: 'presupuesto',   label: 'Presupuesto',      Icon: FileText,     show: event.budgetPublished },
+            { id: 'resumen',       label: 'Mi evento',        Icon: CalendarDays },
+            { id: 'estado_cuenta', label: 'Estado de cuenta', Icon: CreditCard,  show: hasApproved || hasPayments },
+            { id: 'cronograma',    label: 'Cronograma',       Icon: Clock,       show: hasSchedule },
+            { id: 'presupuesto',   label: 'Presupuesto',      Icon: FileText,    show: event.budgetPublished },
           ].filter(tab => tab.show !== false).map(tab => {
             const active = activeTab === tab.id
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '14px 16px', background: 'none', border: 'none',
+                className="portal-tab"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '14px 8px', background: 'none', border: 'none',
                   borderBottom: active ? `2px solid ${col.gold}` : '2px solid transparent',
                   color: active ? col.gold : col.faint,
-                  fontSize: 13, fontWeight: active ? 700 : 500,
+                  fontSize: 12, fontWeight: active ? 700 : 500,
                   cursor: 'pointer', transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap' }}>
-                <tab.Icon size={14} />
-                {tab.label}
+                <tab.Icon size={15} />
+                <span className="portal-tab-label">{tab.label}</span>
               </button>
             )
           })}
