@@ -124,7 +124,7 @@ export default function Login() {
             style={{ textAlign: "center", marginBottom: -50, marginTop: -100}}
           >
             <img
-              src="/hauslogopng.png"
+              src="/haus-logo.svg"
               alt="Haus logo"
               style={{
                 width: 350,
