@@ -22,7 +22,6 @@ protectedRouter.post("/events/:id/portal-token", async (req, res) => {
 // Router público — devuelve datos del portal sin auth
 const publicRouter = Router();
 publicRouter.get("/portal/:token", async (req, res) => {
-  console.log("PORTAL HIT", req.params.token);
   try {
     const event = await prisma.event.findUnique({
       where: { portalToken: req.params.token },

@@ -39,10 +39,13 @@ exports.create = async (req, res) => {
     if (kind === 'General') {
       if (!items || items.length === 0) return res.status(400).json({ error: 'Debe agregar al menos un ítem' })
       if (items.some(i => !i.description?.trim())) return res.status(400).json({ error: 'Todos los ítems deben tener descripción' })
+      if (items.some(i => Number(i.quantity) <= 0)) return res.status(400).json({ error: 'La cantidad de cada ítem debe ser mayor a 0' })
+      if (items.some(i => Number(i.unitPrice) < 0)) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
     }
     if (kind === 'Catering') {
       if (!covers || Number(covers) <= 0) return res.status(400).json({ error: 'La cantidad de cubiertos es requerida' })
       if (!pricePerCover || Number(pricePerCover) <= 0) return res.status(400).json({ error: 'El precio por cubierto es requerido' })
+      if (items && items.some(i => Number(i.unitPrice) < 0)) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
     }
 
     const quote = await prisma.quote.create({
@@ -89,10 +92,13 @@ exports.update = async (req, res) => {
     if (kind === 'General') {
       if (!items || items.length === 0) return res.status(400).json({ error: 'Debe agregar al menos un ítem' })
       if (items.some(i => !i.description?.trim())) return res.status(400).json({ error: 'Todos los ítems deben tener descripción' })
+      if (items.some(i => Number(i.quantity) <= 0)) return res.status(400).json({ error: 'La cantidad de cada ítem debe ser mayor a 0' })
+      if (items.some(i => Number(i.unitPrice) < 0)) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
     }
     if (kind === 'Catering') {
       if (!covers || Number(covers) <= 0) return res.status(400).json({ error: 'La cantidad de cubiertos es requerida' })
       if (!pricePerCover || Number(pricePerCover) <= 0) return res.status(400).json({ error: 'El precio por cubierto es requerido' })
+      if (items && items.some(i => Number(i.unitPrice) < 0)) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
     }
 
     const id = Number(req.params.id)

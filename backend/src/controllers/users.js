@@ -69,12 +69,17 @@ exports.changePassword = async (req, res) => {
 
 exports.remove = async (req, res) => {
   try {
-    if (Number(req.params.id) === req.user.id)
+    const targetId = Number(req.params.id)
+    if (targetId === req.user.id)
       return res.status(400).json({ error: 'No podés eliminar tu propio usuario' })
-    await prisma.user.delete({ where: { id: Number(req.params.id) } })
+    // Solo el usuario con ID 1 (admin principal) puede eliminar otros usuarios
+    if (req.user.id !== 1)
+      return res.status(403).json({ error: 'Solo el administrador puede eliminar usuarios' })
+    await prisma.user.delete({ where: { id: targetId } })
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete user:', e)
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Usuario no encontrado' })
     res.status(500).json({ error: e.message })
   }
 }

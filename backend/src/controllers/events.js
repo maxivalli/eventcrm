@@ -85,15 +85,9 @@ exports.remove = async (req, res) => {
   try {
     const id = Number(req.params.id)
     const event = await prisma.event.findUnique({ where: { id }, select: { name: true } })
-    const quotes = await prisma.quote.findMany({ where: { eventId: id }, select: { id: true } })
-    const quoteIds = quotes.map(q => q.id)
-    if (quoteIds.length > 0) await prisma.quoteItem.deleteMany({ where: { quoteId: { in: quoteIds } } })
-    await prisma.supplierPayment.deleteMany({ where: { eventId: id } })
-    await prisma.payment.deleteMany({ where: { eventId: id } })
-    await prisma.quote.deleteMany({ where: { eventId: id } })
-    await prisma.eventFile.deleteMany({ where: { eventId: id } })
+    if (!event) return res.status(404).json({ error: 'Evento no encontrado' })
     await prisma.event.delete({ where: { id } })
-    log({ action: 'delete', entity: 'event', entityId: id, label: `Evento eliminado: ${event?.name || id}` })
+    log({ action: 'delete', entity: 'event', entityId: id, label: `Evento eliminado: ${event.name}` })
     res.json({ success: true })
   } catch (e) {
     console.error('Error delete event:', e)
