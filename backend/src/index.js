@@ -26,6 +26,7 @@ const { publicRouter: portalPublic, protectedRouter: portalProtected } = require
 const portalQueriesRoutes  = require('./routes/portalQueries')
 const scheduleRoutes       = require('./routes/schedule')
 const cron             = require('./services/cron')
+const invitationsRoute = require('./routes/invitations')
 
 const app = express();
 
@@ -94,6 +95,7 @@ app.use('/api/activity',    authMiddleware, activityRoutes)
 app.use('/api/contacts',   authMiddleware, contactRoutes)
 app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
 app.use('/api',            authMiddleware, portalProtected)  // POST /api/events/:id/portal-token
+app.use('/api/invitations', invitationsRoute)
 
 async function start() {
   // Correr migraciones antes de levantar el servidor

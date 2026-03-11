@@ -17,6 +17,7 @@ import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
 import ClientPortal from "./pages/ClientPortal";
 import PortalQueries from "./pages/PortalQueries";
+import Invitations from "./pages/Invitations";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -113,6 +114,7 @@ function AppRoutes() {
         <Route path="contacts" element={<Contacts />} />
         <Route path="whatsapp" element={<WhatsApp />} />
         <Route path="portal-queries" element={<PortalQueries />} />
+        <Route path="invitations"    element={<Invitations />} />
       </Route>
     </Routes>
   );

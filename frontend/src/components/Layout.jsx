@@ -21,6 +21,7 @@ import {
   BookUser,
   MessageCircle,
   MessageSquareMore,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -28,12 +29,13 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
-      { path: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-      { path: "/contacts", label: "Contactos", Icon: BookUser },
-      { path: "/clients", label: "Clientes", Icon: Users },
-      { path: "/events", label: "Eventos", Icon: CalendarDays },
-      { path: "/quotes", label: "Cotizaciones", Icon: FileText },
-      { path: "/budget", label: "Presupuestos", Icon: PieChart },
+      { path: "/dashboard",    label: "Dashboard",      Icon: LayoutDashboard },
+      { path: "/contacts",     label: "Contactos",      Icon: BookUser },
+      { path: "/clients",      label: "Clientes",       Icon: Users },
+      { path: "/events",       label: "Eventos",        Icon: CalendarDays },
+      { path: "/quotes",       label: "Cotizaciones",   Icon: FileText },
+      { path: "/budget",       label: "Presupuestos",   Icon: PieChart },
+      { path: "/invitations",  label: "Invitaciones IA", Icon: Sparkles },
     ],
   },
   {

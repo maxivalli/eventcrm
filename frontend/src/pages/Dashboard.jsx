@@ -7,7 +7,7 @@ import {
 import {
   UserCheck, CalendarClock, TrendingUp, AlertCircle,
   FilePlus, ArrowDownCircle, Package, CheckCircle2,
-  MessageSquare, Cake, Wallet, TrendingDown, LayoutDashboard, BarChart2,
+  MessageSquare, Cake, Wallet, TrendingDown, LayoutDashboard, BarChart2, CalendarDays, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -570,11 +570,305 @@ function FinanzasTab({ data, loading }) {
   )
 }
 
+
+// ── Tab Calendario ────────────────────────────────────────────────────────────
+
+const MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const DIAS_SEMANA = ['Lu','Ma','Mi','Ju','Vi','Sá','Do']
+
+const EV_COLORS = {
+  Confirmado: { bg: '#22c55e', text: '#fff', dot: '#16a34a' },
+  Propuesta:  { bg: '#f59e0b', text: '#fff', dot: '#d97706' },
+  Finalizado: { bg: '#8b5cf6', text: '#fff', dot: '#7c3aed' },
+}
+
+function MiniMonth({ year, month, events, onEventClick }) {
+  const firstDay = new Date(year, month, 1)
+  const lastDay  = new Date(year, month + 1, 0)
+  const startDow = (firstDay.getDay() + 6) % 7 // 0=Lun
+  const totalDays = lastDay.getDate()
+
+  // Map day -> events
+  const byDay = {}
+  events.forEach(ev => {
+    const d = new Date(ev.date)
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate()
+      if (!byDay[day]) byDay[day] = []
+      byDay[day].push(ev)
+    }
+  })
+
+  const cells = []
+  for (let i = 0; i < startDow; i++) cells.push(null)
+  for (let d = 1; d <= totalDays; d++) cells.push(d)
+
+  const today = new Date()
+  const isToday = (d) => today.getFullYear() === year && today.getMonth() === month && today.getDate() === d
+
+  return (
+    <div style={{
+      background: 'var(--bg-surface)', border: '1px solid var(--border)',
+      borderRadius: 12, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 8,
+    }}>
+      {/* Nombre del mes */}
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'center', letterSpacing: 0.5 }}>
+        {MESES_FULL[month]}
+      </div>
+
+      {/* Cabecera días semana */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+        {DIAS_SEMANA.map(d => (
+          <div key={d} style={{ fontSize: 9, color: 'var(--text-faint)', textAlign: 'center', fontWeight: 600, letterSpacing: 0.5 }}>
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Grilla de días */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e${i}`} />
+          const evs = byDay[day] || []
+          const hasEvent = evs.length > 0
+          // Color del primer evento del día (si hay varios, prioridad: Confirmado > Propuesta > Finalizado)
+          const priority = ['Confirmado','Propuesta','Finalizado']
+          const topEv = evs.sort((a, b) => priority.indexOf(a.status) - priority.indexOf(b.status))[0]
+          const colors = topEv ? EV_COLORS[topEv.status] || EV_COLORS.Propuesta : null
+
+          return (
+            <div
+              key={day}
+              onClick={() => hasEvent && onEventClick(evs, year, month, day)}
+              title={hasEvent ? evs.map(e => e.name).join(', ') : undefined}
+              style={{
+                aspectRatio: '1',
+                borderRadius: 5,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 10, fontWeight: hasEvent ? 700 : 400,
+                cursor: hasEvent ? 'pointer' : 'default',
+                background: hasEvent ? colors.bg + '22' : isToday(day) ? 'var(--gold-bg)' : 'transparent',
+                color: hasEvent ? colors.bg : isToday(day) ? 'var(--gold)' : 'var(--text-muted)',
+                border: isToday(day) ? '1px solid var(--gold-border)' : hasEvent ? `1px solid ${colors.bg}44` : '1px solid transparent',
+                position: 'relative',
+                transition: 'all 0.15s',
+              }}
+            >
+              {day}
+              {evs.length > 1 && (
+                <div style={{
+                  position: 'absolute', top: 1, right: 2,
+                  fontSize: 7, fontWeight: 800,
+                  color: colors.bg,
+                  lineHeight: 1,
+                }}>
+                  {evs.length}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Leyenda de eventos del mes */}
+      {Object.keys(byDay).length > 0 && (
+        <div style={{ borderTop: '1px solid var(--border-row)', paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {Object.entries(byDay).slice(0, 3).map(([day, evs]) => (
+            evs.map(ev => {
+              const c = EV_COLORS[ev.status] || EV_COLORS.Propuesta
+              return (
+                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer' }} onClick={() => onEventClick([ev], year, month, Number(day))}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, flexShrink: 0 }} />
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {day}/{String(month+1).padStart(2,'0')} · {ev.name}
+                  </div>
+                </div>
+              )
+            })
+          ))}
+          {Object.keys(byDay).length > 3 && (
+            <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>+ {Object.values(byDay).flat().length - Object.entries(byDay).slice(0,3).reduce((a,[,v])=>a+v.length,0)} más…</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EventPopover({ evs, onClose }) {
+  if (!evs || evs.length === 0) return null
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.5)',
+    }} onClick={onClose}>
+      <div style={{
+        background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
+        borderRadius: 16, padding: 24, minWidth: 300, maxWidth: 400,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+          {evs.length === 1 ? 'Evento' : `${evs.length} eventos`}
+        </div>
+        {evs.map(ev => {
+          const c = EV_COLORS[ev.status] || EV_COLORS.Propuesta
+          const d = new Date(ev.date)
+          return (
+            <div key={ev.id} style={{
+              padding: '12px 14px', borderRadius: 10, marginBottom: 8,
+              background: c.bg + '14', border: `1px solid ${c.bg}30`,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{ev.name}</div>
+                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: c.bg + '22', color: c.bg }}>
+                  {ev.status}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                📅 {d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {ev.time && ` · ${ev.time} hs`}
+              </div>
+              {ev.venue  && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📍 {ev.venue}</div>}
+              {ev.client && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>👤 {ev.client.name}</div>}
+            </div>
+          )
+        })}
+        <button onClick={onClose} style={{
+          width: '100%', padding: '10px', marginTop: 4,
+          background: 'transparent', border: '1px solid var(--border)',
+          borderRadius: 9, color: 'var(--text-muted)', fontSize: 13,
+          cursor: 'pointer', fontWeight: 600,
+        }}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CalendarioTab({ data, loading }) {
+  const [year, setYear] = useState(new Date().getFullYear())
+  const [popover, setPopover] = useState(null) // { evs }
+
+  if (!data) return null
+
+  const events = data.events || []
+
+  // Stats del año
+  const yearEvents = events.filter(e => new Date(e.date).getFullYear() === year)
+  const confirmed  = yearEvents.filter(e => e.status === 'Confirmado').length
+  const proposals  = yearEvents.filter(e => e.status === 'Propuesta').length
+  const finished   = yearEvents.filter(e => e.status === 'Finalizado').length
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Header año + navegación */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'var(--bg-surface)', border: '1px solid var(--border)',
+        borderRadius: 16, padding: '16px 24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button onClick={() => setYear(y => y - 1)} style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: 'var(--bg-sunken)', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ChevronLeft size={16} />
+          </button>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', minWidth: 60, textAlign: 'center' }}>
+            {year}
+          </div>
+          <button onClick={() => setYear(y => y + 1)} style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: 'var(--bg-sunken)', border: '1px solid var(--border)',
+            color: 'var(--text-muted)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ChevronRight size={16} />
+          </button>
+          <button onClick={() => setYear(new Date().getFullYear())} style={{
+            padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+            background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
+            color: 'var(--gold)', cursor: 'pointer',
+          }}>
+            Hoy
+          </button>
+        </div>
+
+        {/* Stats del año */}
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          {loading ? null : (
+            <>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{confirmed}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', letterSpacing: 0.5 }}>Confirmados</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#f59e0b' }}>{proposals}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', letterSpacing: 0.5 }}>Propuestas</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#8b5cf6' }}>{finished}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', letterSpacing: 0.5 }}>Finalizados</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{yearEvents.length}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)', letterSpacing: 0.5 }}>Total</div>
+              </div>
+
+              {/* Leyenda */}
+              <div style={{ display: 'flex', gap: 12, marginLeft: 8, paddingLeft: 20, borderLeft: '1px solid var(--border)' }}>
+                {[['Confirmado','#22c55e'],['Propuesta','#f59e0b'],['Finalizado','#8b5cf6']].map(([label, color]) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Grilla de 12 meses */}
+      {loading ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, height: 200 }}>
+              <div style={{ padding: 14 }}><Skeleton height={12} width={60} style={{ margin: '0 auto' }} /></div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {Array.from({ length: 12 }).map((_, m) => (
+            <MiniMonth
+              key={m}
+              year={year}
+              month={m}
+              events={events}
+              onEventClick={(evs) => setPopover({ evs })}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Popover de evento */}
+      {popover && <EventPopover evs={popover.evs} onClose={() => setPopover(null)} />}
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'resumen',  label: 'Resumen',  Icon: LayoutDashboard },
-  { id: 'finanzas', label: 'Finanzas', Icon: BarChart2 },
+  { id: 'resumen',   label: 'Resumen',    Icon: LayoutDashboard },
+  { id: 'finanzas',  label: 'Finanzas',   Icon: BarChart2 },
+  { id: 'calendario',label: 'Calendario', Icon: CalendarDays },
 ]
 
 export default function Dashboard() {
@@ -651,7 +945,8 @@ export default function Dashboard() {
       </div>
 
       {tab === 'resumen'  && <ResumenTab  data={data} activityLogs={activityLogs} portalQueries={portalQueries} loading={loading} />}
-      {tab === 'finanzas' && <FinanzasTab data={data} loading={loading} />}
+      {tab === 'finanzas'   && <FinanzasTab   data={data} loading={loading} />}
+      {tab === 'calendario' && <CalendarioTab data={data} loading={loading} />}
     </div>
   )
 }

@@ -76,4 +76,24 @@ function normalizePhone(phone) {
   return p
 }
 
-module.exports = { sendText, getInstanceStatus, getQRCode, createInstance, normalizePhone }
+/**
+ * Envía una imagen (URL pública) con caption opcional.
+ * @param {string} phone   - teléfono argentino, se normaliza automáticamente
+ * @param {string} url     - URL pública de la imagen
+ * @param {string} caption - texto que acompaña la imagen (opcional)
+ */
+async function sendImage(phone, url, caption = '') {
+  const client = getClient()
+  const number = normalizePhone(phone)
+  const res = await client.post(`/message/sendMedia/${instance()}`, {
+    number,
+    mediaMessage: {
+      mediatype: 'image',
+      media: url,
+      caption,
+    },
+  })
+  return res.data
+}
+
+module.exports = { sendText, sendImage, getInstanceStatus, getQRCode, createInstance, normalizePhone }
