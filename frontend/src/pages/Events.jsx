@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip, ClipboardList, Link2, AlertCircle, FileText } from "lucide-react";
+import { MessageCircle, Paperclip, Link2, AlertCircle, FileText } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -500,10 +500,6 @@ function EventDetail({ event, onClose, onEdit }) {
   const [portalToken, setPortalToken]   = useState(event.portalToken || null);
   const [portalCopied, setPortalCopied] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [briefing, setBriefing]         = useState(null);
-  const [briefingLoading, setBriefingLoading] = useState(false);
-  const [briefingCopied, setBriefingCopied]   = useState(false);
-  const [showBriefing, setShowBriefing] = useState(false);
   const [alerts, setAlerts]             = useState(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
   const [showAlerts, setShowAlerts]     = useState(false);
@@ -534,23 +530,6 @@ function EventDetail({ event, onClose, onEdit }) {
   const handleCopyPortal = () => {
     navigator.clipboard.writeText(portalUrl)
     setPortalCopied(true); setTimeout(() => setPortalCopied(false), 2000)
-  }
-  const handleBriefing = async () => {
-    setShowBriefing(true); if (briefing) return
-    setBriefingLoading(true)
-    try {
-      const res = await api.post('/api/ai/event-briefing', {
-        event: { ...event, clientName: event.client?.name },
-        menu: quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado').flatMap(q => (q.menus||[]).map(qm => qm.menu).filter(Boolean)).flatMap(m => m.sections||[]),
-        payments, quotes,
-      })
-      setBriefing(res.data.briefing)
-    } catch { setBriefing('No se pudo generar el briefing. Intentá de nuevo.') }
-    finally { setBriefingLoading(false) }
-  }
-  const handleCopyBriefing = () => {
-    navigator.clipboard.writeText(briefing)
-    setBriefingCopied(true); setTimeout(() => setBriefingCopied(false), 2000)
   }
 
   const handleAlerts = async () => {
@@ -740,9 +719,6 @@ function EventDetail({ event, onClose, onEdit }) {
             <button onClick={handleProposal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
               <FileText size={13} /> Propuesta
             </button>
-            <button onClick={handleBriefing} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-              <ClipboardList size={13} /> Briefing
-            </button>
             <button onClick={() => onEdit(event)} style={{ padding: '7px 16px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Editar</button>
             <button onClick={onClose} style={{ padding: '7px 13px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
           </div>
@@ -766,34 +742,6 @@ function EventDetail({ event, onClose, onEdit }) {
           ))}
         </div>
 
-        {/* ── Briefing modal ── */}
-        {showBriefing && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-            onClick={e => e.target === e.currentTarget && setShowBriefing(false)}>
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={15} /> Briefing del evento</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {briefing && !briefingLoading && (
-                    <>
-                      <button onClick={handleCopyBriefing} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: briefingCopied ? 'rgba(34,197,94,0.1)' : 'transparent', color: briefingCopied ? '#22c55e' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                        {briefingCopied ? '✓ Copiado' : 'Copiar'}
-                      </button>
-                      <button onClick={() => { setBriefing(null); handleBriefing() }} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Regenerar</button>
-                    </>
-                  )}
-                  <button onClick={() => setShowBriefing(false)} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
-                </div>
-              </div>
-              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
-                {briefingLoading
-                  ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Generando briefing con IA...</div>
-                  : <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.7, color: 'var(--text-primary)' }}>{briefing}</pre>
-                }
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── Modal Alertas ── */}
         {showAlerts && (
