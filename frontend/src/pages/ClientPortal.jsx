@@ -4,8 +4,7 @@ import axios from 'axios'
 import BudgetPreview from '../components/BudgetPreview'
 import {
   CalendarDays, CreditCard, Clock, FileText, ClipboardList,
-  Phone, Lock, UtensilsCrossed, Sparkles, MapPin, Users,
-  CheckCircle2, XCircle, MessageCircle, Mail, Instagram,
+  Phone, Lock, UtensilsCrossed, Sparkles,
 } from 'lucide-react'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
@@ -19,7 +18,6 @@ const fmtDate = (str) =>
 const fmtShortDate = (str) =>
   new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 
-const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 
 const col = {
   bg:          '#09090F',
@@ -122,7 +120,7 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
       transition: 'all 0.3s',
     }}>
       {/* ── Header ── */}
-      <div style={{ padding: '12px 16px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+      <div className="portal-quote-header" style={{ padding: '12px 16px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexShrink: 1 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: col.text, flexShrink: 0 }}>
             {quote.kind === 'Catering' ? 'Catering' : 'Servicio'}
@@ -148,7 +146,7 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
 
       {/* ── Subtotal cubiertos ── */}
       {quote.kind === 'Catering' && quote.covers && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: `1px solid ${col.border}`, background: col.sunken }}>
+        <div className="portal-catering-sub" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 18px', borderBottom: `1px solid ${col.border}`, background: col.sunken }}>
           <span style={{ fontSize: 12, color: col.faint }}>Servicio por persona</span>
           <div style={{ textAlign: 'right' }}>
             <span style={{ fontSize: 11, color: col.faint, marginRight: 10 }}>{quote.covers} × {fmt(quote.pricePerCover)}</span>
@@ -168,7 +166,7 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
               {menuSections.reduce((a, s) => a + (s.items || []).length, 0)} platos
             </span>
           </div>
-          {menuSections.map((section, si) => {
+          {menuSections.map((section) => {
             const c = SECCION_COLORS_PORTAL[section.nombre] || '#6b7280'
             return (
               <div key={section.id} style={{ borderTop: `1px solid ${col.border}` }}>
@@ -196,7 +194,7 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
           <div style={{ padding: '10px 18px 6px' }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: col.faint, textTransform: 'uppercase', letterSpacing: 1.5 }}>Extras</span>
           </div>
-          {(quote.items || []).map((item, i, arr) => (
+          {(quote.items || []).map((item, i) => (
             <div key={item.id ?? `item-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 18px', borderTop: `1px solid ${col.border}` }}>
               <div>
                 <span style={{ fontSize: 13, color: col.muted }}>{item.description}</span>
@@ -318,7 +316,7 @@ export default function ClientPortal() {
     </div>
   )
 
-  const { event, payments, menuSections, schedule, finance, quotes } = data
+  const { event, payments, menuSections, schedule, quotes } = data
 
   const statusInfo = {
     Propuesta:  { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: 'rgba(245,158,11,0.3)', label: 'En propuesta' },
@@ -366,9 +364,13 @@ export default function ClientPortal() {
       <style>{`
         @media (max-width: 600px) {
           .portal-wrap { padding: 0 16px 100px !important; }
-          .portal-hero-name { font-size: 26px !important; }
+          .portal-hero { padding: 24px 0 !important; }
+          .portal-hero-name { font-size: 24px !important; }
           .portal-chat-btn { bottom: 16px !important; right: 16px !important; }
           .portal-chat-win { width: calc(100vw - 32px) !important; right: 16px !important; bottom: 80px !important; }
+          .portal-quote-header { flex-wrap: wrap !important; row-gap: 6px !important; }
+          .portal-catering-sub { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; padding: 10px 16px !important; }
+          .portal-budget-scroll { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; border-radius: 14px !important; }
         }
         @keyframes fadeInTooltip {
           from { opacity: 0; transform: translateX(12px); }
@@ -431,7 +433,7 @@ export default function ClientPortal() {
       {activeTab === 'resumen' && <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px 100px' }}>
 
         {/* Hero */}
-        <div style={{ padding: '36px 0 36px', borderBottom: `1px solid ${col.border}`, marginBottom: 36 }}>
+        <div className="portal-hero" style={{ padding: '36px 0 36px', borderBottom: `1px solid ${col.border}`, marginBottom: 36 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 12px', borderRadius: 20, marginBottom: 16, background: sc.bg, border: `1px solid ${sc.border}` }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc.color }} />
             <span style={{ fontSize: 10, fontWeight: 800, color: sc.color, letterSpacing: 1.5, textTransform: 'uppercase' }}>{sc.label}</span>
@@ -633,7 +635,7 @@ export default function ClientPortal() {
           <div style={{ fontSize: 12, color: col.faint, marginBottom: 20, lineHeight: 1.6 }}>
             Este es el presupuesto detallado de tu evento. Para guardarlo, usá la opción <strong style={{ color: col.muted }}>Imprimir → Guardar como PDF</strong> de tu navegador.
           </div>
-          <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${col.border}`, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+          <div className="portal-budget-scroll" style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${col.border}`, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
             <BudgetPreview
               client={{ name: event.clientName, contact: event.clientName }}
               event={event}
@@ -677,7 +679,7 @@ export default function ClientPortal() {
           </div>
         )}
         {!chatOpen && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeInTooltip 0.5s cubic-bezier(0.34,1.56,0.64,1)', position: 'absolute', right: 68, bottom: '50%', transform: 'translateY(50%)', pointerEvents: 'none' }}>
+          <div className="portal-chat-tooltip" style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeInTooltip 0.5s cubic-bezier(0.34,1.56,0.64,1)', position: 'absolute', right: 68, bottom: '50%', transform: 'translateY(50%)', pointerEvents: 'none' }}>
             <div style={{ background: '#ffffff', border: '1px solid #e8e0d0', borderRadius: 12, padding: '9px 16px', fontSize: 12.5, color: '#4a3f2f', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.12)', whiteSpace: 'nowrap', position: 'relative', lineHeight: 1.4 }}>
               ¿Tenés dudas? ¡Hablemos! 👋
               <div style={{ position: 'absolute', right: -7, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '7px solid #ffffff', filter: 'drop-shadow(1px 0 0 #e8e0d0)' }} />
