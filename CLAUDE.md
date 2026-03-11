@@ -100,6 +100,12 @@ eventcrm-main/
 | `DishIngredient` | pertenece a `Dish`; campos: `nombre`, `cantidad` (por persona), `unidad`, `categoria` |
 | `EventMenuSection` | pertenece a `Event`; tiene `EventMenuItem[]`; campos: `nombre`, `orden` |
 | `EventMenuItem` | pertenece a `EventMenuSection` y a `Dish`; campos: `nota` |
+| `QuoteMenu` | join entre `Quote` y `Menu` (cotizaciones tipo Catering) |
+| `Menu` | tiene `MenuSection[]`; campos: `name` |
+| `MenuSection` | pertenece a `Menu`; tiene `MenuItem[]`; campos: `nombre`, `orden` |
+| `MenuItem` | pertenece a `MenuSection` y a `Dish`; campos: `nota` |
+| `ScheduleItem` | pertenece a `Event`; campos: `time`, `description`, `duration`, `order` |
+| `PortalQuery` | pertenece a `Event`; campos: `question`, `status` (`pending`/`resolved`), `createdAt` |
 | `ActivityLog` | Independiente; campos: `action`, `entity`, `entityId`, `label`, `detail`, `meta` (JSON string) |
 | `Contact` | Independiente; campos: `name`, `phone`, `email` |
 
@@ -172,6 +178,16 @@ npx prisma studio
 | GET/POST | `/api/schedule/event/:eventId` | ✅ | Cronograma por evento |
 | GET | `/api/activity` | ✅ | Log de actividad |
 | GET/POST/DELETE | `/api/contacts` | ✅ | Agenda de contactos |
+| GET/POST/PUT/DELETE | `/api/menus` | ✅ | Menús reutilizables (para cotizaciones Catering) |
+| GET/POST | `/api/portal-queries` | ✅ | Consultas de clientes desde el portal |
+| PATCH | `/api/portal-queries/:id/resolve` | ✅ | Marcar consulta como resuelta |
+| GET | `/api/whatsapp/status` | ✅ | Estado de conexión Evolution API |
+| GET | `/api/whatsapp/qr` | ✅ | QR code para vincular instancia |
+| POST | `/api/whatsapp/instance` | ✅ | Crear instancia WhatsApp |
+| GET/PUT | `/api/whatsapp/templates` | ✅ | Plantillas de mensajes automáticos |
+| POST | `/api/whatsapp/send/event/:eventId` | ✅ | Enviar mensaje a cliente de un evento |
+| POST | `/api/whatsapp/send/client/:clientId` | ✅ | Enviar mensaje a un cliente |
+| POST | `/api/whatsapp/jobs/:jobId/run` | ✅ | Disparar cron job manualmente |
 | POST | `/api/ai/suggest-ingredients` | ✅ | Sugerir ingredientes con IA |
 | POST | `/api/ai/suggest-dish-info` | ✅ | Generar descripción de plato con IA |
 
@@ -295,11 +311,40 @@ Usar `axios` directo (no `api/axios.js` que requiere token).
 
 1. **Idioma**: Todo en **español** (código, UI, errores).
 2. **Módulos**: Backend CommonJS, Frontend ESM.
-3. **Cascada**: `onDelete: Cascade` en todas las relaciones de Event.
+3. **Cascada**: `onDelete: Cascade` en todas las relaciones de Event. No hacer deletes manuales de hijos antes de `event.delete()`.
 4. **IDs**: Siempre `Number(req.params.id)`.
 5. **Toast**: `useToast()`, nunca `alert()`.
 6. **ConfirmDialog**: Para todas las eliminaciones.
 7. **ActivityLog**: Fire-and-forget con `log()`, nunca `await`.
 8. **Client.status**: Default `'Inactivo'`; se activa automáticamente al crear evento.
-9. **Event.portalToken**: Generado on-demand, nunca incluir en listados públicos.
+9. **Event.portalToken**: Generado on-demand, nunca incluir en listados públicos, nunca loguear en consola.
 10. **Fechas**: Normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)`.
+11. **Admin**: No hay campo `role` en `User`. El administrador principal se identifica por `req.user.id === 1`. Solo el admin puede eliminar usuarios.
+12. **Precios**: Validar que `unitPrice >= 0` y `quantity > 0` en QuoteItems. `pricePerCover > 0` y `covers > 0` en cotizaciones Catering.
+13. **Dashboard**: Tiene dos tabs — `Resumen` (operativo diario) y `Finanzas` (analítica e ingresos/egresos).
+14. **Importación VCF**: Muestra spinner + barra de progreso en tiempo real mientras importa contactos (puede tardar varios minutos).
+
+---
+
+## Patrones de diseño (frontend)
+
+### Header de página
+```jsx
+<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+  <div>
+    <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, ... }}>Título</h1>
+    <p style={{ color: 'var(--text-secondary)', marginTop: 4 }}>Subtítulo</p>
+  </div>
+  <button ...>Acción principal</button>
+</div>
+```
+
+### Tabs de navegación
+```jsx
+// Contenedor
+{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 4, width: 'fit-content' }
+// Tab activo
+{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', color: '#000', borderRadius: 7, padding: '8px 18px', fontWeight: 600 }
+// Tab inactivo
+{ background: 'transparent', color: 'var(--text-secondary)', borderRadius: 7, padding: '8px 18px' }
+```
