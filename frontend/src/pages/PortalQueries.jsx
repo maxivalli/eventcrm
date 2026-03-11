@@ -150,7 +150,7 @@ export default function PortalQueries() {
                     "{q.question}"
                   </div>
 
-                  {/* Meta: evento + cliente + fecha */}
+                  {/* Meta: evento + cliente */}
                   <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>Evento</div>
@@ -166,24 +166,29 @@ export default function PortalQueries() {
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{q.event.client.phone}</div>
                       </div>
                     )}
-                    <div style={{ marginLeft: 'auto' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-                        {fmtDate(q.createdAt)} · {fmtTime(q.createdAt)}
-                      </div>
-                    </div>
+                  </div>
+                </div>
+
+                {/* Fecha centrada */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 64, gap: 2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    {fmtDate(q.createdAt).replace(' de ', ' ').replace(' de ', ' ')}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', textAlign: 'center' }}>
+                    {fmtTime(q.createdAt)}
                   </div>
                 </div>
 
                 {/* Acciones */}
                 {isPending && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0, alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0, alignItems: 'stretch', justifyContent: 'center', width: 110 }}>
                     {q.event.client.phone && (
                       <a
                         href={buildWhatsAppUrl(q.event.client.phone, q.event.name, q.question)}
                         target="_blank" rel="noreferrer"
                         style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
                           background: 'linear-gradient(135deg,#22c55e,#16a34a)',
                           color: 'white', textDecoration: 'none', whiteSpace: 'nowrap',
                         }}>
@@ -198,8 +203,8 @@ export default function PortalQueries() {
                       onClick={() => resolve(q.id)}
                       disabled={resolving === q.id}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 600,
                         border: '1px solid var(--border)', background: 'transparent',
                         color: 'var(--text-muted)', cursor: resolving === q.id ? 'wait' : 'pointer',
                         whiteSpace: 'nowrap', transition: 'all 0.15s',
