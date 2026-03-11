@@ -249,7 +249,31 @@ export default function ClientPortal() {
   const [error, setError]         = useState(null)
   const [deciding, setDeciding]   = useState(null)
   const [activeTab, setActiveTab] = useState('resumen')
-  const [chatOpen, setChatOpen]   = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [chatOpen, setChatOpen]     = useState(false)
+
+  const handleDownloadPdf = async () => {
+    setPdfLoading(true)
+    try {
+      const html2pdf = (await import('html2pdf.js')).default
+      const element  = document.getElementById('budget-preview')
+      const filename = `presupuesto-haus-${(event?.name || 'evento').toLowerCase().replace(/\s+/g, '-')}.pdf`
+      await html2pdf()
+        .set({
+          margin: 0,
+          filename,
+          image:      { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF:      { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(element)
+        .save()
+    } catch (e) {
+      console.error('Error generando PDF:', e)
+    } finally {
+      setPdfLoading(false)
+    }
+  }
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [chatMessages, setChatMessages] = useState([
@@ -632,8 +656,24 @@ export default function ClientPortal() {
       {/* Tab Presupuesto */}
       {event.budgetPublished && activeTab === 'presupuesto' && (
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 100px' }}>
-          <div style={{ fontSize: 12, color: col.faint, marginBottom: 20, lineHeight: 1.6 }}>
-            Este es el presupuesto detallado de tu evento. Para guardarlo, usá la opción <strong style={{ color: col.muted }}>Imprimir → Guardar como PDF</strong> de tu navegador.
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading}
+              style={{
+                padding: '10px 20px',
+                background: pdfLoading ? col.surface : `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`,
+                border: pdfLoading ? `1px solid ${col.border}` : 'none',
+                borderRadius: 10,
+                color: pdfLoading ? col.faint : '#09090F',
+                fontWeight: 700, fontSize: 13,
+                cursor: pdfLoading ? 'wait' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8,
+                transition: 'all 0.2s',
+              }}
+            >
+              {pdfLoading ? 'Generando...' : '↓ Descargar PDF'}
+            </button>
           </div>
           <div className="portal-budget-scroll" style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${col.border}`, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
             <BudgetPreview
