@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip, Link2, AlertCircle, FileText } from "lucide-react";
+import { MessageCircle, Paperclip, Link2, AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, UtensilsCrossed, Sparkles, Wheat, Leaf, Salad, Stethoscope, Milk, Check, Copy } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -228,12 +228,12 @@ function DatePicker({ value, onChange, hasError }) {
 }
 
 const DIETARY_OPTIONS = [
-  { key: 'celiac',     label: 'Celíacos',     icon: '🌾' },
-  { key: 'vegan',      label: 'Veganos',       icon: '🌱' },
-  { key: 'vegetarian', label: 'Vegetarianos',  icon: '🥦' },
-  { key: 'diabetic',   label: 'Diabéticos',    icon: '🩺' },
-  { key: 'kosher',     label: 'Kosher',        icon: '✡️' },
-  { key: 'lactose',    label: 'Sin lactosa',   icon: '🥛' },
+  { key: 'celiac',     label: 'Celíacos',     icon: <Wheat size={14} /> },
+  { key: 'vegan',      label: 'Veganos',       icon: <Leaf size={14} /> },
+  { key: 'vegetarian', label: 'Vegetarianos',  icon: <Salad size={14} /> },
+  { key: 'diabetic',   label: 'Diabéticos',    icon: <Stethoscope size={14} /> },
+  { key: 'kosher',     label: 'Kosher',        icon: <Star size={14} /> },
+  { key: 'lactose',    label: 'Sin lactosa',   icon: <Milk size={14} /> },
 ]
 
 const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "", dietaryOptions: [] };
@@ -382,7 +382,7 @@ function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false 
   const isConfirmed = quote.clientStatus === 'Aprobado'
 
   const kindLabel = { Catering: 'Catering', General: 'Servicio' }[quote.kind] || quote.kind
-  const kindIcon  = { Catering: '🍽', General: '✦' }[quote.kind] || '◇'
+  const kindIcon  = { Catering: <UtensilsCrossed size={16} />, General: <Sparkles size={16} /> }[quote.kind] || <Sparkles size={16} />
 
   return (
     <div style={{
@@ -394,7 +394,7 @@ function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false 
       {/* Header */}
       <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 16 }}>{kindIcon}</span>
+          <span style={{ display: 'flex', alignItems: 'center' }}>{kindIcon}</span>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{kindLabel}</div>
             {quote.kind === 'Catering' && quote.covers && (
@@ -404,7 +404,7 @@ function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {isConfirmed && (
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', padding: '3px 10px', borderRadius: 99 }}>✓ Confirmado</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', padding: '3px 10px', borderRadius: 99 }}><Check size={11} /> Confirmado</span>
           )}
           <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--gold)' }}>{fmt(total)}</span>
         </div>
@@ -633,12 +633,15 @@ function EventDetail({ event, onClose, onEdit }) {
       api.get('/api/quotes'),
       api.get(`/api/payments?eventId=${event.id}`),
       api.get(`/api/supplier-payments/by-event/${event.id}`),
-    ]).then(([qRes, pRes, spRes]) => {
+      api.get(`/api/event-guests?eventId=${event.id}`),
+    ]).then(([qRes, pRes, spRes, gRes]) => {
       setQuotes(qRes.data.filter(q => q.eventId === event.id));
       setPayments(pRes.data.payments || []);
       setSummary({ totalQuotes: pRes.data.totalQuotes || 0, totalPaid: pRes.data.totalPaid || 0, balance: pRes.data.balance || 0 });
       setSpPayments(spRes.data.payments || []);
       setSpSummary({ totalPaid: spRes.data.totalPaid || 0, totalPending: spRes.data.totalPending || 0 });
+      setGuests(gRes.data);
+      setGuestsLoaded(true);
     }).catch(console.error).finally(() => setLoading(false));
   }, [event.id]);
 
@@ -671,10 +674,10 @@ function EventDetail({ event, onClose, onEdit }) {
   const cateringConfirmed = quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado');
 
   const TABS = [
-    { id: 'info',       label: 'Info',       icon: '📋' },
-    { id: 'servicios',  label: 'Servicios',  icon: '✦', badge: confirmedQuotes.length },
-    { id: 'finanzas',   label: 'Finanzas',   icon: '💳' },
-    { id: 'invitados',  label: 'Invitados',  icon: '👥', badge: guests.length || null },
+    { id: 'info',       label: 'Info',       icon: <ClipboardList size={14} /> },
+    { id: 'servicios',  label: 'Servicios',  icon: <Star size={14} />, badge: confirmedQuotes.length },
+    { id: 'finanzas',   label: 'Finanzas',   icon: <CreditCard size={14} /> },
+    { id: 'invitados',  label: 'Invitados',  icon: <Users size={14} />, badge: guests.length || null },
   ];
 
   return (
@@ -712,7 +715,7 @@ function EventDetail({ event, onClose, onEdit }) {
                   <MessageCircle size={13} /> WA
                 </button>
                 <button onClick={handleCopyPortal} style={{ padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
-                  {portalCopied ? '✓ Copiado' : '🔗 Portal'}
+                  {portalCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Portal</>}
                 </button>
               </>
             ) : (
@@ -727,7 +730,7 @@ function EventDetail({ event, onClose, onEdit }) {
               <FileText size={13} /> Propuesta
             </button>
             <button onClick={() => onEdit(event)} style={{ padding: '7px 16px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Editar</button>
-            <button onClick={onClose} style={{ padding: '7px 13px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
+            <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}><X size={14} /></button>
           </div>
         </div>
 
@@ -741,7 +744,7 @@ function EventDetail({ event, onClose, onEdit }) {
               borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
               marginBottom: -1, display: 'flex', alignItems: 'center', gap: 7, transition: 'all 0.15s',
             }}>
-              <span>{t.icon}</span> {t.label}
+              {t.icon} {t.label}
               {t.badge > 0 && (
                 <span style={{ fontSize: 10, fontWeight: 800, background: '#22c55e', color: '#fff', borderRadius: 99, padding: '1px 6px' }}>{t.badge}</span>
               )}
@@ -769,7 +772,7 @@ function EventDetail({ event, onClose, onEdit }) {
                   <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Analizando el evento con IA...</div>
                 ) : !alerts || alerts.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Check size={32} color="#22c55e" /></div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#22c55e', marginBottom: 6 }}>Sin inconsistencias detectadas</div>
                     <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>El evento parece estar en orden.</div>
                   </div>
@@ -804,13 +807,13 @@ function EventDetail({ event, onClose, onEdit }) {
                 <div style={{ display: 'flex', gap: 8 }}>
                   {proposal && !proposalLoading && (
                     <>
-                      <button onClick={handleCopyProposal} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: proposalCopied ? 'rgba(34,197,94,0.1)' : 'transparent', color: proposalCopied ? '#22c55e' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                        {proposalCopied ? '✓ Copiado' : 'Copiar'}
+                      <button onClick={handleCopyProposal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: proposalCopied ? 'rgba(34,197,94,0.1)' : 'transparent', color: proposalCopied ? '#22c55e' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                        {proposalCopied ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
                       </button>
                       <button onClick={() => { setProposal(null); handleProposal() }} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Regenerar</button>
                     </>
                   )}
-                  <button onClick={() => setShowProposal(false)} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
+                  <button onClick={() => setShowProposal(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={14} /></button>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
@@ -894,7 +897,7 @@ function EventDetail({ event, onClose, onEdit }) {
                   {/* Servicios confirmados */}
                   {confirmedQuotes.length > 0 && (
                     <section>
-                      <div style={{ ...SL, color: '#22c55e' }}>✓ Confirmados por el cliente</div>
+                      <div style={{ ...SL, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 5 }}><Check size={13} /> Confirmados por el cliente</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {confirmedQuotes.map(q => (
                           <QuoteDetailCard key={q.id} quote={q} calcTotal={calcQuoteTotal} SECCION_COLORS={SECCION_COLORS} fmt={fmt} />
@@ -1070,7 +1073,7 @@ function EventDetail({ event, onClose, onEdit }) {
                     {checkinUrl ? (
                       <>
                         <button onClick={handleCopyCheckin} style={{ padding: '7px 12px', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 8, background: checkinCopied ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)', color: checkinCopied ? '#22c55e' : '#3b82f6', fontSize: 12, cursor: 'pointer' }}>
-                          {checkinCopied ? '✓ Copiado' : '🔗 Link portero'}
+                          {checkinCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Link portero</>}
                         </button>
                         <button onClick={handleGenerateCheckin} title="Regenerar link" style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-faint)', fontSize: 11, cursor: 'pointer' }}>↺</button>
                       </>
@@ -1169,7 +1172,7 @@ function EventDetail({ event, onClose, onEdit }) {
                       </div>
                       {/* Toggle pagado */}
                       <button onClick={() => handleTogglePagado(g)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${g.pagado ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`, background: g.pagado ? 'rgba(34,197,94,0.12)' : 'var(--bg-sunken)', color: g.pagado ? '#22c55e' : 'var(--text-faint)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {g.pagado ? '✓ Pagó' : 'Sin pagar'}
+                        {g.pagado ? <><Check size={11} /> Pagó</> : 'Sin pagar'}
                       </button>
                       {/* Ingresó (solo lectura en CRM) */}
                       {g.ingreso && (
@@ -1202,6 +1205,7 @@ export default function Events() {
   const [sortDir, setSortDir] = useState("asc");
   const [modal, setModal]     = useState(null);
   const [selected, setSelected]       = useState(null);
+  const [detailKey, setDetailKey]     = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const fetchData = async () => {
@@ -1263,6 +1267,7 @@ export default function Events() {
         setEvents(evRes.data);
         const updated = evRes.data.find(e => e.id === selected.id);
         setSelected(updated || null);
+        setDetailKey(k => k + 1);
         setModal(updated ? "detail" : null);
       }
     } catch (e) { toast(e.response?.data?.error || "Error al guardar"); }
@@ -1284,7 +1289,7 @@ export default function Events() {
     } catch { toast("Error al cambiar el estado"); }
   };
 
-  const openDetail = ev => { setSelected(ev); setModal("detail"); };
+  const openDetail = ev => { setSelected(ev); setModal("detail"); setDetailKey(k => k + 1); };
   const openEdit   = ev => { setSelected(ev); setModal("edit");   };
 
   const fbtn = (active) => ({
@@ -1400,7 +1405,7 @@ export default function Events() {
 
       {modal === "new"    && <EventForm clients={clients} onSave={handleSave} onClose={() => setModal(null)} />}
       {modal === "edit"   && selected && <EventForm initial={selected} clients={clients} onSave={handleSave} onClose={() => { setModal(null); setSelected(null); }} />}
-      {modal === "detail" && selected && <EventDetail event={selected} onClose={() => { setModal(null); setSelected(null); }} onEdit={ev => { setModal("edit"); setSelected(ev); }} />}
+      {modal === "detail" && selected && <EventDetail key={detailKey} event={selected} onClose={() => { setModal(null); setSelected(null); }} onEdit={ev => { setModal("edit"); setSelected(ev); }} />}
 
       {confirmDelete && (
         <ConfirmDialog
