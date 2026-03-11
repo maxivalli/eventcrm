@@ -413,6 +413,7 @@ export default function Quotes() {
   const [quotes, setQuotes]     = useState([])
   const [events, setEvents]     = useState([])
   const [clients, setClients]   = useState([])
+  const [lastSeenDecisions] = useState(() => localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString())
 
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
@@ -437,6 +438,7 @@ export default function Quotes() {
     fetchData()
     // Marcar decisiones del cliente como vistas
     localStorage.setItem('lastSeenDecisions', new Date().toISOString())
+    window.dispatchEvent(new Event('storage'))
   }, [])
 
   const filtered = quotes.filter(q => {
@@ -522,7 +524,19 @@ export default function Quotes() {
             >
               <div style={{ fontSize: 11, color: 'var(--text-label)', fontWeight: 600 }}>{String(q.id).padStart(4, '0')}</div>
               <Badge label={q.kind} color={kindColors[q.kind] || '#5a5a7a'} />
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{q.event?.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{q.event?.name}</div>
+                {q.clientStatus && q.clientDecidedAt && new Date(q.clientDecidedAt) > new Date(lastSeenDecisions) && (
+                  <span style={{
+                    fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 700, whiteSpace: 'nowrap',
+                    background: q.clientStatus === 'Aprobado' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                    color: q.clientStatus === 'Aprobado' ? '#22c55e' : '#ef4444',
+                    border: `1px solid ${q.clientStatus === 'Aprobado' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                  }}>
+                    Cliente {q.clientStatus === 'Aprobado' ? 'aprobó' : 'rechazó'}
+                  </span>
+                )}
+              </div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{q.event?.client?.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(q.date)}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>{formatCurrency(calcTotal(q))}</div>

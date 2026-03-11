@@ -287,7 +287,7 @@ module.exports = router
 
 // ── Alerta de inconsistencias ───────────────────────────────────────────────
 router.post('/event-alerts', async (req, res) => {
-  const { event, quotes, payments, spPayments } = req.body
+  const { event, quotes, payments, spPayments, guests } = req.body
   if (!event) return res.status(400).json({ error: 'Datos del evento requeridos' })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -318,6 +318,12 @@ router.post('/event-alerts', async (req, res) => {
   const tieneCateringAprobado = (quotes || []).some(q => q.kind === 'Catering' && q.status === 'Aprobado')
   const margen = totalAprobado - totalProveedores
 
+  const totalInvitados = (guests || []).length
+  const invitadosMayores = (guests || []).filter(g => g.tipo === 'Mayor').length
+  const invitadosMenores = (guests || []).filter(g => g.tipo === 'Menor').length
+  const invitadosPagaron = (guests || []).filter(g => g.pagado).length
+  const invitadosSinPagar = totalInvitados - invitadosPagaron
+
   const prompt = `Sos un coordinador de eventos senior de Haus, empresa de organización de eventos en Argentina. Analizá los datos de este evento y detectá inconsistencias, riesgos o alertas importantes.
 
 DATOS DEL EVENTO:
@@ -344,6 +350,14 @@ FINANZAS:
 - Total comprometido con proveedores: ${fmtARS(totalProveedores)}
 - Margen bruto estimado: ${fmtARS(margen)}
 
+LISTA DE INVITADOS:
+${totalInvitados === 0
+  ? '- No hay invitados cargados en el sistema'
+  : `- Total invitados cargados: ${totalInvitados} (${invitadosMayores} mayores, ${invitadosMenores} menores)
+- Pagaron tarjeta: ${invitadosPagaron}
+- Sin pagar tarjeta: ${invitadosSinPagar}`}
+${event.guests ? `- Capacidad estimada del evento: ${event.guests} personas` : ''}
+
 Detectá alertas reales y relevantes. No inventes problemas que no existen. Si el evento está en buen estado, devolvé pocas alertas o ninguna.
 
 Ejemplos de alertas válidas:
@@ -354,6 +368,9 @@ Ejemplos de alertas válidas:
 - Cotizaciones pendientes de aprobación que bloquean la producción
 - Sin venue especificado para evento próximo
 - Muchos invitados sin catering contratado
+- Muchos invitados sin pagar tarjeta faltando pocos días para el evento
+- La cantidad de invitados cargados supera la capacidad estimada del evento
+- Evento próximo sin invitados cargados en el sistema
 
 Respondé ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown:
 [

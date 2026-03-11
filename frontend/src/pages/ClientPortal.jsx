@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import BudgetPreview from '../components/BudgetPreview'
 import {
   CalendarDays, CreditCard, Clock, FileText, ClipboardList,
-  Phone, Lock, UtensilsCrossed, Sparkles,
+  Phone, Lock, UtensilsCrossed, Sparkles, FileUp, Users,
 } from 'lucide-react'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
@@ -274,6 +274,50 @@ export default function ClientPortal() {
       setPdfLoading(false)
     }
   }
+  const [guestUploadState, setGuestUploadState] = useState(null) // null | 'parsing' | 'preview' | 'confirming' | 'done'
+  const [parsedGuests, setParsedGuests]         = useState([])
+  const [uploadError, setUploadError]           = useState(null)
+  const [existingGuests, setExistingGuests]     = useState(null) // null = no cargado, [] = vacío
+  const fileInputRef = useRef(null)
+
+  const loadExistingGuests = async () => {
+    try {
+      const res = await axios.get(`${API}/api/portal/${token}/guests`)
+      setExistingGuests(res.data.guests)
+    } catch { setExistingGuests([]) }
+  }
+
+  const handleGuestFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploadError(null)
+    setGuestUploadState('parsing')
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const res = await axios.post(`${API}/api/portal/${token}/guests/parse`, form)
+      setParsedGuests(res.data.guests)
+      setGuestUploadState('preview')
+    } catch (err) {
+      setUploadError(err.response?.data?.error || 'No se pudo leer el archivo')
+      setGuestUploadState(null)
+    }
+  }
+
+  const handleGuestConfirm = async () => {
+    setGuestUploadState('confirming')
+    try {
+      await axios.post(`${API}/api/portal/${token}/guests/confirm`, { guests: parsedGuests })
+      setExistingGuests([...parsedGuests])
+      setParsedGuests([])
+      setGuestUploadState(null)
+    } catch (err) {
+      setUploadError(err.response?.data?.error || 'Error al guardar la lista')
+      setGuestUploadState('preview')
+    }
+  }
+
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [chatMessages, setChatMessages] = useState([
@@ -432,6 +476,7 @@ export default function ClientPortal() {
         <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex' }}>
           {[
             { id: 'resumen',       label: 'Mi evento',        Icon: CalendarDays },
+            { id: 'invitados',     label: 'Invitados',        Icon: Users },
             { id: 'estado_cuenta', label: 'Estado de cuenta', Icon: CreditCard,  show: hasApproved || hasPayments },
             { id: 'cronograma',    label: 'Cronograma',       Icon: Clock,       show: hasSchedule },
             { id: 'presupuesto',   label: 'Presupuesto',      Icon: FileText,    show: event.budgetPublished },
@@ -556,6 +601,108 @@ export default function ClientPortal() {
         </div>
 
       </div>}
+
+      {/* Tab Invitados */}
+      {activeTab === 'invitados' && (() => {
+        // Cargar invitados existentes la primera vez que se abre el tab
+        if (existingGuests === null) loadExistingGuests()
+
+        const mayores  = (existingGuests || []).filter(g => g.tipo === 'Mayor').length
+        const menores  = (existingGuests || []).filter(g => g.tipo === 'Menor').length
+        const pagados  = (existingGuests || []).filter(g => g.pagado).length
+
+        return (
+          <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 100px' }}>
+            <input ref={fileInputRef} type="file" accept=".docx,.pdf" style={{ display: 'none' }} onChange={handleGuestFile} />
+
+            {/* Lista existente */}
+            {existingGuests === null ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: col.faint, fontSize: 13 }}>Cargando...</div>
+            ) : existingGuests.length > 0 && guestUploadState !== 'preview' && (
+              <div style={{ marginBottom: 28 }}>
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+                  {[
+                    { label: 'Total',   value: existingGuests.length, color: col.gold },
+                    { label: 'Mayores', value: mayores,               color: col.muted },
+                    { label: 'Menores', value: menores,               color: '#8b5cf6' },
+                    { label: 'Pagaron', value: pagados,               color: col.green },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 10, padding: '14px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                      <div style={{ fontSize: 10, color: col.faint, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Lista */}
+                <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden', maxHeight: 360, overflowY: 'auto', marginBottom: 16 }}>
+                  {existingGuests.map((g, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderBottom: i < existingGuests.length - 1 ? `1px solid ${col.border}` : 'none' }}>
+                      <span style={{ flex: 1, fontSize: 13, color: col.text }}>{g.name}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                        background: g.tipo === 'Menor' ? 'rgba(139,92,246,0.15)' : col.border,
+                        color: g.tipo === 'Menor' ? '#8b5cf6' : col.faint,
+                        border: `1px solid ${g.tipo === 'Menor' ? 'rgba(139,92,246,0.3)' : col.border}` }}>
+                        {g.tipo}
+                      </span>
+                      {g.pagado && <span style={{ fontSize: 10, color: col.green, background: col.greenBg, border: `1px solid ${col.greenBorder}`, borderRadius: 20, padding: '2px 8px', fontWeight: 700 }}>Pagó</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upload / preview */}
+            {guestUploadState === 'preview' || guestUploadState === 'confirming' ? (
+              <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: col.text }}>Revisá antes de confirmar</span>
+                  <span style={{ fontSize: 12, color: col.faint }}>{parsedGuests.length} invitados</span>
+                </div>
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  {parsedGuests.map((g, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: i < parsedGuests.length - 1 ? `1px solid ${col.border}` : 'none' }}>
+                      <span style={{ flex: 1, fontSize: 13, color: col.text }}>{g.name}</span>
+                      <select value={g.tipo} onChange={e => setParsedGuests(prev => prev.map((x, j) => j === i ? { ...x, tipo: e.target.value } : x))}
+                        style={{ fontSize: 11, background: col.bg, border: `1px solid ${col.border}`, borderRadius: 6, padding: '3px 6px', color: g.tipo === 'Menor' ? '#8b5cf6' : col.faint, cursor: 'pointer' }}>
+                        <option value="Mayor">Mayor</option>
+                        <option value="Menor">Menor</option>
+                      </select>
+                      <button onClick={() => setParsedGuests(prev => prev.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', color: col.faint, cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                {uploadError && <div style={{ fontSize: 12, color: col.red, padding: '10px 18px' }}>{uploadError}</div>}
+                <div style={{ display: 'flex', gap: 8, padding: '14px 18px', borderTop: `1px solid ${col.border}` }}>
+                  <button onClick={handleGuestConfirm} disabled={parsedGuests.length === 0 || guestUploadState === 'confirming'}
+                    style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`, color: '#09090F', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                    {guestUploadState === 'confirming' ? 'Enviando...' : `Confirmar ${parsedGuests.length} invitados`}
+                  </button>
+                  <button onClick={() => { setGuestUploadState(null); setParsedGuests([]); setUploadError(null) }}
+                    style={{ padding: '11px 16px', borderRadius: 10, border: `1px solid ${col.border}`, background: 'transparent', color: col.faint, fontSize: 13, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, padding: '24px 20px', textAlign: 'center' }}>
+                <FileUp size={28} style={{ color: col.faint, marginBottom: 12 }} />
+                <div style={{ fontSize: 14, color: col.muted, marginBottom: 6, fontWeight: 500 }}>
+                  {existingGuests?.length ? 'Actualizá tu lista de invitados' : 'Subí tu lista de invitados'}
+                </div>
+                <div style={{ fontSize: 12, color: col.faint, marginBottom: 20 }}>Formato Word (.docx) o PDF. Cada nombre en una línea. Si hay menores, aclaralo al lado del nombre.</div>
+                {uploadError && <div style={{ fontSize: 12, color: col.red, marginBottom: 14 }}>{uploadError}</div>}
+                <button onClick={() => fileInputRef.current?.click()} disabled={guestUploadState === 'parsing'}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 10, border: `1px solid ${col.goldBorder}`, background: col.goldBg, color: col.gold, fontSize: 13, fontWeight: 600, cursor: guestUploadState === 'parsing' ? 'wait' : 'pointer' }}>
+                  <FileUp size={15} />
+                  {guestUploadState === 'parsing' ? 'Leyendo archivo...' : 'Seleccionar archivo'}
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Tab Estado de cuenta */}
       {activeTab === 'estado_cuenta' && (

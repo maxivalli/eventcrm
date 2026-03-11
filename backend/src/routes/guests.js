@@ -4,6 +4,7 @@ const multer = require('multer')
 const mammoth = require('mammoth')
 const pdfParse = require('pdf-parse')
 const prisma = require('../prisma')
+const { log } = require('../utils/activity')
 
 // Multer en memoria para extracción de texto (no sube a Cloudinary)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
@@ -33,7 +34,86 @@ function parseGuestsFromText(text) {
 const publicRouter = Router()
 const protectedRouter = Router()
 
-// ── Rutas públicas (portal del portero, sin auth) ──────────────────────────
+// ── Rutas públicas (portal del portero + portal del cliente, sin auth) ────
+
+// POST /api/portal/:token/guests/parse — parsea archivo desde el portal del cliente (sin guardar)
+publicRouter.post('/portal/:token/guests/parse', upload.single('file'), async (req, res) => {
+  const event = await prisma.event.findUnique({
+    where: { portalToken: req.params.token },
+    select: { id: true },
+  })
+  if (!event) return res.status(404).json({ error: 'Token inválido' })
+  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' })
+
+  const { mimetype, buffer, originalname } = req.file
+  const ext = originalname.split('.').pop().toLowerCase()
+
+  try {
+    let text = ''
+    if (ext === 'docx' || mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+    } else if (ext === 'pdf' || mimetype === 'application/pdf') {
+      const result = await pdfParse(buffer)
+      text = result.text
+    } else {
+      return res.status(400).json({ error: 'Solo se aceptan archivos .docx o .pdf' })
+    }
+
+    const guests = parseGuestsFromText(text)
+    if (guests.length === 0) return res.status(422).json({ error: 'No se encontraron nombres en el archivo' })
+    res.json({ guests })
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo leer el archivo' })
+  }
+})
+
+// GET /api/portal/:token/guests — lista de invitados del evento (para mostrar en portal)
+publicRouter.get('/portal/:token/guests', async (req, res) => {
+  const event = await prisma.event.findUnique({
+    where: { portalToken: req.params.token },
+    select: { id: true, name: true },
+  })
+  if (!event) return res.status(404).json({ error: 'Token inválido' })
+
+  try {
+    const guests = await prisma.eventGuest.findMany({
+      where: { eventId: event.id },
+      orderBy: { name: 'asc' },
+    })
+    res.json({ guests })
+  } catch (e) {
+    res.status(500).json({ error: 'Error al obtener invitados' })
+  }
+})
+
+// POST /api/portal/:token/guests/confirm — guarda lista (reemplaza todo)
+publicRouter.post('/portal/:token/guests/confirm', async (req, res) => {
+  const { guests } = req.body
+  if (!Array.isArray(guests) || guests.length === 0)
+    return res.status(400).json({ error: 'Lista de invitados requerida' })
+
+  const event = await prisma.event.findUnique({
+    where: { portalToken: req.params.token },
+    select: { id: true, name: true },
+  })
+  if (!event) return res.status(404).json({ error: 'Token inválido' })
+
+  try {
+    await prisma.eventGuest.deleteMany({ where: { eventId: event.id } })
+    await prisma.eventGuest.createMany({
+      data: guests.map(g => ({
+        eventId: event.id,
+        name: g.name.trim(),
+        tipo: g.tipo || 'Mayor',
+      })),
+    })
+    log({ action: 'portal_guests', entity: 'event', entityId: event.id, label: event.name, detail: `${guests.length} invitados enviados desde el portal` })
+    res.json({ ok: true, count: guests.length })
+  } catch (e) {
+    res.status(500).json({ error: 'Error al guardar la lista' })
+  }
+})
 
 // GET /api/checkin/:token — datos del evento + lista de invitados
 publicRouter.get('/checkin/:token', async (req, res) => {

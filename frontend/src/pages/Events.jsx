@@ -536,9 +536,16 @@ function EventDetail({ event, onClose, onEdit }) {
     setShowAlerts(true); if (alerts) return
     setAlertsLoading(true)
     try {
+      let currentGuests = guests
+      if (!guestsLoaded) {
+        const gRes = await api.get(`/api/event-guests?eventId=${event.id}`)
+        currentGuests = gRes.data
+        setGuests(gRes.data)
+        setGuestsLoaded(true)
+      }
       const res = await api.post('/api/ai/event-alerts', {
         event: { ...event, client: event.client },
-        quotes, payments, spPayments,
+        quotes, payments, spPayments, guests: currentGuests,
       })
       setAlerts(res.data.alerts)
     } catch { setAlerts([]) }
@@ -1210,7 +1217,11 @@ export default function Events() {
     } catch { toast("Error al cargar eventos"); }
     finally { setLoading(false); }
   };
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    localStorage.setItem('lastSeenGuestLists', new Date().toISOString())
+    window.dispatchEvent(new Event('storage'))
+  }, []);
 
   const filtered = events.filter(e => {
     const ms = e.name.toLowerCase().includes(search.toLowerCase()) || e.client?.name.toLowerCase().includes(search.toLowerCase());
@@ -1339,6 +1350,11 @@ export default function Events() {
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{ev.name}</span>
                   {ev._count?.files > 0 && <Paperclip size={12} title={`${ev._count.files} adjunto${ev._count.files !== 1 ? "s" : ""}`} style={{ color: "var(--text-label)" }} />}
+                  {ev._count?.eventGuests > 0 && (
+                    <span title={`${ev._count.eventGuests} invitados cargados`} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#8b5cf6", border: "1px solid rgba(139,92,246,0.3)", whiteSpace: "nowrap" }}>
+                      {ev._count.eventGuests} inv.
+                    </span>
+                  )}
                   {isPastEvent(ev) && (
                     <span style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 700,

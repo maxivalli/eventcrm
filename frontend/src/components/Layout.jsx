@@ -71,8 +71,12 @@ export default function Layout() {
   const [open, setOpen] = useState(true);
   const [pendingQueries, setPendingQueries] = useState(0);
   const [clientDecisions, setClientDecisions] = useState(0);
+  const [portalGuestLists, setPortalGuestLists] = useState(0);
   const [lastSeenDecisions, setLastSeenDecisions] = useState(() =>
     localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
+  );
+  const [lastSeenGuestLists, setLastSeenGuestLists] = useState(() =>
+    localStorage.getItem('lastSeenGuestLists') || new Date(0).toISOString()
   );
 
   // Escuchar cambios de localStorage desde otras pestañas
@@ -80,6 +84,8 @@ export default function Layout() {
     const onStorage = () => {
       const val = localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
       setLastSeenDecisions(val)
+      const val2 = localStorage.getItem('lastSeenGuestLists') || new Date(0).toISOString()
+      setLastSeenGuestLists(val2)
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -89,7 +95,7 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // Polling unificado: portal-queries + client-decisions en un solo intervalo (30s)
+  // Polling unificado: portal-queries + client-decisions + portal-guests en un solo intervalo (30s)
   useEffect(() => {
     const load = () => {
       api.get("/api/portal-queries")
@@ -98,11 +104,14 @@ export default function Layout() {
       api.get(`/api/activity/client-decisions?since=${lastSeenDecisions}`)
         .then(res => setClientDecisions(res.data.length))
         .catch(() => {})
+      api.get(`/api/activity/portal-guests?since=${lastSeenGuestLists}`)
+        .then(res => setPortalGuestLists(res.data.length))
+        .catch(() => {})
     }
     load()
     const interval = setInterval(load, 30000)
     return () => clearInterval(interval)
-  }, [lastSeenDecisions]);
+  }, [lastSeenDecisions, lastSeenGuestLists]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -229,6 +238,18 @@ export default function Layout() {
                         {clientDecisions}
                       </div>
                     )}
+                    {path === "/events" && portalGuestLists > 0 && (
+                      <div style={{
+                        position: "absolute", top: -5, right: -6,
+                        background: "#8b5cf6", color: "#fff",
+                        borderRadius: 20, fontSize: 9, fontWeight: 800,
+                        minWidth: 14, height: 14, display: "flex",
+                        alignItems: "center", justifyContent: "center",
+                        padding: "0 3px", lineHeight: 1,
+                      }}>
+                        {portalGuestLists}
+                      </div>
+                    )}
                   </div>
                   {open && (
                     <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>
@@ -251,6 +272,15 @@ export default function Layout() {
                       padding: "1px 7px",
                     }}>
                       {clientDecisions} nuevo{clientDecisions !== 1 ? "s" : ""}
+                    </div>
+                  )}
+                  {open && path === "/events" && portalGuestLists > 0 && (
+                    <div style={{
+                      background: "rgba(139,92,246,0.15)", color: "#8b5cf6",
+                      borderRadius: 20, fontSize: 10, fontWeight: 700,
+                      padding: "1px 7px",
+                    }}>
+                      {portalGuestLists} lista{portalGuestLists !== 1 ? "s" : ""}
                     </div>
                   )}
                 </NavLink>
