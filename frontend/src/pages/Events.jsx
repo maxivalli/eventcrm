@@ -1329,7 +1329,8 @@ export default function Events() {
 
       {/* Tabla */}
       <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
+          <span>Tipo</span>
           <span>Evento</span>
           <span>Cliente</span>
           <span onClick={() => toggleSort("date")} style={{ cursor: "pointer", userSelect: "none" }}>Fecha<SortIcon col="date" /></span>
@@ -1342,10 +1343,11 @@ export default function Events() {
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
           : filtered.map((ev, i) => (
             <div key={ev.id} onClick={() => openDetail(ev)}
-              style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
+              style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
+              <div><Badge label={ev.type} color={typeColors[ev.type] || "var(--text-muted)"} /></div>
               <div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{ev.name}</span>
@@ -1367,7 +1369,6 @@ export default function Events() {
                     </span>
                   )}
                 </div>
-                <Badge label={ev.type} color={typeColors[ev.type] || "var(--text-muted)"} />
               </div>
               <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{ev.client?.name}</div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{fmtDate(ev.date)}</div>
