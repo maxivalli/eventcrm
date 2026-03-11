@@ -75,6 +75,14 @@ function parseVcf(text) {
   return contacts
 }
 
+// ── Spinner keyframe (inyectado una sola vez) ─────────────────────────────────
+if (!document.getElementById('vcf-spin-style')) {
+  const s = document.createElement('style')
+  s.id = 'vcf-spin-style'
+  s.textContent = `@keyframes vcf-spin { to { transform: rotate(360deg) } }`
+  document.head.appendChild(s)
+}
+
 // ── Modal importación VCF ─────────────────────────────────────────────────────
 
 function VcfImportModal({ existingContacts, onImport, onClose }) {
@@ -82,6 +90,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
   const [contacts,  setContacts]  = useState([])
   const [selected,  setSelected]  = useState(new Set())
   const [importing, setImporting] = useState(false)
+  const [progress,  setProgress]  = useState({ current: 0, total: 0 })
   const [error,     setError]     = useState('')
   const fileRef = useRef()
 
@@ -130,8 +139,10 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
   }
 
   const handleImport = async () => {
+    const toImport = contacts.filter((_, i) => selected.has(i))
+    setProgress({ current: 0, total: toImport.length })
     setImporting(true)
-    await onImport(contacts.filter((_, i) => selected.has(i)))
+    await onImport(toImport, (current, total) => setProgress({ current, total }))
     setImporting(false)
   }
 
@@ -146,7 +157,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div onClick={importing ? undefined : onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, width: '100%', maxWidth: 620, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
@@ -177,7 +188,40 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
 
-          {step === 'upload' && (
+          {importing && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', gap: 24 }}>
+              {/* Spinner */}
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                border: '4px solid var(--border)',
+                borderTopColor: 'var(--gold)',
+                animation: 'vcf-spin 0.8s linear infinite',
+              }} />
+              {/* Texto de progreso */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+                  Importando contactos...
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-label)' }}>
+                  {progress.current} de {progress.total}
+                </div>
+              </div>
+              {/* Barra de progreso */}
+              <div style={{ width: '100%', height: 6, background: 'var(--bg-sunken)', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 99,
+                  background: 'linear-gradient(135deg, var(--gold), var(--gold-light))',
+                  width: `${progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0}%`,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>
+                No cierres esta ventana hasta que termine
+              </div>
+            </div>
+          )}
+
+          {!importing && step === 'upload' && (
             <div>
               <div
                 onClick={() => fileRef.current.click()}
@@ -217,7 +261,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
             </div>
           )}
 
-          {step === 'preview' && (
+          {!importing && step === 'preview' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div style={{ fontSize: 12, color: 'var(--text-label)' }}>
@@ -273,7 +317,7 @@ function VcfImportModal({ existingContacts, onImport, onClose }) {
         </div>
 
         {/* Footer */}
-        {step === 'preview' && (
+        {!importing && step === 'preview' && (
           <div style={{ padding: '16px 28px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexShrink: 0 }}>
             <button onClick={onClose} style={{ flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
               Cancelar
@@ -436,11 +480,12 @@ export default function Contacts() {
     finally { setConfirmDeleteSel(false) }
   }
 
-  const handleVcfImport = async (toImport) => {
+  const handleVcfImport = async (toImport, onProgress) => {
     let ok = 0, fail = 0
     for (const c of toImport) {
       try { await api.post('/api/contacts', c); ok++ }
       catch { fail++ }
+      onProgress?.(ok + fail, toImport.length)
     }
     await fetchContacts()
     setShowVcf(false)
