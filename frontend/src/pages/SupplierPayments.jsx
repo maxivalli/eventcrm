@@ -67,7 +67,7 @@ export default function SupplierPayments() {
   useEffect(() => {
     Promise.all([api.get('/api/suppliers'), api.get('/api/events')])
       .then(([s, e]) => { setSuppliers(s.data.filter(x => x.status === 'Activo')); setEvents(e.data) })
-      .catch(() => {})
+      .catch(() => toast('Error al cargar proveedores y eventos'))
   }, [])
 
   useEffect(() => { setData(null); if (!supplierId || !eventId) return; fetchPayments() }, [supplierId, eventId])

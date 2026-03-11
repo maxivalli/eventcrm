@@ -57,10 +57,26 @@ const PlusIcon = () => (
   </svg>
 )
 
-const sortByTime = (arr) => [...arr].sort((a, b) => {
+const sortByTime = (arr) => {
+  // Detectar si el cronograma cruza medianoche:
+  // hay ítems nocturnos (>= 18hs) Y de madrugada (<= 05hs)
   const toMins = (h) => { const [hh, mm] = (h || '00:00').split(':').map(Number); return hh * 60 + mm }
-  return toMins(a.hora) - toMins(b.hora)
-})
+  const hours = arr.map(i => toMins(i.hora) / 60)
+  const hasNight = hours.some(h => h >= 18)
+  const hasDawn  = hours.some(h => h <= 5)
+  const crossesMidnight = hasNight && hasDawn
+
+  return [...arr].sort((a, b) => {
+    let ma = toMins(a.hora)
+    let mb = toMins(b.hora)
+    // Si cruza medianoche, los horarios de madrugada (00-05hs) se suman 24hs para quedar al final
+    if (crossesMidnight) {
+      if (ma <= 5 * 60) ma += 24 * 60
+      if (mb <= 5 * 60) mb += 24 * 60
+    }
+    return ma - mb
+  })
+}
 
 export default function Cronograma({ event }) {
   const eventId = event?.id

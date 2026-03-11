@@ -240,7 +240,7 @@ const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type:
 
 function EventForm({ initial, clients, onSave, onClose }) {
   const [form, setForm] = useState(
-    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "", dietaryOptions: (() => { try { return typeof initial.dietaryOptions === 'string' ? JSON.parse(initial.dietaryOptions) : (initial.dietaryOptions || []) } catch { return [] } })() } : emptyForm
+    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "", dietaryOptions: (() => { try { const d = typeof initial.dietaryOptions === 'string' ? JSON.parse(initial.dietaryOptions) : (initial.dietaryOptions || []); return Array.isArray(d) ? d : [] } catch { return [] } })() } : emptyForm
   );
   const [errors, setErrors] = useState({});
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })) };
@@ -466,7 +466,7 @@ function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false 
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(quote.items || []).map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div key={item.id ?? `item-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
                     <div>
                       <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.description}</div>
                       {item.quantity > 1 && <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>Cantidad: {item.quantity}</div>}
@@ -573,8 +573,8 @@ function EventDetail({ event, onClose, onEdit }) {
   const SECCION_COLORS = { 'Entrada': '#3b82f6', 'Plato principal': '#8b5cf6', 'Guarnición': '#22c55e', 'Bebidas': '#06b6d4', 'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280' };
 
   // Cotizaciones agrupadas por tipo
-  const confirmedQuotes = quotes.filter(q => q.clientStatus === 'Aprobado');
-  const pendingQuotes   = quotes.filter(q => !q.clientStatus);
+  const confirmedQuotes   = quotes.filter(q => q.clientStatus === 'Aprobado');
+  const pendingQuotes     = quotes.filter(q => q.clientStatus == null);
   const cateringConfirmed = quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado');
 
   const TABS = [
@@ -608,9 +608,13 @@ function EventDetail({ event, onClose, onEdit }) {
               <>
                 <button onClick={() => {
                   const phone = event.client?.phone?.replace(/\D/g, '')
+                  if (!phone) return
                   const msg = encodeURIComponent(`Hola ${event.client?.name}, te comparto el seguimiento de tu evento "${event.name}" 🎉\n\n${portalUrl}`)
-                  window.open(`https://wa.me/${phone ? `54${phone.slice(-10)}` : ''}?text=${msg}`, '_blank')
-                }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(37,211,102,0.4)', borderRadius: 8, background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, cursor: 'pointer' }}>
+                  window.open(`https://wa.me/54${phone.slice(-10)}?text=${msg}`, '_blank')
+                }}
+                disabled={!event.client?.phone}
+                title={!event.client?.phone ? 'El cliente no tiene teléfono registrado' : 'Enviar por WhatsApp'}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(37,211,102,0.4)', borderRadius: 8, background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, cursor: event.client?.phone ? 'pointer' : 'not-allowed', opacity: event.client?.phone ? 1 : 0.4 }}>
                   <MessageCircle size={13} /> WA
                 </button>
                 <button onClick={handleCopyPortal} style={{ padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
@@ -953,10 +957,20 @@ export default function Events() {
   const handleSave = async (form) => {
     try {
       const p = { ...form, clientId: Number(form.clientId), guests: Number(form.guests), budget: Number(form.budget) };
-      if (modal === "new") { await api.post("/api/events", p); toast("Evento creado", "success"); }
-      else                 { await api.put(`/api/events/${selected.id}`, p); toast("Evento actualizado", "success"); }
-      await fetchData();
-      setModal(null); setSelected(null);
+      if (modal === "new") {
+        await api.post("/api/events", p);
+        toast("Evento creado", "success");
+        await fetchData();
+        setModal(null); setSelected(null);
+      } else {
+        await api.put(`/api/events/${selected.id}`, p);
+        toast("Evento actualizado", "success");
+        const evRes = await api.get("/api/events");
+        setEvents(evRes.data);
+        const updated = evRes.data.find(e => e.id === selected.id);
+        setSelected(updated || null);
+        setModal(updated ? "detail" : null);
+      }
     } catch (e) { toast(e.response?.data?.error || "Error al guardar"); }
   };
 

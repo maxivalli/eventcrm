@@ -48,9 +48,11 @@ const lbl  = { fontSize: 11, color: 'var(--text-label)', textTransform: 'upperca
 const err_ = { fontSize: 11, color: '#ef4444', marginTop: 4 }
 
 function ItemsEditor({ items, onChange, label = 'Ítems' }) {
-  const addItem    = () => onChange([...items, { id: `new-${Date.now()}`, description: '', quantity: 1, unitPrice: 0 }])
+  const addItem    = () => onChange([...items, { id: `new-${Date.now()}`, description: '', quantity: '', unitPrice: '' }])
   const removeItem = (id) => onChange(items.filter(i => i.id !== id))
   const updateItem = (id, key, val) => onChange(items.map(i => i.id === id ? { ...i, [key]: val } : i))
+
+  const numVal = (v) => v === '' || v === undefined ? 0 : Number(v)
 
   return (
     <div>
@@ -60,9 +62,15 @@ function ItemsEditor({ items, onChange, label = 'Ítems' }) {
       {items.map(item => (
         <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '3fr 80px 120px 100px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
           <input style={inpS} value={item.description} placeholder="Descripción" onChange={e => updateItem(item.id, 'description', e.target.value)} />
-          <input type="number" style={inpS} value={item.quantity}  onChange={e => updateItem(item.id, 'quantity',  Number(e.target.value))} />
-          <input type="number" style={inpS} value={item.unitPrice} onChange={e => updateItem(item.id, 'unitPrice', Number(e.target.value))} />
-          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, textAlign: 'right' }}>{formatCurrency(item.quantity * item.unitPrice)}</div>
+          <input type="number" style={inpS} value={item.quantity}
+            onChange={e => updateItem(item.id, 'quantity', e.target.value)}
+            onFocus={e => e.target.select()}
+            placeholder="1" />
+          <input type="number" style={inpS} value={item.unitPrice}
+            onChange={e => updateItem(item.id, 'unitPrice', e.target.value)}
+            onFocus={e => e.target.select()}
+            placeholder="0" />
+          <div style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, textAlign: 'right' }}>{formatCurrency(numVal(item.quantity) * numVal(item.unitPrice))}</div>
           <button onClick={() => removeItem(item.id)} style={{ width: 28, height: 28, border: '1px solid var(--border-strong)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
       ))}
@@ -211,12 +219,12 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
                 <label style={lbl}>Cantidad de cubiertos *</label>
-                <input type="number" style={inp(errors.covers)} value={form.covers} onChange={e => set('covers', e.target.value)} />
+                <input type="number" style={inp(errors.covers)} value={form.covers} onChange={e => set('covers', e.target.value)} onFocus={e => e.target.select()} placeholder="0" />
                 {errors.covers && <div style={err_}>{errors.covers}</div>}
               </div>
               <div>
                 <label style={lbl}>Precio por cubierto (ARS) *</label>
-                <input type="number" style={inp(errors.pricePerCover)} value={form.pricePerCover} onChange={e => set('pricePerCover', e.target.value)} />
+                <input type="number" style={inp(errors.pricePerCover)} value={form.pricePerCover} onChange={e => set('pricePerCover', e.target.value)} onFocus={e => e.target.select()} placeholder="0" />
                 {errors.pricePerCover && <div style={err_}>{errors.pricePerCover}</div>}
               </div>
             </div>
@@ -258,7 +266,7 @@ function QuoteForm({ initial, events, clients, onSave, onClose }) {
                           {isSelected && (menu.sections || []).length > 0 && (
                             <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                               {(menu.sections || []).flatMap(s => s.items || []).slice(0, 6).map((item, i) => (
-                                <span key={i} style={{ fontSize: 10, background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', padding: '2px 8px', borderRadius: 20 }}>{item.dish?.name}</span>
+                                <span key={item.dish?.id ?? i} style={{ fontSize: 10, background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', padding: '2px 8px', borderRadius: 20 }}>{item.dish?.name}</span>
                               ))}
                               {(menu.sections || []).flatMap(s => s.items || []).length > 6 && (
                                 <span style={{ fontSize: 10, color: 'var(--text-faint)', padding: '2px 6px' }}>+{(menu.sections || []).flatMap(s => s.items || []).length - 6} más</span>

@@ -21,7 +21,6 @@ import {
   BookUser,
   MessageCircle,
   MessageSquareMore,
-  Bell,
 } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
@@ -75,41 +74,32 @@ export default function Layout() {
     localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
   );
 
-  // Escuchar cambios de localStorage desde otras partes de la app
+  // Escuchar cambios de localStorage desde otras pestañas
   useEffect(() => {
     const onStorage = () => {
       const val = localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
       setLastSeenDecisions(val)
     }
     window.addEventListener('storage', onStorage)
-    // También chequeamos directamente (para la misma pestaña)
-    const interval = setInterval(() => {
-      const val = localStorage.getItem('lastSeenDecisions') || new Date(0).toISOString()
-      setLastSeenDecisions(prev => prev !== val ? val : prev)
-    }, 3000)
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(interval) }
+    return () => window.removeEventListener('storage', onStorage)
   }, []);
+
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // Polling unificado: portal-queries + client-decisions en un solo intervalo (30s)
   useEffect(() => {
-    const load = () =>
+    const load = () => {
       api.get("/api/portal-queries")
         .then(res => setPendingQueries(res.data.filter(q => q.status === "pending").length))
         .catch(() => {})
-    load()
-    const interval = setInterval(load, 5000)
-    return () => clearInterval(interval)
-  }, []);
-
-  useEffect(() => {
-    const load = () =>
       api.get(`/api/activity/client-decisions?since=${lastSeenDecisions}`)
         .then(res => setClientDecisions(res.data.length))
         .catch(() => {})
+    }
     load()
-    const interval = setInterval(load, 5000)
+    const interval = setInterval(load, 30000)
     return () => clearInterval(interval)
   }, [lastSeenDecisions]);
 

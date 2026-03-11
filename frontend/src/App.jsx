@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -33,7 +33,6 @@ function MobileBlock() {
       padding: '40px 32px', textAlign: 'center',
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      {/* Logo */}
       <div style={{
         width: 64, height: 64, borderRadius: 18, marginBottom: 28,
         background: 'linear-gradient(135deg, #c9a84c, #e8c97a)',
@@ -41,7 +40,6 @@ function MobileBlock() {
         fontSize: 28, fontWeight: 900, color: '#09090f',
       }}>H</div>
 
-      {/* Ícono monitor */}
       <div style={{ marginBottom: 24 }}>
         <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -75,7 +73,8 @@ function MobileBlock() {
   )
 }
 
-export default function App() {
+function AppRoutes() {
+  const location = useLocation();
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {
@@ -84,39 +83,45 @@ export default function App() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const isPortal = window.location.pathname.startsWith('/portal/')
+  const isPortal = location.pathname.startsWith('/portal/')
   if (isMobile && !isPortal) return <MobileBlock />;
 
   return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/portal/:token" element={<ClientPortal />} />
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <Layout />
+          </PrivateRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="users" element={<Users />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="clients" element={<Clients />} />
+        <Route path="events" element={<Events />} />
+        <Route path="quotes" element={<Quotes />} />
+        <Route path="suppliers" element={<Suppliers />} />
+        <Route path="budget" element={<Budget />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="supplier-payments" element={<SupplierPayments />} />
+        <Route path="catering" element={<MenusPage />} />
+        <Route path="recetario" element={<Recetario />} />
+        <Route path="contacts" element={<Contacts />} />
+        <Route path="whatsapp" element={<WhatsApp />} />
+        <Route path="portal-queries" element={<PortalQueries />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/portal/:token" element={<ClientPortal />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Layout />
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="users" element={<Users />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="clients" element={<Clients />} />
-          <Route path="events" element={<Events />} />
-          <Route path="quotes" element={<Quotes />} />
-          <Route path="suppliers" element={<Suppliers />} />
-          <Route path="budget" element={<Budget />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="supplier-payments" element={<SupplierPayments />} />
-          <Route path="catering" element={<MenusPage />} />
-          <Route path="recetario" element={<Recetario />} />
-          <Route path="contacts" element={<Contacts />} />
-          <Route path="whatsapp" element={<WhatsApp />} />
-          <Route path="portal-queries" element={<PortalQueries />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

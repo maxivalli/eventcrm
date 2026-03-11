@@ -195,6 +195,20 @@ router.post('/generate-schedule', async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
 
+  const startTime = time || '20:00'
+  const [startHour] = startTime.split(':').map(Number)
+
+  // Determinar si es evento nocturno (empieza >= 18hs) o diurno (empieza < 18hs)
+  const isNocturno = startHour >= 18
+  const prepHoras = isNocturno ? 4 : 3  // horas antes del inicio para la preparación
+
+  // Calcular hora de inicio de preparación
+  const prepStart = ((startHour - prepHoras) + 24) % 24
+  const prepStartStr = String(prepStart).padStart(2, '0') + ':00'
+
+  // Hora máxima de cierre según tipo de evento
+  const cierreMax = isNocturno ? '05:00 del día siguiente' : '20:00 (máximo 8hs después del inicio)'
+
   const prompt = `Sos un coordinador de eventos profesional en Argentina con más de 10 años de experiencia organizando eventos sociales y corporativos.
 
 Generá un cronograma detallado para el siguiente evento:
@@ -203,13 +217,21 @@ Generá un cronograma detallado para el siguiente evento:
 - Invitados: ${guests || 'No especificado'}
 - Venue: ${venue || 'No especificado'}
 - Fecha: ${date || 'No especificada'}
-- Hora de inicio: ${time || '20:00'}
+- Hora de inicio (apertura al público): ${startTime}
 
-El cronograma debe cubrir desde la preparación del venue (horas antes) hasta el cierre del evento.
-Incluí momentos clave: llegada del equipo, montaje, llegada de invitados, recepción, cada momento gastronómico, entretenimiento, momentos especiales y cierre.
-Adaptá el cronograma al tipo de evento (casamiento, corporativo, cumpleaños, etc.).
-Usá la hora de inicio indicada como referencia para calcular todos los horarios.
-Incluí entre 10 y 18 ítems según la complejidad.
+REGLAS DE HORARIOS — MUY IMPORTANTE:
+1. La preparación del venue empieza a las ${prepStartStr} (${prepHoras} horas antes del inicio).
+2. Los invitados llegan a las ${startTime}. Todos los ítems de Preparación van ANTES de esta hora.
+3. ${isNocturno
+    ? `Este es un evento NOCTURNO. Los horarios después de medianoche se escriben como 00:XX, 01:XX, 02:XX, 03:XX, 04:XX, 05:XX — NUNCA como 24:XX o 25:XX. El evento termina como máximo a las 05:00.`
+    : `Este es un evento DIURNO. El evento termina como máximo a las 20:00 (no puede extenderse más de 8 horas desde el inicio).`
+  }
+4. Los ítems deben estar ordenados cronológicamente. Para ordenar correctamente cruzando medianoche, considerá que 00:XX, 01:XX, 02:XX, 03:XX, 04:XX, 05:XX son POSTERIORES a 23:XX.
+5. NO inventes horarios fuera del rango ${prepStartStr} → ${cierreMax}.
+6. La hora de inicio ${startTime} es inamovible — es cuando abren las puertas al público.
+
+Incluí entre 12 y 18 ítems cubriendo: llegada del equipo, montaje, recepción de invitados, momentos gastronómicos, entretenimiento, momentos especiales según el tipo de evento, y cierre.
+Adaptá el contenido al tipo de evento: ${type}.
 
 Respondé ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown, con este formato exacto:
 [
@@ -221,12 +243,12 @@ Respondé ÚNICAMENTE con un JSON válido, sin texto adicional, sin markdown, co
   }
 ]
 
-Reglas:
+Reglas finales:
 - Solo devolvé el array JSON, nada más
-- hora debe estar en formato HH:MM (24hs)
-- Los ítems deben estar ordenados cronológicamente
-- Usá categorías del listado exactamente como están escritas
-- Las descripciones deben ser concretas y útiles para el coordinador`
+- hora en formato HH:MM (24hs), valores válidos: 00–23 para horas, 00–59 para minutos
+- Items ordenados cronológicamente (recordá que 00:XX es DESPUÉS de 23:XX)
+- Categorías exactamente como están escritas
+- Descripciones concretas y útiles para el equipo de coordinación`
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {

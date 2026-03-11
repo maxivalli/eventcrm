@@ -32,6 +32,9 @@ publicRouter.get("/portal/:token", async (req, res) => {
           select: { amount: true, date: true, note: true },
           orderBy: { date: "asc" },
         },
+        scheduleItems: {
+          orderBy: [{ orden: 'asc' }, { hora: 'asc' }],
+        },
         quotes: {
           include: {
             items: true,
@@ -55,7 +58,7 @@ publicRouter.get("/portal/:token", async (req, res) => {
 
     if (!event) return res.status(404).json({ error: "Portal no encontrado" });
 
-    const schedule = [];
+    const schedule = event.scheduleItems || [];
 
     const totalPaid = event.payments.reduce((a, p) => a + p.amount, 0);
     const totalQuotes = event.quotes.reduce((a, q) => {

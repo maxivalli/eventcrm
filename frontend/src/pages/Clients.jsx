@@ -189,7 +189,7 @@ function ClientDetail({ client, onClose, onEdit }) {
     setLoadingEvs(true)
     api.get(`/api/clients/${client.id}`)
       .then(res => setEvents(res.data.events ?? []))
-      .catch(() => {})
+      .catch(() => toast('Error al cargar eventos del cliente'))
       .finally(() => setLoadingEvs(false))
   }, [client.id])
 

@@ -82,7 +82,7 @@ function ShoppingList({ eventId, guests, eventName, onClose }) {
   useEffect(() => {
     api.get(`/api/menu/shopping/${eventId}`)
       .then(r => setData(r.data))
-      .catch(() => {})
+      .catch(() => toast('Error al cargar la lista de compras'))
       .finally(() => setLoading(false))
   }, [eventId])
 

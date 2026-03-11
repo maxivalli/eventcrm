@@ -48,13 +48,13 @@ export default function Payments() {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
-    api.get('/api/clients').then(r => setClients(r.data)).catch(() => {})
+    api.get('/api/clients').then(r => setClients(r.data)).catch(() => toast('Error al cargar clientes'))
   }, [])
 
   useEffect(() => {
     setEventId(''); setData(null)
     if (!clientId) { setEvents([]); return }
-    api.get(`/api/clients/${clientId}`).then(r => setEvents(r.data.events || [])).catch(() => {})
+    api.get(`/api/clients/${clientId}`).then(r => setEvents(r.data.events || [])).catch(() => toast('Error al cargar eventos del cliente'))
   }, [clientId])
 
   useEffect(() => { setData(null); if (!eventId) return; fetchPayments() }, [eventId])

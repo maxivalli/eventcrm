@@ -332,7 +332,7 @@ export default function Dashboard() {
               <div>Sin deudas pendientes</div>
             </div>
           ) : suppliersPending.map((s, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', ...rowBorder }}>
+            <div key={s.id ?? i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', ...rowBorder }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-label)' }}>{s.count} pago{s.count > 1 ? 's' : ''} pendiente{s.count > 1 ? 's' : ''}</div>

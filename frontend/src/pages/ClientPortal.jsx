@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import BudgetPreview from '../components/BudgetPreview'
+import {
+  CalendarDays, CreditCard, Clock, FileText, ClipboardList,
+  Phone, Lock, UtensilsCrossed, Sparkles, MapPin, Users,
+  CheckCircle2, XCircle, MessageCircle, Mail, Instagram,
+} from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
 
 const fmt = (n) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
@@ -75,11 +80,11 @@ function Countdown({ date, time, status }) {
   )
 }
 
-function Block({ label, icon, children, accent }) {
+function Block({ label, icon: Icon, children, accent }) {
   return (
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        {icon && <span style={{ fontSize: 15 }}>{icon}</span>}
+        {Icon && <Icon size={14} style={{ color: accent || col.faint, flexShrink: 0 }} />}
         <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 2.5, textTransform: 'uppercase', color: accent || col.faint }}>{label}</span>
         <div style={{ flex: 1, height: 1, background: col.border, marginLeft: 4 }} />
       </div>
@@ -194,7 +199,7 @@ function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne 
             <span style={{ fontSize: 10, fontWeight: 800, color: col.faint, textTransform: 'uppercase', letterSpacing: 1.5 }}>Extras</span>
           </div>
           {(quote.items || []).map((item, i, arr) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 18px', borderTop: `1px solid ${col.border}` }}>
+            <div key={item.id ?? `item-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 18px', borderTop: `1px solid ${col.border}` }}>
               <div>
                 <span style={{ fontSize: 13, color: col.muted }}>{item.description}</span>
                 {item.quantity > 1 && <span style={{ fontSize: 11, color: col.faint, marginLeft: 8 }}>x{item.quantity}</span>}
@@ -367,6 +372,25 @@ export default function ClientPortal() {
           .portal-chat-btn { bottom: 16px !important; right: 16px !important; }
           .portal-chat-win { width: calc(100vw - 32px) !important; right: 16px !important; bottom: 80px !important; }
         }
+        @keyframes fadeInTooltip {
+          from { opacity: 0; transform: translateX(12px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes floatBot {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-5px); }
+        }
+        @keyframes eyeBlink {
+          0%, 90%, 100% { transform: scaleY(1); }
+          95%            { transform: scaleY(0.1); }
+        }
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(0deg); }
+          20%       { transform: rotate(-8deg); }
+          40%       { transform: rotate(8deg); }
+          60%       { transform: rotate(-5deg); }
+          80%       { transform: rotate(5deg); }
+        }
       `}</style>
 
       {/* Header */}
@@ -375,32 +399,32 @@ export default function ClientPortal() {
         <div style={{ fontSize: 10, color: col.faint, letterSpacing: 2, textTransform: 'uppercase' }}>Portal del cliente</div>
       </div>
 
-      {/* Tabs — solo si hay presupuesto publicado */}
-      {event.budgetPublished && (
-        <div style={{ borderBottom: `1px solid ${col.border}`, background: col.bg, position: 'sticky', top: 57, zIndex: 19 }}>
-          <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4 }}>
-            {[
-              { id: 'resumen',      label: 'Mi evento',    icon: '◇' },
-              { id: 'presupuesto',  label: 'Presupuesto',  icon: '📄' },
-            ].map(tab => {
-              const active = activeTab === tab.id
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '14px 16px', background: 'none', border: 'none',
-                    borderBottom: active ? `2px solid ${col.gold}` : '2px solid transparent',
-                    color: active ? col.gold : col.faint,
-                    fontSize: 13, fontWeight: active ? 700 : 500,
-                    cursor: 'pointer', transition: 'all 0.15s', marginBottom: -1 }}>
-                  <span style={{ fontSize: 14 }}>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              )
-            })}
-          </div>
+      {/* Tabs */}
+      <div style={{ borderBottom: `1px solid ${col.border}`, background: col.bg, position: 'sticky', top: 57, zIndex: 19 }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4, overflowX: 'auto' }}>
+          {[
+            { id: 'resumen',       label: 'Mi evento',       Icon: CalendarDays },
+            { id: 'estado_cuenta', label: 'Estado de cuenta', Icon: CreditCard,   show: hasApproved || hasPayments },
+            { id: 'cronograma',    label: 'Cronograma',       Icon: Clock,        show: hasSchedule },
+            { id: 'presupuesto',   label: 'Presupuesto',      Icon: FileText,     show: event.budgetPublished },
+          ].filter(tab => tab.show !== false).map(tab => {
+            const active = activeTab === tab.id
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '14px 16px', background: 'none', border: 'none',
+                  borderBottom: active ? `2px solid ${col.gold}` : '2px solid transparent',
+                  color: active ? col.gold : col.faint,
+                  fontSize: 13, fontWeight: active ? 700 : 500,
+                  cursor: 'pointer', transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap' }}>
+                <tab.Icon size={14} />
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
-      )}
+      </div>
 
-      {(!event.budgetPublished || activeTab === 'resumen') && <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px 100px' }}>
+      {activeTab === 'resumen' && <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px 100px' }}>
 
         {/* Hero */}
         <div style={{ padding: '36px 0 36px', borderBottom: `1px solid ${col.border}`, marginBottom: 36 }}>
@@ -418,7 +442,7 @@ export default function ClientPortal() {
         </div>
 
         {/* Info del evento */}
-        <Block label="Tu evento" icon="📋">
+        <Block label="Tu evento" icon={ClipboardList}>
           <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden' }}>
             {[
               { label: 'Fecha',     value: fmtDate(event.date) },
@@ -438,7 +462,7 @@ export default function ClientPortal() {
         {/* Cotizaciones agrupadas por tipo */}
         {hasQuotes && Object.entries(filteredQuoteGroups).map(([kind, kindQuotes]) => {
           const kindLabels = { General: 'Servicios', Catering: 'Catering' }
-          const kindIcons  = { General: '✦', Catering: '🍽' }
+          const kindIcons  = { General: Sparkles, Catering: UtensilsCrossed }
 
           // Solo catering tiene lógica de "elegí una opción"
           const isCatering      = kind === 'Catering'
@@ -479,77 +503,8 @@ export default function ClientPortal() {
 
 
 
-                {/* Cronograma */}
-        {hasSchedule && (
-          <Block label="Cronograma" icon="🕐">
-            <div style={{ position: 'relative', paddingLeft: 8 }}>
-              <div style={{ position: 'absolute', left: 46, top: 6, bottom: 6, width: 1, background: col.border }} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {schedule.map(item => {
-                  const catColors = { Preparación: '#3b82f6', Recepción: col.green, Gastronomía: '#f59e0b', Entretenimiento: '#ec4899', Protocolo: '#8b5cf6', Cierre: col.faint }
-                  const c = catColors[item.categoria] || col.faint
-                  return (
-                    <div key={item.id} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                      <div style={{ width: 44, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: col.faint, fontVariantNumeric: 'tabular-nums' }}>{item.hora}</span>
-                      </div>
-                      <div style={{ flexShrink: 0, width: 10, height: 10, borderRadius: '50%', background: c, border: `2px solid ${col.bg}`, marginTop: 4, position: 'relative', zIndex: 1 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: col.text, marginBottom: 2 }}>{item.titulo}</div>
-                        {item.descripcion && <div style={{ fontSize: 12, color: col.faint, lineHeight: 1.5, marginBottom: 4 }}>{item.descripcion}</div>}
-                        <div style={{ display: 'inline-block', fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${c}18`, color: c, fontWeight: 600 }}>{item.categoria}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </Block>
-        )}
-
-        {/* Estado de cuenta — solo si hay algo aprobado o pagos */}
-        {(hasApproved || hasPayments) && (
-          <Block label="Estado de cuenta" icon="💳">
-            <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: col.goldBg, borderBottom: `1px solid ${col.goldBorder}` }}>
-                <span style={{ fontSize: 13 }}>🔒</span>
-                <span style={{ fontSize: 11, color: '#A0906A' }}>Esta información es confidencial y está destinada exclusivamente a vos.</span>
-              </div>
-              {approvedTotal > 0 && (
-                <div style={{ padding: '16px 18px', borderBottom: `1px solid ${col.border}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: col.faint }}>Progreso de pago</span>
-                    <span style={{ fontSize: 12, color: col.green, fontWeight: 600 }}>{fmt(totalPaid)} de {fmt(approvedTotal)}</span>
-                  </div>
-                  <div style={{ background: col.border, borderRadius: 99, height: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${col.green}, #16a34a)`, width: `${Math.min((totalPaid/approvedTotal)*100, 100)}%`, transition: 'width 1.2s ease' }} />
-                  </div>
-                </div>
-              )}
-              {hasPayments
-                ? payments.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 18px', borderBottom: i < payments.length - 1 ? `1px solid ${col.border}` : 'none' }}>
-                    <div>
-                      <div style={{ fontSize: 13, color: col.text }}>{p.note || 'Pago recibido'}</div>
-                      <div style={{ fontSize: 11, color: col.faint, marginTop: 2 }}>{fmtShortDate(p.date)}</div>
-                    </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: col.green }}>{fmt(p.amount)}</span>
-                  </div>
-                ))
-                : <div style={{ padding: '14px 18px', fontSize: 13, color: col.faint }}>Sin pagos registrados aún.</div>
-              }
-              {approvedTotal > 0 && (
-                <div style={{ borderTop: `1px solid ${col.border}`, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, color: col.muted, fontWeight: 600 }}>Saldo pendiente</span>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: balance > 0 ? col.red : col.green }}>{fmt(balance)}</span>
-                </div>
-              )}
-            </div>
-          </Block>
-        )}
-
         {/* Contacto */}
-        <Block label="Contacto" icon="📞">
+        <Block label="Contacto" icon={Phone}>
           <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden' }}>
             {[
               { label: 'WhatsApp', value: '+54 9 11 0000-0000', href: 'https://wa.me/5491100000000' },
@@ -571,6 +526,102 @@ export default function ClientPortal() {
         </div>
 
       </div>}
+
+      {/* Tab Estado de cuenta */}
+      {activeTab === 'estado_cuenta' && (
+        <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 100px' }}>
+          <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px', background: col.goldBg, borderBottom: `1px solid ${col.goldBorder}` }}>
+              <Lock size={13} style={{ color: '#A0906A', flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: '#A0906A' }}>Esta información es confidencial y está destinada exclusivamente a vos.</span>
+            </div>
+            {approvedTotal > 0 && (
+              <div style={{ padding: '20px 18px', borderBottom: `1px solid ${col.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, color: col.muted }}>Progreso de pago</span>
+                  <span style={{ fontSize: 13, color: col.green, fontWeight: 700 }}>{fmt(totalPaid)} de {fmt(approvedTotal)}</span>
+                </div>
+                <div style={{ background: col.border, borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                  {(() => {
+                    const pct = Math.min((totalPaid / approvedTotal) * 100, 100)
+                    const barColor = pct < 30
+                      ? `linear-gradient(90deg, #ef4444, #dc2626)`
+                      : pct < 70
+                      ? `linear-gradient(90deg, #f59e0b, #d97706)`
+                      : `linear-gradient(90deg, #22c55e, #16a34a)`
+                    return <div style={{ height: '100%', borderRadius: 99, background: barColor, width: `${pct}%`, transition: 'width 1.2s ease, background 0.8s ease' }} />
+                  })()}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                  {(() => {
+                    const pct = Math.min((totalPaid/approvedTotal)*100, 100)
+                    const pctColor = pct < 30 ? col.red : pct < 70 ? '#f59e0b' : col.green
+                    return <span style={{ fontSize: 11, color: pctColor, fontWeight: 600 }}>{Math.round(pct)}% abonado</span>
+                  })()}
+                  <span style={{ fontSize: 11, color: col.faint }}>Saldo: <strong style={{ color: balance > 0 ? col.red : col.green }}>{fmt(balance)}</strong></span>
+                </div>
+              </div>
+            )}
+            <div>
+              <div style={{ padding: '12px 18px', fontSize: 10, fontWeight: 800, color: col.faint, textTransform: 'uppercase', letterSpacing: 1.5, borderBottom: `1px solid ${col.border}` }}>
+                Pagos registrados
+              </div>
+              {hasPayments
+                ? payments.map((p, i) => (
+                  <div key={p.id ?? `payment-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: i < payments.length - 1 ? `1px solid ${col.border}` : 'none' }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: col.text, fontWeight: 500 }}>{p.note || 'Pago recibido'}</div>
+                      <div style={{ fontSize: 11, color: col.faint, marginTop: 3 }}>{fmtShortDate(p.date)}</div>
+                    </div>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: col.green }}>{fmt(p.amount)}</span>
+                  </div>
+                ))
+                : <div style={{ padding: '24px 18px', fontSize: 13, color: col.faint, textAlign: 'center' }}>Sin pagos registrados aún.</div>
+              }
+            </div>
+            {approvedTotal > 0 && (
+              <div style={{ borderTop: `1px solid ${col.border}`, padding: '16px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: balance > 0 ? 'rgba(239,68,68,0.04)' : 'rgba(34,197,94,0.04)' }}>
+                <span style={{ fontSize: 14, color: col.muted, fontWeight: 600 }}>Saldo pendiente</span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: balance > 0 ? col.red : col.green }}>{fmt(balance)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab Cronograma */}
+      {activeTab === 'cronograma' && (
+        <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 100px' }}>
+          {hasSchedule ? (
+            <div style={{ position: 'relative', paddingLeft: 8 }}>
+              <div style={{ position: 'absolute', left: 46, top: 6, bottom: 6, width: 1, background: col.border }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {schedule.map(item => {
+                  const catColors = { Preparación: '#3b82f6', Recepción: col.green, Gastronomía: '#f59e0b', Entretenimiento: '#ec4899', Protocolo: '#8b5cf6', Cierre: col.faint }
+                  const c = catColors[item.categoria] || col.faint
+                  return (
+                    <div key={item.id} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                      <div style={{ width: 44, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: col.faint, fontVariantNumeric: 'tabular-nums' }}>{item.hora}</span>
+                      </div>
+                      <div style={{ flexShrink: 0, width: 10, height: 10, borderRadius: '50%', background: c, border: `2px solid ${col.bg}`, marginTop: 4, position: 'relative', zIndex: 1 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: col.text, marginBottom: 3 }}>{item.titulo}</div>
+                        {item.descripcion && <div style={{ fontSize: 12, color: col.faint, lineHeight: 1.6, marginBottom: 6 }}>{item.descripcion}</div>}
+                        <div style={{ display: 'inline-block', fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${c}18`, color: c, fontWeight: 700 }}>{item.categoria}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: col.faint, fontSize: 13 }}>
+              El cronograma del evento aún no está disponible.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab Presupuesto */}
       {event.budgetPublished && activeTab === 'presupuesto' && (
@@ -603,7 +654,7 @@ export default function ClientPortal() {
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {chatMessages.map((m, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div key={`msg-${i}`} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{ padding: '9px 13px', borderRadius: m.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px', background: m.role === 'user' ? `linear-gradient(135deg, ${col.gold}, ${col.goldLight})` : col.bg, color: m.role === 'user' ? '#09090F' : col.text, fontSize: 13, maxWidth: '85%', lineHeight: 1.5, border: m.role === 'user' ? 'none' : `1px solid ${col.border}` }}>
                     {m.text}
                   </div>
@@ -621,8 +672,44 @@ export default function ClientPortal() {
             </div>
           </div>
         )}
-        <button onClick={() => setChatOpen(o => !o)} style={{ width: 52, height: 52, borderRadius: '50%', background: chatOpen ? col.surface : `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`, border: chatOpen ? `1px solid ${col.border}` : 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, transition: 'all 0.2s' }}>
-          {chatOpen ? <span style={{ fontSize: 16, color: col.faint }}>✕</span> : '🤖'}
+        {!chatOpen && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeInTooltip 0.5s cubic-bezier(0.34,1.56,0.64,1)', position: 'absolute', right: 68, bottom: '50%', transform: 'translateY(50%)', pointerEvents: 'none' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e8e0d0', borderRadius: 12, padding: '9px 16px', fontSize: 12.5, color: '#4a3f2f', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.12)', whiteSpace: 'nowrap', position: 'relative', lineHeight: 1.4 }}>
+              ¿Tenés dudas? ¡Hablemos! 👋
+              <div style={{ position: 'absolute', right: -7, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '7px solid #ffffff', filter: 'drop-shadow(1px 0 0 #e8e0d0)' }} />
+            </div>
+          </div>
+        )}
+        <button onClick={() => setChatOpen(o => !o)}
+          style={{ width: 58, height: 58, borderRadius: '50%', background: chatOpen ? col.surface : `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`, border: chatOpen ? `1px solid ${col.border}` : 'none', cursor: 'pointer', boxShadow: chatOpen ? 'none' : '0 4px 24px rgba(184,151,90,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.25s', flexShrink: 0, animation: chatOpen ? 'none' : 'floatBot 3s ease-in-out infinite', position: 'relative' }}>
+          {chatOpen
+            ? <span style={{ fontSize: 16, color: col.faint, fontWeight: 300 }}>✕</span>
+            : (
+              <svg width="34" height="34" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ animation: 'wiggle 4s ease-in-out infinite 2s' }}>
+                {/* Cabeza */}
+                <ellipse cx="16" cy="13" rx="9" ry="9" fill="#09090F" />
+                {/* Brillo de la cabeza */}
+                <ellipse cx="13" cy="9.5" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.12)" transform="rotate(-20 13 9.5)" />
+                {/* Ojos con parpadeo */}
+                <ellipse cx="12.5" cy="12.5" rx="2" ry="2.2" fill="white" style={{ animation: 'eyeBlink 4s ease-in-out infinite' }} />
+                <ellipse cx="19.5" cy="12.5" rx="2" ry="2.2" fill="white" style={{ animation: 'eyeBlink 4s ease-in-out infinite 0.05s' }} />
+                {/* Pupilas */}
+                <circle cx="13" cy="13" r="1.1" fill="#09090F" />
+                <circle cx="20" cy="13" r="1.1" fill="#09090F" />
+                {/* Brillito en los ojos */}
+                <circle cx="13.6" cy="12.3" r="0.4" fill="white" />
+                <circle cx="20.6" cy="12.3" r="0.4" fill="white" />
+                {/* Sonrisa */}
+                <path d="M12.5 16.5 Q16 19.5 19.5 16.5" stroke="#09090F" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+                {/* Cuello */}
+                <rect x="14" y="21.5" width="4" height="2.5" rx="1" fill="#09090F" />
+                {/* Cuerpo */}
+                <ellipse cx="16" cy="26.5" rx="6" ry="4" fill="#09090F" />
+                {/* Corbatín dorado */}
+                <path d="M14.5 24 L16 25.5 L17.5 24 L17 22.5 L15 22.5 Z" fill={col.gold} />
+              </svg>
+            )
+          }
         </button>
       </div>
 
