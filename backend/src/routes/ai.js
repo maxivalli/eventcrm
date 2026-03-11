@@ -367,3 +367,168 @@ Usá un tono profesional pero directo. Formato con emojis para facilitar la lect
     res.status(502).json({ error: 'No se pudo generar el briefing' })
   }
 })
+
+// ── Alerta de inconsistencias ───────────────────────────────────────────────
+router.post('/event-alerts', async (req, res) => {
+  const { event, quotes, payments, spPayments } = req.body
+  if (!event) return res.status(400).json({ error: 'Datos del evento requeridos' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+  const fmtDate = (str) => str ? new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Sin fecha'
+
+  const today = new Date()
+  const eventDate = event.date ? new Date(event.date) : null
+  const daysUntil = eventDate ? Math.ceil((eventDate - today) / 86400000) : null
+
+  const totalCotizado = (quotes || []).reduce((a, q) => {
+    const items = (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+    const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
+    return a + items + catering
+  }, 0)
+  const totalAprobado = (quotes || []).filter(q => q.status === 'Aprobado').reduce((a, q) => {
+    const items = (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+    const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
+    return a + items + catering
+  }, 0)
+  const totalCobrado = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const saldoPendiente = totalAprobado - totalCobrado
+  const totalProveedores = (spPayments || []).reduce((a, p) => a + p.amount, 0)
+  const cotizacionesPendientes = (quotes || []).filter(q => q.status === 'Pendiente').length
+  const tieneCatering = (quotes || []).some(q => q.kind === 'Catering')
+  const tieneCateringAprobado = (quotes || []).some(q => q.kind === 'Catering' && q.status === 'Aprobado')
+  const margen = totalAprobado - totalProveedores
+
+  const prompt = `Sos un coordinador de eventos senior de Haus, empresa de organización de eventos en Argentina. Analizá los datos de este evento y detectá inconsistencias, riesgos o alertas importantes.
+
+DATOS DEL EVENTO:
+- Nombre: ${event.name}
+- Cliente: ${event.client?.name || 'N/A'}
+- Estado: ${event.status}
+- Fecha: ${fmtDate(event.date)}
+- Días hasta el evento: ${daysUntil !== null ? daysUntil : 'desconocido'}
+- Invitados: ${event.guests || 'No especificado'}
+- Venue: ${event.venue || 'No especificado'}
+- Tipo: ${event.type || 'No especificado'}
+
+COTIZACIONES:
+- Total cotizaciones: ${(quotes || []).length}
+- Cotizaciones pendientes de aprobación: ${cotizacionesPendientes}
+- Total cotizado: ${fmtARS(totalCotizado)}
+- Total aprobado: ${fmtARS(totalAprobado)}
+- Tiene catering: ${tieneCatering ? 'Sí' : 'No'}
+- Catering aprobado: ${tieneCateringAprobado ? 'Sí' : 'No'}
+
+FINANZAS:
+- Total cobrado al cliente: ${fmtARS(totalCobrado)}
+- Saldo pendiente del cliente: ${fmtARS(saldoPendiente)}
+- Total comprometido con proveedores: ${fmtARS(totalProveedores)}
+- Margen bruto estimado: ${fmtARS(margen)}
+
+Detectá alertas reales y relevantes. No inventes problemas que no existen. Si el evento está en buen estado, devolvé pocas alertas o ninguna.
+
+Ejemplos de alertas válidas:
+- Evento confirmado pero sin catering aprobado (si tiene invitados)
+- Saldo del cliente muy alto faltando pocos días
+- Margen negativo (proveedores > ingresos aprobados)
+- Evento en pocos días sin cotizaciones aprobadas
+- Cotizaciones pendientes de aprobación que bloquean la producción
+- Sin venue especificado para evento próximo
+- Muchos invitados sin catering contratado
+
+Respondé ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown:
+[
+  { "nivel": "alto|medio|bajo", "categoria": "Finanzas|Producción|Cliente|Logística", "mensaje": "Descripción clara y concisa de la alerta (máximo 2 oraciones)" }
+]
+
+Si no hay alertas relevantes, devolvé un array vacío: []`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] }),
+    })
+    const data = await response.json()
+    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+    const text = data.content?.map(b => b.text || '').join('') || ''
+    const clean = text.replace(/```json|```/g, '').trim()
+    const alerts = JSON.parse(clean)
+    if (!Array.isArray(alerts)) throw new Error('Respuesta inválida')
+    res.json({ alerts })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo analizar el evento' })
+  }
+})
+
+// ── Propuesta comercial narrativa ───────────────────────────────────────────
+router.post('/proposal', async (req, res) => {
+  const { event, quotes, payments } = req.body
+  if (!event) return res.status(400).json({ error: 'Datos del evento requeridos' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+  const fmtDate = (str) => str ? new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'A confirmar'
+
+  const serviciosText = (quotes || []).map(q => {
+    const items = (q.items || []).reduce((a, i) => a + i.quantity * i.unitPrice, 0)
+    const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
+    const total = items + catering
+    const detalle = q.kind === 'Catering'
+      ? `${q.covers} cubiertos a ${fmtARS(q.pricePerCover)} c/u${items > 0 ? ` + extras (${fmtARS(items)})` : ''}`
+      : (q.items || []).map(i => `${i.description} (x${i.quantity})`).join(', ')
+    return `- ${q.kind}: ${fmtARS(total)}${detalle ? ` — ${detalle}` : ''}`
+  }).join('\n')
+
+  const totalAprobado = (quotes || []).filter(q => q.status === 'Aprobado').reduce((a, q) => {
+    return a + (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0) + (q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0)
+  }, 0)
+  const totalCobrado = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const saldoPendiente = totalAprobado - totalCobrado
+
+  const prompt = `Sos un asesor comercial de Haus, empresa de organización y producción de eventos sociales en Buenos Aires, Argentina. Redactá una propuesta comercial narrativa y profesional para el siguiente evento.
+
+DATOS DEL EVENTO:
+- Evento: ${event.name}
+- Cliente: ${event.client?.name || 'Cliente'}
+- Tipo de evento: ${event.type || 'Social'}
+- Fecha: ${fmtDate(event.date)}
+- Hora: ${event.time || 'A confirmar'}
+- Lugar: ${event.venue || 'A confirmar'}
+- Invitados: ${event.guests || 'A confirmar'}
+
+SERVICIOS Y PRECIOS:
+${serviciosText || 'Sin servicios cotizados aún'}
+
+RESUMEN FINANCIERO:
+- Total de la propuesta: ${fmtARS(totalAprobado)}
+- Señal abonada: ${fmtARS(totalCobrado)}
+- Saldo pendiente: ${fmtARS(saldoPendiente)}
+
+Redactá una propuesta en español, tono cálido y profesional, en formato de carta. Incluí:
+1. Encabezado con fecha actual y datos del cliente
+2. Párrafo de introducción presentando a Haus y la propuesta
+3. Descripción de los servicios incluidos (narrativa, no solo lista de precios)
+4. Condiciones de pago y próximos pasos
+5. Cierre cordial con firma de Haus
+
+Usá un lenguaje elegante, apropiado para eventos sociales de alta gama. NO uses emojis. El texto debe ser apto para enviar por email o imprimir.`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] }),
+    })
+    const data = await response.json()
+    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+    const proposal = data.content?.map(b => b.text || '').join('') || ''
+    res.json({ proposal })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo generar la propuesta' })
+  }
+})

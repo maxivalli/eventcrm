@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip, ClipboardList, Link2 } from "lucide-react";
+import { MessageCircle, Paperclip, ClipboardList, Link2, AlertCircle, FileText } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -503,6 +503,13 @@ function EventDetail({ event, onClose, onEdit }) {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingCopied, setBriefingCopied]   = useState(false);
   const [showBriefing, setShowBriefing] = useState(false);
+  const [alerts, setAlerts]             = useState(null);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+  const [showAlerts, setShowAlerts]     = useState(false);
+  const [proposal, setProposal]         = useState(null);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [proposalCopied, setProposalCopied]   = useState(false);
+  const [showProposal, setShowProposal] = useState(false);
 
   const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : null;
 
@@ -533,6 +540,33 @@ function EventDetail({ event, onClose, onEdit }) {
   const handleCopyBriefing = () => {
     navigator.clipboard.writeText(briefing)
     setBriefingCopied(true); setTimeout(() => setBriefingCopied(false), 2000)
+  }
+
+  const handleAlerts = async () => {
+    setShowAlerts(true); if (alerts) return
+    setAlertsLoading(true)
+    try {
+      const res = await api.post('/api/ai/event-alerts', {
+        event: { ...event, client: event.client },
+        quotes, payments, spPayments,
+      })
+      setAlerts(res.data.alerts)
+    } catch { setAlerts([]) }
+    finally { setAlertsLoading(false) }
+  }
+
+  const handleProposal = async () => {
+    setShowProposal(true); if (proposal) return
+    setProposalLoading(true)
+    try {
+      const res = await api.post('/api/ai/proposal', { event: { ...event, client: event.client }, quotes, payments })
+      setProposal(res.data.proposal)
+    } catch { setProposal('No se pudo generar la propuesta. Intentá de nuevo.') }
+    finally { setProposalLoading(false) }
+  }
+  const handleCopyProposal = () => {
+    navigator.clipboard.writeText(proposal)
+    setProposalCopied(true); setTimeout(() => setProposalCopied(false), 2000)
   }
 
   useEffect(() => {
@@ -626,6 +660,12 @@ function EventDetail({ event, onClose, onEdit }) {
                 {portalLoading ? 'Generando...' : <><Link2 size={13} /> Portal</>}
               </button>
             )}
+            <button onClick={handleAlerts} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              <AlertCircle size={13} /> Alertas
+            </button>
+            <button onClick={handleProposal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+              <FileText size={13} /> Propuesta
+            </button>
             <button onClick={handleBriefing} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
               <ClipboardList size={13} /> Briefing
             </button>
@@ -675,6 +715,79 @@ function EventDetail({ event, onClose, onEdit }) {
                 {briefingLoading
                   ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Generando briefing con IA...</div>
                   : <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.7, color: 'var(--text-primary)' }}>{briefing}</pre>
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Modal Alertas ── */}
+        {showAlerts && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => e.target === e.currentTarget && setShowAlerts(false)}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}><AlertCircle size={15} /> Alertas de inconsistencias</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {alerts && !alertsLoading && (
+                    <button onClick={() => { setAlerts(null); handleAlerts() }} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Reanalizar</button>
+                  )}
+                  <button onClick={() => setShowAlerts(false)} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+                {alertsLoading ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Analizando el evento con IA...</div>
+                ) : !alerts || alerts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#22c55e', marginBottom: 6 }}>Sin inconsistencias detectadas</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>El evento parece estar en orden.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {alerts.map((a, i) => {
+                      const nivelColor = a.nivel === 'alto' ? '#ef4444' : a.nivel === 'medio' ? '#f59e0b' : '#3b82f6'
+                      return (
+                        <div key={i} style={{ background: `${nivelColor}0d`, border: `1px solid ${nivelColor}30`, borderLeft: `3px solid ${nivelColor}`, borderRadius: 10, padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: nivelColor }}>{a.nivel}</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-faint)', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 20, padding: '1px 8px' }}>{a.categoria}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{a.mensaje}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Modal Propuesta ── */}
+        {showProposal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+            onClick={e => e.target === e.currentTarget && setShowProposal(false)}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}><FileText size={15} /> Propuesta comercial</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {proposal && !proposalLoading && (
+                    <>
+                      <button onClick={handleCopyProposal} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: proposalCopied ? 'rgba(34,197,94,0.1)' : 'transparent', color: proposalCopied ? '#22c55e' : 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                        {proposalCopied ? '✓ Copiado' : 'Copiar'}
+                      </button>
+                      <button onClick={() => { setProposal(null); handleProposal() }} style={{ padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>Regenerar</button>
+                    </>
+                  )}
+                  <button onClick={() => setShowProposal(false)} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                {proposalLoading
+                  ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-label)', fontSize: 13 }}>Generando propuesta con IA...</div>
+                  : <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.8, color: 'var(--text-primary)' }}>{proposal}</pre>
                 }
               </div>
             </div>
