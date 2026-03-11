@@ -489,6 +489,7 @@ function QuoteDetailCard({ quote, calcTotal, SECCION_COLORS, fmt, muted = false 
 
 function EventDetail({ event, onClose, onEdit }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [tab, setTab]             = useState('info');
   const [quotes, setQuotes]       = useState([]);
   const [payments, setPayments]   = useState([]);
@@ -516,6 +517,9 @@ function EventDetail({ event, onClose, onEdit }) {
   const [checkinCopied, setCheckinCopied] = useState(false);
   const [guestForm, setGuestForm]       = useState({ name: '', tipo: 'Mayor' });
   const [guestAdding, setGuestAdding]   = useState(false);
+  const [importParsed, setImportParsed] = useState(null);   // [{ name, tipo }] para preview
+  const [importLoading, setImportLoading] = useState(false);
+  const [importConfirming, setImportConfirming] = useState(false);
 
   const portalUrl   = portalToken   ? `${window.location.origin}/portal/${portalToken}`   : null;
   const checkinUrl  = checkinToken  ? `${window.location.origin}/checkin/${checkinToken}`  : null;
@@ -613,6 +617,29 @@ function EventDetail({ event, onClose, onEdit }) {
   const handleCopyCheckin = () => {
     navigator.clipboard.writeText(checkinUrl)
     setCheckinCopied(true); setTimeout(() => setCheckinCopied(false), 2000)
+  }
+
+  const handleImportFile = async (file) => {
+    if (!file) return
+    setImportLoading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await api.post('/api/event-guests/parse', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+      setImportParsed(res.data.guests)
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'No se pudo leer el archivo')
+    } finally { setImportLoading(false) }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!importParsed?.length) return
+    setImportConfirming(true)
+    try {
+      const res = await api.post('/api/event-guests/bulk', { eventId: event.id, guests: importParsed })
+      setGuests(res.data)
+      setImportParsed(null)
+    } finally { setImportConfirming(false) }
   }
 
   useEffect(() => {
@@ -1101,25 +1128,76 @@ function EventDetail({ event, onClose, onEdit }) {
                 </div>
 
                 {/* Formulario agregar invitado */}
-                <form onSubmit={handleAddGuest} style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 8 }}>
-                  <input
-                    value={guestForm.name}
-                    onChange={e => setGuestForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="Nombre completo del invitado..."
-                    style={{ flex: 1, background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
-                  />
-                  <select
-                    value={guestForm.tipo}
-                    onChange={e => setGuestForm(f => ({ ...f, tipo: e.target.value }))}
-                    style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
-                  >
-                    <option value="Mayor">Mayor</option>
-                    <option value="Menor">Menor</option>
-                  </select>
-                  <button type="submit" disabled={guestAdding || !guestForm.name.trim()} style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: guestAdding || !guestForm.name.trim() ? 0.5 : 1 }}>
-                    + Agregar
-                  </button>
-                </form>
+                <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <form onSubmit={handleAddGuest} style={{ display: 'flex', gap: 8, flex: 1 }}>
+                    <input
+                      value={guestForm.name}
+                      onChange={e => setGuestForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Nombre completo del invitado..."
+                      style={{ flex: 1, background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+                    />
+                    <select
+                      value={guestForm.tipo}
+                      onChange={e => setGuestForm(f => ({ ...f, tipo: e.target.value }))}
+                      style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+                    >
+                      <option value="Mayor">Mayor</option>
+                      <option value="Menor">Menor</option>
+                    </select>
+                    <button type="submit" disabled={guestAdding || !guestForm.name.trim()} style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: guestAdding || !guestForm.name.trim() ? 0.5 : 1 }}>
+                      + Agregar
+                    </button>
+                  </form>
+                  {/* Importar desde archivo */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-sunken)', color: importLoading ? 'var(--text-faint)' : 'var(--text-muted)', fontSize: 13, cursor: importLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {importLoading ? 'Leyendo...' : '↑ Importar'}
+                    <input
+                      type="file"
+                      accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      style={{ display: 'none' }}
+                      disabled={importLoading}
+                      onChange={e => { handleImportFile(e.target.files[0]); e.target.value = '' }}
+                    />
+                  </label>
+                </div>
+
+                {/* Modal preview importación */}
+                {importParsed && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+                    onClick={e => e.target === e.currentTarget && setImportParsed(null)}>
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '75vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Previsualización · {importParsed.length} invitados</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>Revisá la lista antes de confirmar. Podés editar tipo abajo.</div>
+                        </div>
+                        <button onClick={() => setImportParsed(null)} style={{ padding: '5px 9px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
+                      </div>
+                      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+                        {importParsed.map((g, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 20px', borderBottom: '1px solid var(--border-row)' }}>
+                            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{g.name}</span>
+                            <select
+                              value={g.tipo}
+                              onChange={e => setImportParsed(prev => prev.map((x, j) => j === i ? { ...x, tipo: e.target.value } : x))}
+                              style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', color: g.tipo === 'Menor' ? '#8b5cf6' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
+                            >
+                              <option value="Mayor">Mayor</option>
+                              <option value="Menor">Menor</option>
+                            </select>
+                            <button onClick={() => setImportParsed(prev => prev.filter((_, j) => j !== i))} style={{ padding: '3px 7px', border: 'none', background: 'transparent', color: 'var(--text-faint)', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button onClick={() => setImportParsed(null)} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+                        <button onClick={handleConfirmImport} disabled={importConfirming || importParsed.length === 0} style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: importConfirming ? 0.6 : 1 }}>
+                          {importConfirming ? 'Importando...' : `Confirmar ${importParsed.length} invitados`}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Lista */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '8px 28px 24px' }}>

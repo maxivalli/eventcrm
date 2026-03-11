@@ -1,6 +1,34 @@
 const { Router } = require('express')
 const { randomUUID } = require('crypto')
+const multer = require('multer')
+const mammoth = require('mammoth')
+const pdfParse = require('pdf-parse')
 const prisma = require('../prisma')
+
+// Multer en memoria para extracción de texto (no sube a Cloudinary)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
+
+// Extrae nombres y tipo (Mayor/Menor) de texto plano línea por línea
+function parseGuestsFromText(text) {
+  const MENOR_RE = /\bmen[oa]r\b/i
+  return text
+    .split(/\r?\n/)
+    .map(line => {
+      // Quitar numeración, bullets, guiones al inicio: "1.", "-", "*", "•"
+      let raw = line.replace(/^[\s\d\.\-\*\•\)]+/, '').trim()
+      if (!raw || raw.length < 2) return null
+      const tipo = MENOR_RE.test(raw) ? 'Menor' : 'Mayor'
+      // Eliminar la palabra "menor/menora" y caracteres sobrantes (paréntesis, comas, guiones)
+      const name = raw
+        .replace(MENOR_RE, '')
+        .replace(/[\(\)\[\],\-–—]+/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      if (!name || name.length < 2) return null
+      return { name, tipo }
+    })
+    .filter(Boolean)
+}
 
 const publicRouter = Router()
 const protectedRouter = Router()
@@ -118,6 +146,60 @@ protectedRouter.post('/events/:id/checkin-token', async (req, res) => {
     res.json(event)
   } catch (e) {
     res.status(500).json({ error: 'Error al generar token' })
+  }
+})
+
+// POST /api/event-guests/parse — extrae nombres de .docx o .pdf (sin guardar)
+protectedRouter.post('/event-guests/parse', upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' })
+
+  const { mimetype, buffer, originalname } = req.file
+  const ext = originalname.split('.').pop().toLowerCase()
+
+  try {
+    let text = ''
+
+    if (ext === 'docx' || mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+    } else if (ext === 'pdf' || mimetype === 'application/pdf') {
+      const result = await pdfParse(buffer)
+      text = result.text
+    } else {
+      return res.status(400).json({ error: 'Solo se aceptan archivos .docx o .pdf' })
+    }
+
+    const guests = parseGuestsFromText(text)
+    if (guests.length === 0) return res.status(422).json({ error: 'No se encontraron nombres en el archivo' })
+
+    res.json({ guests })
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo leer el archivo' })
+  }
+})
+
+// POST /api/event-guests/bulk — inserta múltiples invitados de una vez
+protectedRouter.post('/event-guests/bulk', async (req, res) => {
+  const { eventId, guests } = req.body
+  if (!eventId || !Array.isArray(guests) || guests.length === 0)
+    return res.status(400).json({ error: 'eventId y guests[] son requeridos' })
+
+  try {
+    await prisma.eventGuest.createMany({
+      data: guests.map(g => ({
+        eventId: Number(eventId),
+        name: g.name.trim(),
+        tipo: g.tipo || 'Mayor',
+      })),
+      skipDuplicates: false,
+    })
+    const all = await prisma.eventGuest.findMany({
+      where: { eventId: Number(eventId) },
+      orderBy: { name: 'asc' },
+    })
+    res.json(all)
+  } catch (e) {
+    res.status(500).json({ error: 'Error al importar invitados' })
   }
 })
 
