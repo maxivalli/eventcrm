@@ -16,8 +16,8 @@ import Recetario from "./pages/Recetario";
 import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
 import ClientPortal from "./pages/ClientPortal";
+import CheckinPortal from "./pages/CheckinPortal";
 import PortalQueries from "./pages/PortalQueries";
-import Invitations from "./pages/Invitations";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -84,13 +84,15 @@ function AppRoutes() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const isPortal = location.pathname.startsWith('/portal/')
-  if (isMobile && !isPortal) return <MobileBlock />;
+  const isPortal   = location.pathname.startsWith('/portal/')
+  const isCheckin  = location.pathname.startsWith('/checkin/')
+  if (isMobile && !isPortal && !isCheckin) return <MobileBlock />;
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/portal/:token" element={<ClientPortal />} />
+      <Route path="/portal/:token"  element={<ClientPortal />} />
+      <Route path="/checkin/:token" element={<CheckinPortal />} />
       <Route
         path="/"
         element={
@@ -114,7 +116,6 @@ function AppRoutes() {
         <Route path="contacts" element={<Contacts />} />
         <Route path="whatsapp" element={<WhatsApp />} />
         <Route path="portal-queries" element={<PortalQueries />} />
-        <Route path="invitations"    element={<Invitations />} />
       </Route>
     </Routes>
   );

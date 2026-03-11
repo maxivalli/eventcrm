@@ -14,7 +14,6 @@ router.get('/templates/preview',   ctrl.previewTemplate)
 // Envío
 router.post('/send/event/:eventId',        ctrl.sendToEvent)
 router.post('/send/client/:clientId',      ctrl.sendToClient)
-router.post('/send/invitation/:eventId',   ctrl.sendInvitation)
 
 // Cron manual
 router.post('/jobs/:jobId/run', ctrl.triggerJob)

@@ -510,8 +510,15 @@ function EventDetail({ event, onClose, onEdit }) {
   const [proposalLoading, setProposalLoading] = useState(false);
   const [proposalCopied, setProposalCopied]   = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [guests, setGuests]             = useState([]);
+  const [guestsLoaded, setGuestsLoaded] = useState(false);
+  const [checkinToken, setCheckinToken] = useState(event.checkinToken || null);
+  const [checkinCopied, setCheckinCopied] = useState(false);
+  const [guestForm, setGuestForm]       = useState({ name: '', tipo: 'Mayor' });
+  const [guestAdding, setGuestAdding]   = useState(false);
 
-  const portalUrl = portalToken ? `${window.location.origin}/portal/${portalToken}` : null;
+  const portalUrl   = portalToken   ? `${window.location.origin}/portal/${portalToken}`   : null;
+  const checkinUrl  = checkinToken  ? `${window.location.origin}/checkin/${checkinToken}`  : null;
 
   const handleGeneratePortal = async () => {
     setPortalLoading(true)
@@ -569,6 +576,45 @@ function EventDetail({ event, onClose, onEdit }) {
     setProposalCopied(true); setTimeout(() => setProposalCopied(false), 2000)
   }
 
+  // ── Invitados ──────────────────────────────────────────────────────────────
+  const loadGuests = async () => {
+    if (guestsLoaded) return
+    const res = await api.get(`/api/event-guests?eventId=${event.id}`)
+    setGuests(res.data)
+    setGuestsLoaded(true)
+  }
+
+  const handleAddGuest = async (e) => {
+    e.preventDefault()
+    if (!guestForm.name.trim()) return
+    setGuestAdding(true)
+    try {
+      const res = await api.post('/api/event-guests', { eventId: event.id, name: guestForm.name, tipo: guestForm.tipo })
+      setGuests(prev => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)))
+      setGuestForm({ name: '', tipo: 'Mayor' })
+    } finally { setGuestAdding(false) }
+  }
+
+  const handleTogglePagado = async (guest) => {
+    const res = await api.put(`/api/event-guests/${guest.id}`, { pagado: !guest.pagado })
+    setGuests(prev => prev.map(g => g.id === guest.id ? res.data : g))
+  }
+
+  const handleDeleteGuest = async (id) => {
+    await api.delete(`/api/event-guests/${id}`)
+    setGuests(prev => prev.filter(g => g.id !== id))
+  }
+
+  const handleGenerateCheckin = async () => {
+    const res = await api.post(`/api/events/${event.id}/checkin-token`)
+    setCheckinToken(res.data.checkinToken)
+  }
+
+  const handleCopyCheckin = () => {
+    navigator.clipboard.writeText(checkinUrl)
+    setCheckinCopied(true); setTimeout(() => setCheckinCopied(false), 2000)
+  }
+
   useEffect(() => {
     Promise.all([
       api.get('/api/quotes'),
@@ -612,9 +658,10 @@ function EventDetail({ event, onClose, onEdit }) {
   const cateringConfirmed = quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado');
 
   const TABS = [
-    { id: 'info',      label: 'Info',      icon: '📋' },
-    { id: 'servicios', label: 'Servicios', icon: '✦', badge: confirmedQuotes.length },
-    { id: 'finanzas',  label: 'Finanzas',  icon: '💳' },
+    { id: 'info',       label: 'Info',       icon: '📋' },
+    { id: 'servicios',  label: 'Servicios',  icon: '✦', badge: confirmedQuotes.length },
+    { id: 'finanzas',   label: 'Finanzas',   icon: '💳' },
+    { id: 'invitados',  label: 'Invitados',  icon: '👥', badge: guests.length || null },
   ];
 
   return (
@@ -1006,6 +1053,103 @@ function EventDetail({ event, onClose, onEdit }) {
               </div>
             </div>
           )}
+
+          {/* ═══════════════ TAB: INVITADOS ═══════════════ */}
+          {tab === 'invitados' && (() => {
+            // Cargar invitados la primera vez que se abre el tab
+            if (!guestsLoaded) loadGuests()
+
+            const mayores  = guests.filter(g => g.tipo === 'Mayor')
+            const menores  = guests.filter(g => g.tipo === 'Menor')
+            const pagados  = guests.filter(g => g.pagado)
+            const ingresaron = guests.filter(g => g.ingreso)
+
+            return (
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Header con stats + check-in link */}
+                <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+                  {/* Stats */}
+                  <div style={{ display: 'flex', gap: 20 }}>
+                    {[
+                      { label: 'Total', value: guests.length, color: 'var(--gold)' },
+                      { label: 'Mayores', value: mayores.length, color: 'var(--text-primary)' },
+                      { label: 'Menores', value: menores.length, color: '#8b5cf6' },
+                      { label: 'Pagaron', value: pagados.length, color: '#22c55e' },
+                      { label: 'Ingresaron', value: ingresaron.length, color: '#3b82f6' },
+                    ].map(s => (
+                      <div key={s.label} style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 3, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Check-in link */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {checkinUrl ? (
+                      <>
+                        <button onClick={handleCopyCheckin} style={{ padding: '7px 12px', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 8, background: checkinCopied ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)', color: checkinCopied ? '#22c55e' : '#3b82f6', fontSize: 12, cursor: 'pointer' }}>
+                          {checkinCopied ? '✓ Copiado' : '🔗 Link portero'}
+                        </button>
+                        <button onClick={handleGenerateCheckin} title="Regenerar link" style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-faint)', fontSize: 11, cursor: 'pointer' }}>↺</button>
+                      </>
+                    ) : (
+                      <button onClick={handleGenerateCheckin} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                        Generar link portero
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Formulario agregar invitado */}
+                <form onSubmit={handleAddGuest} style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 8 }}>
+                  <input
+                    value={guestForm.name}
+                    onChange={e => setGuestForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="Nombre completo del invitado..."
+                    style={{ flex: 1, background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+                  />
+                  <select
+                    value={guestForm.tipo}
+                    onChange={e => setGuestForm(f => ({ ...f, tipo: e.target.value }))}
+                    style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
+                  >
+                    <option value="Mayor">Mayor</option>
+                    <option value="Menor">Menor</option>
+                  </select>
+                  <button type="submit" disabled={guestAdding || !guestForm.name.trim()} style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: guestAdding || !guestForm.name.trim() ? 0.5 : 1 }}>
+                    + Agregar
+                  </button>
+                </form>
+
+                {/* Lista */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 28px 24px' }}>
+                  {guests.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-faint)', fontSize: 13 }}>
+                      Sin invitados cargados aún
+                    </div>
+                  ) : guests.map(g => (
+                    <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-row)' }}>
+                      {/* Nombre + tipo */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{g.name}</span>
+                        <span style={{ marginLeft: 8, fontSize: 10, color: g.tipo === 'Menor' ? '#8b5cf6' : 'var(--text-faint)', background: g.tipo === 'Menor' ? 'rgba(139,92,246,0.1)' : 'var(--bg-sunken)', border: `1px solid ${g.tipo === 'Menor' ? 'rgba(139,92,246,0.3)' : 'var(--border)'}`, borderRadius: 20, padding: '1px 7px', fontWeight: 600 }}>{g.tipo}</span>
+                      </div>
+                      {/* Toggle pagado */}
+                      <button onClick={() => handleTogglePagado(g)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${g.pagado ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`, background: g.pagado ? 'rgba(34,197,94,0.12)' : 'var(--bg-sunken)', color: g.pagado ? '#22c55e' : 'var(--text-faint)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {g.pagado ? '✓ Pagó' : 'Sin pagar'}
+                      </button>
+                      {/* Ingresó (solo lectura en CRM) */}
+                      {g.ingreso && (
+                        <span style={{ fontSize: 10, color: '#3b82f6', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>Ingresó</span>
+                      )}
+                      {/* Eliminar */}
+                      <button onClick={() => handleDeleteGuest(g.id)} style={{ padding: '4px 8px', border: '1px solid transparent', borderRadius: 6, background: 'transparent', color: 'var(--text-faint)', fontSize: 12, cursor: 'pointer', opacity: 0.5 }} title="Eliminar">✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>

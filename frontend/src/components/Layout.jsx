@@ -35,7 +35,6 @@ const NAV_GROUPS = [
       { path: "/events",       label: "Eventos",        Icon: CalendarDays },
       { path: "/quotes",       label: "Cotizaciones",   Icon: FileText },
       { path: "/budget",       label: "Presupuestos",   Icon: PieChart },
-      { path: "/invitations",  label: "Invitaciones IA", Icon: Sparkles },
     ],
   },
   {

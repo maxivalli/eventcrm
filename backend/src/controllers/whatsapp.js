@@ -136,29 +136,6 @@ exports.previewTemplate = async (req, res) => {
   }
 }
 
-// ── Envío de imagen de invitación generada por IA ────────────────────────────
-
-exports.sendInvitation = async (req, res) => {
-  const { eventId } = req.params
-  const { imageUrl, caption } = req.body
-
-  try {
-    const event = await prisma.event.findUnique({
-      where: { id: Number(eventId) },
-      include: { client: true },
-    })
-    if (!event)             return res.status(404).json({ error: 'Evento no encontrado' })
-    if (!event.client?.phone) return res.status(400).json({ error: 'El cliente no tiene teléfono cargado' })
-    if (!imageUrl)          return res.status(400).json({ error: 'imageUrl requerida' })
-
-    const text = caption?.trim() || `🎉 ¡Estás invitado a ${event.name}!`
-    await evolution.sendImage(event.client.phone, imageUrl, text)
-    res.json({ ok: true, to: event.client.phone })
-  } catch (e) {
-    console.error('[sendInvitation error]', e.message)
-    res.status(500).json({ ok: false, error: e.message })
-  }
-}
 
 
 exports.triggerJob = async (req, res) => {
