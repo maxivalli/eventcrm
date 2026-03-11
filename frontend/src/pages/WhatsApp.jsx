@@ -34,7 +34,7 @@ const card = {
 
 const sectionTitle = {
   fontFamily: "'Playfair Display', serif",
-  fontSize: 16,
+  fontSize: 18,
   color: 'var(--gold)',
   marginBottom: 16,
 }
@@ -404,7 +404,7 @@ function SendTab() {
   const confirmedEvents = events.filter(e => ['Confirmado', 'confirmado'].includes(e.status))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600 }}>
       <div style={card}>
         <div style={sectionTitle}>Enviar mensaje a cliente</div>
 
@@ -500,12 +500,14 @@ export default function WhatsApp() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>
-          WhatsApp
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>
-          Mensajes automáticos y manuales vía Evolution API
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>
+            WhatsApp
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>
+            Mensajes automáticos y manuales vía Evolution API
+          </div>
         </div>
       </div>
 
