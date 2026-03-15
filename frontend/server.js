@@ -6,7 +6,7 @@ import { get as httpsGet } from 'https'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST      = path.join(__dirname, 'dist')
-const API       = (process.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
+const API       = (process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
 
 const BOT_UA = /whatsapp|facebookexternalhit|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|applebot|googlebot/i
 

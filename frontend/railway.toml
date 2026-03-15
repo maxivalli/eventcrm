@@ -2,4 +2,4 @@
 command = "npm run build"
 
 [deploy]
-startCommand = "npx serve -s dist -l $PORT --single"
+startCommand = "node server.js"
