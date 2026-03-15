@@ -9,23 +9,24 @@ const fmtDate = (str) =>
   new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 
 const col = {
-  bg:          '#09090F',
-  surface:     '#12121A',
-  border:      '#1A1A28',
-  border2:     '#22223A',
-  gold:        '#C9A84C',
-  goldLight:   '#E8C97A',
-  text:        '#E8E8F0',
-  muted:       '#A0A0B8',
-  faint:       '#606078',
-  green:       '#22c55e',
-  greenBg:     'rgba(34,197,94,0.1)',
-  greenBorder: 'rgba(34,197,94,0.25)',
-  red:         '#ef4444',
-  redBg:       'rgba(239,68,68,0.1)',
-  redBorder:   'rgba(239,68,68,0.25)',
-  purple:      '#8b5cf6',
-  purpleBg:    'rgba(139,92,246,0.12)',
+  bg:          '#FAF9F6',
+  surface:     '#FFFFFF',
+  border:      '#E4DDD0',
+  border2:     '#D4C9B8',
+  gold:        '#A6792D',
+  goldLight:   '#C49A45',
+  goldBg:      'rgba(166,121,45,0.1)',
+  text:        '#1C1A14',
+  muted:       '#6B6252',
+  faint:       '#9E9080',
+  green:       '#16a34a',
+  greenBg:     'rgba(22,163,74,0.08)',
+  greenBorder: 'rgba(22,163,74,0.2)',
+  red:         '#dc2626',
+  redBg:       'rgba(220,38,38,0.08)',
+  redBorder:   'rgba(220,38,38,0.2)',
+  purple:      '#7c3aed',
+  purpleBg:    'rgba(124,58,237,0.1)',
 }
 
 export default function CheckinPortal() {
@@ -195,7 +196,7 @@ export default function CheckinPortal() {
                 padding: '9px 14px', borderRadius: 10, fontSize: 12, fontWeight: filter === f.key ? 700 : 500,
                 cursor: 'pointer', transition: 'all 0.15s',
                 border: `1px solid ${filter === f.key ? col.gold + '60' : col.border2}`,
-                background: filter === f.key ? `rgba(201,168,76,0.1)` : 'transparent',
+                background: filter === f.key ? col.goldBg : 'transparent',
                 color: filter === f.key ? col.gold : col.faint,
               }}>{f.label}</button>
             ))}
@@ -241,7 +242,7 @@ export default function CheckinPortal() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <span style={{
                       fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 700,
-                      background: guest.tipo === 'Menor' ? col.purpleBg : 'rgba(201,168,76,0.1)',
+                      background: guest.tipo === 'Menor' ? col.purpleBg : col.goldBg,
                       color: guest.tipo === 'Menor' ? col.purple : col.gold,
                     }}>{guest.tipo}</span>
                     {guest.pagado ? (
