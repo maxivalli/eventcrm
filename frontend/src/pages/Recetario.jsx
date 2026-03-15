@@ -3,6 +3,7 @@ import { Sparkles, Wand2, Search, Plus, X, UtensilsCrossed } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useAuth } from '../contexts/AuthContext'
 
 const SECCIONES  = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const CATEGORIAS = ['Carnes', 'Fiambres', 'Lácteos', 'Verduras', 'Frutas', 'Almacén', 'Bebidas', 'Panificados', 'Otros']
@@ -395,6 +396,7 @@ function DishDetail({ dish, onEdit, onDelete }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Recetario() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [dishes, setDishes]               = useState([])
   const [loading, setLoading]             = useState(true)
   const [formMode, setFormMode]           = useState(null)   // null | 'new' | 'edit'
@@ -481,9 +483,7 @@ export default function Recetario() {
               {filtered.length !== dishes.length && ` · ${filtered.length} visible${filtered.length !== 1 ? 's' : ''}`}
             </div>
           </div>
-          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            <Plus size={14} /> Nuevo plato
-          </button>
+          {!isReadonly && <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo plato</button>}
         </div>
 
         {/* Búsqueda y filtros */}
@@ -572,9 +572,9 @@ export default function Recetario() {
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', gap: 14 }}>
               <UtensilsCrossed size={40} strokeWidth={1} />
               <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>Seleccioná un plato para ver el detalle</div>
-              <button onClick={openNew} style={{ padding: '9px 20px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: 'rgba(201,168,76,0.06)', color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+              {!isReadonly && <button onClick={openNew} style={{ padding: '9px 20px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: 'rgba(201,168,76,0.06)', color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Plus size={14} /> Nuevo plato
-              </button>
+              </button>}
             </div>
           )}
         </div>

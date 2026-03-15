@@ -12,6 +12,7 @@ import {
   isPastEvent, isBadWeather, WEATHER_CODES,
 } from "../utils/eventUtils";
 import SkeletonTable from "../components/SkeletonTable";
+import { useAuth } from "../contexts/AuthContext";
 
 // Keyframe for "Ya pasó" pulse animation
 if (!document.getElementById('past-event-style')) {
@@ -28,6 +29,7 @@ if (!document.getElementById('past-event-style')) {
 
 export default function Events() {
   const toast = useToast();
+  const { isReadonly } = useAuth();
   const location = useLocation();
   const [events, setEvents]   = useState([]);
   const [clients, setClients] = useState([]);
@@ -183,9 +185,7 @@ export default function Events() {
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: "var(--text-primary)" }}>Eventos</div>
           <div style={{ fontSize: 13, color: "var(--text-label)", marginTop: 4 }}>{filtered.length} eventos encontrados</div>
         </div>
-        <button onClick={() => setModal("new")} style={{ background: "linear-gradient(135deg,#c9a84c,#e8c97a)", border: "none", borderRadius: 8, padding: "10px 20px", color: "#09090f", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-          + Nuevo evento
-        </button>
+        {!isReadonly && <button onClick={() => setModal("new")} style={{ background: "linear-gradient(135deg,#c9a84c,#e8c97a)", border: "none", borderRadius: 8, padding: "10px 20px", color: "#09090f", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Nuevo evento</button>}
       </div>
 
       {/* Filtros */}

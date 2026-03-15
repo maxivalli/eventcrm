@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, Check, Copy, Cloud, Link2 } from "lucide-react";
 import api from "../../api/axios";
 import { useToast } from "../Toast";
+import { useAuth } from "../../contexts/AuthContext";
 import ConfirmDialog from "../ConfirmDialog";
 import Checklist from "../Checklist";
 import Cronograma from "../Cronograma";
@@ -14,6 +15,7 @@ import {
 
 export default function EventDetail({ event, onClose, onEdit }) {
   const toast = useToast();
+  const { isReadonly } = useAuth();
   const [tab, setTab]               = useState('info');
   const [quotes, setQuotes]         = useState([]);
   const [payments, setPayments]     = useState([]);
@@ -205,7 +207,7 @@ export default function EventDetail({ event, onClose, onEdit }) {
   const TABS = [
     { id: 'info',      label: 'Info',      icon: <ClipboardList size={13} /> },
     { id: 'servicios', label: 'Servicios', icon: <Star size={13} />, badge: confirmedQuotes.length },
-    { id: 'finanzas',  label: 'Finanzas',  icon: <CreditCard size={13} /> },
+    ...(!isReadonly ? [{ id: 'finanzas', label: 'Finanzas', icon: <CreditCard size={13} /> }] : []),
     { id: 'invitados', label: 'Invitados', icon: <Users size={13} />, badge: guests.length || null },
   ];
 

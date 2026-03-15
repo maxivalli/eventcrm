@@ -5,6 +5,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 import SkeletonTable from '../components/SkeletonTable'
+import { useAuth } from '../contexts/AuthContext'
 
 const statusColors = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8' }
 const ESTADOS = ['Todos', 'Activo', 'Inactivo']
@@ -313,6 +314,7 @@ function ClientDetail({ client, onClose, onEdit }) {
 
 export default function Clients() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [clients, setClients]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
@@ -372,7 +374,7 @@ export default function Clients() {
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Clientes</div>
           <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} cliente{filtered.length !== 1 ? 's' : ''}{filtered.length !== clients.length ? ` de ${clients.length}` : ''}</div>
         </div>
-        <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo cliente</button>
+        {!isReadonly && <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo cliente</button>}
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>

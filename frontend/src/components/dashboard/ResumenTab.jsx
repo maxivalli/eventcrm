@@ -5,8 +5,10 @@ import {
   getUpcomingBirthdays,
   Badge, SectionTitle, Card, KpiCard, Skeleton, EmptyState,
 } from './dashboardUtils'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function ResumenTab({ data, activityLogs, portalQueries, loading }) {
+  const { isReadonly } = useAuth()
   const events      = data?.events      || []
   const quotes      = data?.quotes      || []
   const clients     = data?.clients     || []
@@ -46,8 +48,10 @@ export default function ResumenTab({ data, activityLogs, portalQueries, loading 
   const kpis = [
     { label: 'Clientes activos',   value: clients.filter(c => c.status === 'Activo').length,            sub: `${clients.length} clientes en total`,             icon: <UserCheck size={28} strokeWidth={1.5} />,  color: 'var(--gold)' },
     { label: 'Eventos en curso',   value: events.filter(e => e.status !== 'Finalizado').length,          sub: `${events.length} eventos en total`,               icon: <CalendarClock size={28} strokeWidth={1.5} />, color: '#3b82f6' },
-    { label: 'Ingresos aprobados', value: fmt(quotes.filter(q => q.status === 'Aprobado').reduce((a, q) => a + calcTotal(q), 0)), sub: `${quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`, icon: <TrendingUp size={28} strokeWidth={1.5} />, color: '#22c55e' },
-    { label: 'Deuda proveedores',  value: fmt(data?.pendingTotal || 0),                                  sub: 'Pagos pendientes a proveedores',                   icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#ef4444' },
+    ...(!isReadonly ? [
+      { label: 'Ingresos aprobados', value: fmt(quotes.filter(q => q.status === 'Aprobado').reduce((a, q) => a + calcTotal(q), 0)), sub: `${quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`, icon: <TrendingUp size={28} strokeWidth={1.5} />, color: '#22c55e' },
+      { label: 'Deuda proveedores',  value: fmt(data?.pendingTotal || 0),                                  sub: 'Pagos pendientes a proveedores',                   icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#ef4444' },
+    ] : []),
   ]
 
   return (
@@ -86,18 +90,20 @@ export default function ResumenTab({ data, activityLogs, portalQueries, loading 
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-label)', marginTop: 1 }}>{ev.client?.name || '—'}</div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  {total > 0 ? (
-                    <>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: balance <= 0 ? '#22c55e' : '#f59e0b' }}>
-                        {balance <= 0 ? '✓ Saldado' : fmt(balance)}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>de {fmt(total)}</div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>Sin cotizar</div>
-                  )}
-                </div>
+                {!isReadonly && (
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {total > 0 ? (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: balance <= 0 ? '#22c55e' : '#f59e0b' }}>
+                          {balance <= 0 ? '✓ Saldado' : fmt(balance)}
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>de {fmt(total)}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>Sin cotizar</div>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -171,7 +177,7 @@ export default function ResumenTab({ data, activityLogs, portalQueries, loading 
       </div>
 
       {/* Fila 2: Sin cotizar | Deuda proveedores | Actividad */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isReadonly ? '1fr 1.2fr' : '1fr 1fr 1.2fr', gap: 20 }}>
 
         <Card>
           <SectionTitle>Eventos sin cotizar</SectionTitle>
@@ -195,20 +201,22 @@ export default function ResumenTab({ data, activityLogs, portalQueries, loading 
           })}
         </Card>
 
-        <Card>
-          <SectionTitle>Deuda con proveedores</SectionTitle>
-          {loading ? <Skeleton height={60} /> : suppliersPending.length === 0 ? (
-            <EmptyState icon={<CheckCircle2 size={22} />} text="Sin deudas pendientes" />
-          ) : suppliersPending.slice(0, 6).map((s, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', ...rowBorder }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-label)' }}>{s.count} pago{s.count > 1 ? 's' : ''} pendiente{s.count > 1 ? 's' : ''}</div>
+        {!isReadonly && (
+          <Card>
+            <SectionTitle>Deuda con proveedores</SectionTitle>
+            {loading ? <Skeleton height={60} /> : suppliersPending.length === 0 ? (
+              <EmptyState icon={<CheckCircle2 size={22} />} text="Sin deudas pendientes" />
+            ) : suppliersPending.slice(0, 6).map((s, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', ...rowBorder }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-label)' }}>{s.count} pago{s.count > 1 ? 's' : ''} pendiente{s.count > 1 ? 's' : ''}</div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{fmt(s.total)}</div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{fmt(s.total)}</div>
-            </div>
-          ))}
-        </Card>
+            ))}
+          </Card>
+        )}
 
         <Card style={{ maxHeight: 360, overflowY: 'auto' }}>
           <SectionTitle>Actividad reciente</SectionTitle>

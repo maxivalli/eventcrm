@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +24,18 @@ import PortalQueries from "./pages/PortalQueries";
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" replace />;
+}
+
+// Solo admin puede acceder
+function AdminRoute({ children }) {
+  const { isAdmin } = useAuth()
+  return isAdmin ? children : <Navigate to="/dashboard" replace />;
+}
+
+// Admin y staff pueden acceder (no readonly)
+function StaffRoute({ children }) {
+  const { isReadonly } = useAuth()
+  return !isReadonly ? children : <Navigate to="/dashboard" replace />;
 }
 
 function MobileBlock() {
@@ -105,19 +118,22 @@ function AppRoutes() {
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="users" element={<Users />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="clients" element={<Clients />} />
-        <Route path="events" element={<Events />} />
-        <Route path="quotes" element={<Quotes />} />
-        <Route path="suppliers" element={<Suppliers />} />
-        <Route path="budget" element={<Budget />} />
-        <Route path="payments" element={<Payments />} />
-        <Route path="supplier-payments" element={<SupplierPayments />} />
-        <Route path="catering" element={<MenusPage />} />
-        <Route path="recetario" element={<Recetario />} />
-        <Route path="contacts" element={<Contacts />} />
-        <Route path="whatsapp" element={<WhatsApp />} />
+        {/* Solo admin */}
+        <Route path="users" element={<AdminRoute><Users /></AdminRoute>} />
+        {/* Admin + staff (no readonly) */}
+        <Route path="payments"          element={<StaffRoute><Payments /></StaffRoute>} />
+        <Route path="supplier-payments" element={<StaffRoute><SupplierPayments /></StaffRoute>} />
+        <Route path="budget"            element={<StaffRoute><Budget /></StaffRoute>} />
+        {/* Todos */}
+        <Route path="dashboard"      element={<Dashboard />} />
+        <Route path="clients"        element={<Clients />} />
+        <Route path="events"         element={<Events />} />
+        <Route path="quotes"         element={<Quotes />} />
+        <Route path="suppliers"      element={<Suppliers />} />
+        <Route path="catering"       element={<MenusPage />} />
+        <Route path="recetario"      element={<Recetario />} />
+        <Route path="contacts"       element={<Contacts />} />
+        <Route path="whatsapp"       element={<WhatsApp />} />
         <Route path="portal-queries" element={<PortalQueries />} />
       </Route>
     </Routes>

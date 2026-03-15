@@ -3,6 +3,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 import SkeletonTable from '../components/SkeletonTable'
+import { useAuth } from '../contexts/AuthContext'
 
 const statusColors = { 'Aprobado': '#22c55e', 'Pendiente': '#f59e0b', 'Rechazado': '#ef4444' }
 const kindColors   = { 'General': '#8b5cf6', 'Catering': '#f97316' }
@@ -411,6 +412,7 @@ function QuoteDetail({ quote, onClose, onEdit }) {
 
 export default function Quotes() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [quotes, setQuotes]     = useState([])
   const [events, setEvents]     = useState([])
   const [clients, setClients]   = useState([])
@@ -500,7 +502,7 @@ export default function Quotes() {
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: 'var(--text-primary)' }}>Cotizaciones</div>
           <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} cotizaciones encontradas</div>
         </div>
-        <button onClick={openNew} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nueva cotización</button>
+        {!isReadonly && <button onClick={openNew} style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nueva cotización</button>}
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>

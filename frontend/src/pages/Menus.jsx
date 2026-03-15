@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight, UtensilsCrossed, Search, X } f
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useAuth } from '../contexts/AuthContext'
 
 const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 
@@ -340,6 +341,7 @@ function MenuDetail({ menu, dishes, onUpdate, onAddSection, onDeleteSection, onA
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Menus() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [menus, setMenus]     = useState([])
   const [dishes, setDishes]   = useState([])
   const [loading, setLoading] = useState(true)
@@ -470,10 +472,7 @@ export default function Menus() {
               {menus.length} menú{menus.length !== 1 ? 's'  : ''} guardado{menus.length !== 1 ? 's' : ''}
             </div>
           </div>
-          <button onClick={() => { setShowNewMenu(true); setSelected(null) }}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            <Plus size={14} /> Nuevo menú
-          </button>
+          {!isReadonly && <button onClick={() => { setShowNewMenu(true); setSelected(null) }} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo menú</button>}
         </div>
 
         {/* Búsqueda */}
@@ -540,10 +539,10 @@ export default function Menus() {
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-faint)', gap: 14 }}>
               <UtensilsCrossed size={40} strokeWidth={1} />
               <div style={{ fontSize: 13 }}>Seleccioná un menú para editarlo</div>
-              <button onClick={() => setShowNewMenu(true)}
+              {!isReadonly && <button onClick={() => setShowNewMenu(true)}
                 style={{ padding: '9px 20px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: 'rgba(201,168,76,0.06)', color: 'var(--gold)', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Plus size={14} /> Nuevo menú
-              </button>
+              </button>}
             </div>
           ) : (
             <MenuDetail

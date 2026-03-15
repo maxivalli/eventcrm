@@ -5,7 +5,7 @@ exports.getAll = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, email: true, createdAt: true }
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
     })
     res.json(users)
   } catch (e) {
@@ -16,13 +16,13 @@ exports.getAll = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const { name, email, password, role } = req.body
     if (!name || !email || !password)
       return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' })
     const hashed = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
-      data: { name, email, password: hashed },
-      select: { id: true, name: true, email: true, createdAt: true }
+      data: { name, email, password: hashed, role: role || 'staff' },
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
     })
     res.status(201).json(user)
   } catch (e) {
@@ -35,11 +35,13 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { name, email } = req.body
+    const { name, email, role } = req.body
+    const data = { name, email }
+    if (role) data.role = role
     const user = await prisma.user.update({
       where: { id: Number(req.params.id) },
-      data: { name, email },
-      select: { id: true, name: true, email: true, createdAt: true }
+      data,
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
     })
     res.json(user)
   } catch (e) {

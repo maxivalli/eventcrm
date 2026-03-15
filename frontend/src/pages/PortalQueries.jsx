@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { MessageSquare, CheckCheck, Clock, Check } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 
 const fmtDate = (str) =>
   new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -25,6 +26,7 @@ const FILTERS = [
 
 export default function PortalQueries() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [queries, setQueries]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [filter, setFilter]       = useState('pending')
@@ -204,7 +206,7 @@ export default function PortalQueries() {
                         WhatsApp
                       </a>
                     )}
-                    <button
+                    {!isReadonly && <button
                       onClick={() => resolve(q.id)}
                       disabled={resolving === q.id}
                       style={{
@@ -219,7 +221,7 @@ export default function PortalQueries() {
                     >
                       <Check size={12} />
                       {resolving === q.id ? 'Guardando...' : 'Resolver'}
-                    </button>
+                    </button>}
                   </div>
                 )}
               </div>

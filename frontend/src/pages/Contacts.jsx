@@ -4,6 +4,7 @@ import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
 import SkeletonTable from '../components/SkeletonTable'
+import { useAuth } from '../contexts/AuthContext'
 
 // ── Quoted-Printable decoder ──────────────────────────────────────────────────
 // Algunos exportadores (Google, Android) codifican tildes y ñ como =C3=B3, etc.
@@ -392,6 +393,7 @@ function ContactForm({ initial, onSave, onClose }) {
 
 export default function Contacts() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [contacts,      setContacts]      = useState([])
   const [loading,       setLoading]       = useState(true)
   const [search,        setSearch]        = useState('')
@@ -509,18 +511,18 @@ export default function Contacts() {
           <div style={{ fontSize: 13, color: 'var(--text-label)', marginTop: 4 }}>{filtered.length} contactos</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
+          {!isReadonly && <button
             onClick={() => setShowVcf(true)}
             style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', color: 'var(--text-muted)', fontSize: 13, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <Upload size={14} /> Importar VCF
-          </button>
-          <button
+          </button>}
+          {!isReadonly && <button
             onClick={() => setModal('new')}
             style={{ background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', border: 'none', borderRadius: 8, padding: '10px 20px', color: '#09090f', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             + Nuevo contacto
-          </button>
+          </button>}
         </div>
       </div>
 

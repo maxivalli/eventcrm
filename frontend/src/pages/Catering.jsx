@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useAuth } from '../contexts/AuthContext'
 
 const SECCIONES_SUGERIDAS = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 
@@ -263,6 +264,7 @@ function ShoppingList({ eventId, guests, eventName, onClose }) {
 
 export default function CateringPage() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [clients, setClients] = useState([])
   const [events, setEvents]   = useState([])
   const [dishes, setDishes]   = useState([])
@@ -379,7 +381,7 @@ export default function CateringPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 700 }}>Menú del evento</div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {!addingSection && (
+                    {!addingSection && !isReadonly && (
                       <button onClick={() => setAddingSection(true)} style={{ padding: '6px 16px', border: '1px solid var(--gold)', borderRadius: 20, background: 'transparent', color: 'var(--gold)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>+ Sección</button>
                     )}
                     {totalDishes > 0 && (
@@ -419,10 +421,10 @@ export default function CateringPage() {
                           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{section.nombre}</span>
                           <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>({section.items.length} plato{section.items.length !== 1 ? 's' : ''})</span>
                         </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        {!isReadonly && <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => setPickerForSection(section.id)} style={{ padding: '4px 12px', border: '1px solid var(--border)', borderRadius: 20, background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}>+ Plato</button>
                           <button onClick={() => setConfirmDeleteSection(section)} style={{ padding: '4px 8px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer' }}>✕</button>
-                        </div>
+                        </div>}
                       </div>
 
                       {pickerForSection === section.id && (
@@ -449,7 +451,7 @@ export default function CateringPage() {
                                   ))}
                                 </div>
                               </div>
-                              <button onClick={() => setConfirmDeleteItem(item)} style={{ padding: '4px 8px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer', flexShrink: 0, marginLeft: 10 }}>✕</button>
+                              {!isReadonly && <button onClick={() => setConfirmDeleteItem(item)} style={{ padding: '4px 8px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer', flexShrink: 0, marginLeft: 10 }}>✕</button>}
                             </div>
                           </div>
                         ))}

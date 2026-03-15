@@ -3,6 +3,7 @@ import { Volume2, UtensilsCrossed, Flower2, Shield, Clapperboard, Truck, Package
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { useAuth } from '../contexts/AuthContext'
 
 const statusColors = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8' }
 
@@ -234,6 +235,7 @@ function SupplierDetail({ supplier, onClose, onEdit }) {
 // ── Main ────────────────────────────────────────────────────────────────────
 export default function Suppliers() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [suppliers, setSuppliers]       = useState([])
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
@@ -302,10 +304,7 @@ export default function Suppliers() {
             {filtered.length} proveedor{filtered.length !== 1 ? 'es' : ''}{filtered.length !== suppliers.length ? ` de ${suppliers.length}` : ''}
           </div>
         </div>
-        <button onClick={() => setModal('new')}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-          <Plus size={14} /> Nuevo proveedor
-        </button>
+        {!isReadonly && <button onClick={() => setModal('new')} style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#09090f', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}><Plus size={14} /> Nuevo proveedor</button>}
       </div>
 
       {/* ── Filtros ── */}

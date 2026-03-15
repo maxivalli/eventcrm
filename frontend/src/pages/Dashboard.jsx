@@ -4,14 +4,16 @@ import api from '../api/axios'
 import ResumenTab   from '../components/dashboard/ResumenTab'
 import FinanzasTab  from '../components/dashboard/FinanzasTab'
 import CalendarioTab from '../components/dashboard/CalendarioTab'
-
-const TABS = [
-  { id: 'resumen',    label: 'Resumen',    Icon: LayoutDashboard },
-  { id: 'finanzas',   label: 'Finanzas',   Icon: BarChart2 },
-  { id: 'calendario', label: 'Calendario', Icon: CalendarDays },
-]
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Dashboard() {
+  const { isReadonly } = useAuth()
+  const TABS = [
+    { id: 'resumen',    label: 'Resumen',    Icon: LayoutDashboard },
+    ...(!isReadonly ? [{ id: 'finanzas', label: 'Finanzas', Icon: BarChart2 }] : []),
+    { id: 'calendario', label: 'Calendario', Icon: CalendarDays },
+  ]
+
   const [tab,           setTab]          = useState('resumen')
   const [data,          setData]         = useState(null)
   const [activityLogs,  setActivity]     = useState([])
@@ -31,9 +33,9 @@ export default function Dashboard() {
           api.get('/api/suppliers'),
         ])
         const [spPending, allPayments, allSpPayments, activityRes, queriesRes] = await Promise.all([
-          safeGet('/api/supplier-payments/pending-total'),
-          safeGet('/api/payments/all'),
-          safeGet('/api/supplier-payments/all'),
+          isReadonly ? null : safeGet('/api/supplier-payments/pending-total'),
+          isReadonly ? null : safeGet('/api/payments/all'),
+          isReadonly ? null : safeGet('/api/supplier-payments/all'),
           safeGet('/api/activity?limit=20'),
           safeGet('/api/portal-queries'),
         ])

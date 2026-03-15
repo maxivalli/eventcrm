@@ -31,7 +31,9 @@ function WhatsAppIcon({ size = 18 }) {
   )
 }
 import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../contexts/AuthContext";
 
+// roles: undefined = todos | 'staff' = admin+staff | 'admin' = solo admin
 const NAV_GROUPS = [
   {
     label: null,
@@ -41,21 +43,22 @@ const NAV_GROUPS = [
       { path: "/clients",      label: "Clientes",       Icon: Users },
       { path: "/events",       label: "Eventos",        Icon: CalendarDays },
       { path: "/quotes",       label: "Cotizaciones",   Icon: FileText },
-      { path: "/budget",       label: "Presupuestos",   Icon: PieChart },
+      { path: "/budget",       label: "Presupuestos",   Icon: PieChart,        minRole: 'staff' },
     ],
   },
   {
     label: "Catering",
     items: [
-      { path: "/catering", label: "Menús", Icon: UtensilsCrossed },
+      { path: "/catering",  label: "Menús",     Icon: UtensilsCrossed },
       { path: "/recetario", label: "Recetario", Icon: ChefHat },
     ],
   },
   {
     label: "Finanzas",
+    minRole: 'staff',
     items: [
-      { path: "/payments", label: "Cobros", Icon: HandCoins },
-      { path: "/supplier-payments", label: "Pagos", Icon: Wallet },
+      { path: "/payments",          label: "Cobros", Icon: HandCoins, minRole: 'staff' },
+      { path: "/supplier-payments", label: "Pagos",  Icon: Wallet,    minRole: 'staff' },
     ],
   },
   {
@@ -69,7 +72,7 @@ const NAV_GROUPS = [
     items: [
       { path: "/whatsapp",  label: "WhatsApp",    Icon: WhatsAppIcon },
       { path: "/suppliers", label: "Proveedores", Icon: Truck },
-      { path: "/users",     label: "Usuarios",    Icon: UserCog },
+      { path: "/users",     label: "Usuarios",    Icon: UserCog, minRole: 'admin' },
     ],
   },
 ];
@@ -100,7 +103,18 @@ export default function Layout() {
 
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { role, isAdmin, isReadonly } = useAuth();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  const canSeeItem = (item) => {
+    if (!item.minRole) return true
+    if (item.minRole === 'admin') return isAdmin
+    if (item.minRole === 'staff') return !isReadonly
+    return true
+  }
+
+  const ROLE_LABEL = { admin: 'Admin', staff: 'Staff', readonly: 'Solo lectura' }
+  const ROLE_COLOR = { admin: '#c9a84c', staff: '#3b82f6', readonly: '#6b7280' }
 
   // Polling unificado: portal-queries + client-decisions + portal-guests en un solo intervalo (30s)
   useEffect(() => {
@@ -175,7 +189,10 @@ export default function Layout() {
 
         {/* Nav */}
         <nav style={{ padding: "12px 8px", flex: 1, overflowY: "auto" }}>
-          {NAV_GROUPS.map((group, gi) => (
+          {NAV_GROUPS.map((group, gi) => {
+            const visibleItems = group.items.filter(canSeeItem)
+            if (visibleItems.length === 0) return null
+            return (
             <div key={gi} style={{ marginBottom: 4 }}>
               {group.label && open && (
                 <div
@@ -199,7 +216,7 @@ export default function Layout() {
                   }}
                 />
               )}
-              {group.items.map(({ path, label, Icon }) => (
+              {visibleItems.map(({ path, label, Icon }) => (
                 <NavLink
                   key={path}
                   to={path}
@@ -293,24 +310,27 @@ export default function Layout() {
                 </NavLink>
               ))}
             </div>
-          ))}
+            )
+          })}
         </nav>
 
         {/* Footer */}
         <div style={{ padding: 12, borderTop: "1px solid var(--border)" }}>
           {open && (
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--text-label)",
-                marginBottom: 8,
-                padding: "0 4px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {user.name || "Usuario"}
+            <div style={{ marginBottom: 8, padding: "0 4px" }}>
+              <div style={{ fontSize: 12, color: "var(--text-label)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 4 }}>
+                {user.name || "Usuario"}
+              </div>
+              <div style={{
+                display: "inline-block", fontSize: 10, fontWeight: 700,
+                padding: "2px 8px", borderRadius: 99,
+                color: ROLE_COLOR[role] || '#6b7280',
+                background: `${ROLE_COLOR[role] || '#6b7280'}18`,
+                border: `1px solid ${ROLE_COLOR[role] || '#6b7280'}40`,
+                letterSpacing: 0.5,
+              }}>
+                {ROLE_LABEL[role] || role}
+              </div>
             </div>
           )}
           <div

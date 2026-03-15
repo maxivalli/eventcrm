@@ -12,6 +12,16 @@ const supplierRoutes = require("./routes/suppliers");
 const paymentRoutes = require("./routes/payments");
 const supplierPaymentRoutes = require("./routes/supplierPayments");
 const authMiddleware = require("./middleware/auth");
+const requireRole    = require("./middleware/requireRole");
+const adminOnly      = requireRole('admin')
+const notReadonly    = requireRole('admin', 'staff')
+
+// Bloquea POST/PUT/PATCH/DELETE para usuarios readonly (GET sigue permitido)
+const blockWrites = (req, res, next) => {
+  if (req.user?.role === 'readonly' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method))
+    return res.status(403).json({ error: 'Sin permiso para realizar esta acción' })
+  next()
+}
 const userRoutes = require("./routes/users");
 const checklistRoutes  = require('./routes/checklist')
 const eventFileRoutes  = require('./routes/eventFiles')
@@ -81,30 +91,30 @@ app.use('/api', guestPublic);         // GET /api/checkin/:token + PATCH .../ing
 app.use('/api', guestPortalPublic);   // GET /api/guest-portal/:token + POST .../rsvp — sin auth
 
 // Rutas protegidas
-app.use("/api/clients", authMiddleware, clientRoutes);
-app.use("/api/events", authMiddleware, eventRoutes);
-app.use("/api/quotes", authMiddleware, quoteRoutes);
-app.use("/api/suppliers", authMiddleware, supplierRoutes);
-app.use("/api/payments", authMiddleware, paymentRoutes);
-app.use("/api/supplier-payments", authMiddleware, supplierPaymentRoutes);
-app.use("/api/users", authMiddleware, userRoutes);
-app.use('/api/checklist',    authMiddleware, checklistRoutes)
-app.use('/api/event-files', authMiddleware, eventFileRoutes)
-app.use('/api/menus',       authMiddleware, menusRoutes)
-app.use('/api/dishes',      authMiddleware, dishRoutes)
-app.use('/api/catering',    authMiddleware, cateringRoutes)
-app.use('/api/event-menu',  authMiddleware, eventMenuRoutes)
-app.use('/api/ai',          portalLimiter, aiPublicRoutes)  // rutas públicas (portal cliente)
-app.use('/api/ai',          aiLimiter, authMiddleware, aiRoutes)
-app.use('/api/portal-queries', portalLimiter, portalQueriesPublic)
-app.use('/api/portal-queries', authMiddleware, portalQueriesProtected)
-app.use('/api/schedule',       authMiddleware, scheduleRoutes)
-app.use('/api/activity',    authMiddleware, activityRoutes)
-app.use('/api/contacts',   authMiddleware, contactRoutes)
-app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
-app.use('/api',            authMiddleware, portalProtected)       // POST /api/events/:id/portal-token
-app.use('/api',            authMiddleware, guestProtected)       // CRUD event-guests + POST /api/events/:id/checkin-token
-app.use('/api',            authMiddleware, guestPortalProtected) // POST /api/events/:id/guest-portal-token
+app.use("/api/clients",           authMiddleware, blockWrites, clientRoutes);
+app.use("/api/events",            authMiddleware, blockWrites, eventRoutes);
+app.use("/api/quotes",            authMiddleware, blockWrites, quoteRoutes);
+app.use("/api/suppliers",         authMiddleware, blockWrites, supplierRoutes);
+app.use("/api/payments",          authMiddleware, notReadonly,  paymentRoutes);
+app.use("/api/supplier-payments", authMiddleware, notReadonly,  supplierPaymentRoutes);
+app.use("/api/users",             authMiddleware, adminOnly,    userRoutes);
+app.use('/api/checklist',         authMiddleware, blockWrites,  checklistRoutes)
+app.use('/api/event-files',       authMiddleware, blockWrites,  eventFileRoutes)
+app.use('/api/menus',             authMiddleware, blockWrites,  menusRoutes)
+app.use('/api/dishes',            authMiddleware, blockWrites,  dishRoutes)
+app.use('/api/catering',          authMiddleware, blockWrites,  cateringRoutes)
+app.use('/api/event-menu',        authMiddleware, blockWrites,  eventMenuRoutes)
+app.use('/api/ai',                portalLimiter,  aiPublicRoutes)  // rutas públicas (portal cliente)
+app.use('/api/ai',                aiLimiter, authMiddleware, blockWrites, aiRoutes)
+app.use('/api/portal-queries',    portalLimiter,  portalQueriesPublic)
+app.use('/api/portal-queries',    authMiddleware, portalQueriesProtected)
+app.use('/api/schedule',          authMiddleware, blockWrites,  scheduleRoutes)
+app.use('/api/activity',          authMiddleware, activityRoutes)
+app.use('/api/contacts',          authMiddleware, blockWrites,  contactRoutes)
+app.use('/api/whatsapp',          authMiddleware, blockWrites,  whatsappRoutes)
+app.use('/api',                   authMiddleware, blockWrites,  portalProtected)
+app.use('/api',                   authMiddleware, blockWrites,  guestProtected)
+app.use('/api',                   authMiddleware, blockWrites,  guestPortalProtected)
 
 async function start() {
   // Correr migraciones antes de levantar el servidor

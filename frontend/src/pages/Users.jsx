@@ -13,7 +13,13 @@ function Badge({ label, color }) {
   )
 }
 
-const emptyForm    = { name: '', email: '', password: '' }
+const ROLES = [
+  { value: 'admin',    label: 'Admin',     color: '#c9a84c' },
+  { value: 'staff',    label: 'Staff',     color: '#3b82f6' },
+  { value: 'readonly', label: 'Solo lectura', color: '#6b7280' },
+]
+
+const emptyForm    = { name: '', email: '', password: '', role: 'staff' }
 const emptyPwdForm = { password: '', confirm: '' }
 
 function UserForm({ initial, onSave, onClose }) {
@@ -66,6 +72,12 @@ function UserForm({ initial, onSave, onClose }) {
               <input type='password' style={inputStyle} value={form.password} onChange={e => set('password', e.target.value)} />
             </div>
           )}
+          <div>
+            <label style={labelStyle}>Rol</label>
+            <select style={inputStyle} value={form.role || 'staff'} onChange={e => set('role', e.target.value)}>
+              {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+            </select>
+          </div>
         </div>
         {error && (
           <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, fontSize: 13, color: '#ef4444' }}>
@@ -243,12 +255,13 @@ export default function Users() {
       {/* Tabla */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 140px',
+          display: 'grid', gridTemplateColumns: '2fr 2fr 100px 1fr 140px',
           padding: '12px 20px', borderBottom: '1px solid var(--border)',
           fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1,
         }}>
           <span>Nombre</span>
           <span>Email</span>
+          <span>Rol</span>
           <span>Creado</span>
           <span></span>
         </div>
@@ -259,7 +272,7 @@ export default function Users() {
           </div>
         ) : users.map((user, i) => (
           <div key={user.id} style={{
-            display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 140px',
+            display: 'grid', gridTemplateColumns: '2fr 2fr 100px 1fr 140px',
             padding: '14px 20px', alignItems: 'center',
             borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none',
             transition: 'background 0.15s',
@@ -282,6 +295,12 @@ export default function Users() {
               </div>
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{user.email}</div>
+            <div>
+              {(() => {
+                const r = ROLES.find(x => x.value === user.role) || ROLES[1]
+                return <Badge label={r.label} color={r.color} />
+              })()}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>{formatDate(user.createdAt)}</div>
             <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
               <button

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Wifi, WifiOff, RefreshCw, QrCode, PlusCircle, Bell, Heart, Cake, Eye, Edit2, Play, Send, MessageSquare, CheckCircle, XCircle, ChevronRight } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../contexts/AuthContext'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const btn = (variant = 'default') => {
 
 function ConnectionTab() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [status,   setStatus]   = useState(null)
   const [qrData,   setQrData]   = useState(null)
   const [loading,  setLoading]  = useState(true)
@@ -147,7 +149,7 @@ function ConnectionTab() {
             <button onClick={fetchStatus} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 6 }}>
               <RefreshCw size={13} /> Actualizar
             </button>
-            {!connected && (
+            {!connected && !isReadonly && (
               <>
                 <button onClick={handleCreate} disabled={creating} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 6 }}>
                   <PlusCircle size={13} /> {creating ? 'Creando...' : 'Crear instancia'}
@@ -186,6 +188,7 @@ function ConnectionTab() {
 
 function TemplatesTab() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [templates, setTemplates] = useState(null)
   const [editing,   setEditing]   = useState(null)   // id de la plantilla en edición
   const [form,      setForm]      = useState({})
@@ -275,11 +278,13 @@ function TemplatesTab() {
               {editing !== tpl.id && (
                 <>
                   <button onClick={() => handlePreview(tpl.id)} style={{ ...btn(), display: 'flex', alignItems: 'center', gap: 5 }}><Eye size={13} /> Preview</button>
-                  <button onClick={() => handleToggle(tpl)} style={{ ...btn(tpl.active ? 'danger' : 'green'), display: 'flex', alignItems: 'center', gap: 5 }}>
-                    {tpl.active ? <XCircle size={13} /> : <CheckCircle size={13} />}
-                    {tpl.active ? 'Desactivar' : 'Activar'}
-                  </button>
-                  <button onClick={() => startEdit(tpl)} style={{ ...btn('primary'), display: 'flex', alignItems: 'center', gap: 5 }}><Edit2 size={13} /> Editar</button>
+                  {!isReadonly && <>
+                    <button onClick={() => handleToggle(tpl)} style={{ ...btn(tpl.active ? 'danger' : 'green'), display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {tpl.active ? <XCircle size={13} /> : <CheckCircle size={13} />}
+                      {tpl.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button onClick={() => startEdit(tpl)} style={{ ...btn('primary'), display: 'flex', alignItems: 'center', gap: 5 }}><Edit2 size={13} /> Editar</button>
+                  </>}
                 </>
               )}
             </div>
@@ -341,7 +346,7 @@ function TemplatesTab() {
           )}
 
           {/* Trigger manual */}
-          {editing !== tpl.id && (
+          {editing !== tpl.id && !isReadonly && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>Ejecutar manualmente (para probar)</span>
               <button onClick={() => handleRunJob(tpl.trigger)} disabled={running === tpl.trigger}
@@ -360,6 +365,7 @@ function TemplatesTab() {
 
 function SendTab() {
   const toast = useToast()
+  const { isReadonly } = useAuth()
   const [events,     setEvents]     = useState([])
   const [templates,  setTemplates]  = useState(null)
   const [eventId,    setEventId]    = useState('')
@@ -478,9 +484,9 @@ function SendTab() {
             </div>
           )}
 
-          <button onClick={handleSend} disabled={sending} style={{ ...btn('primary'), padding: '11px 0', width: '100%', opacity: sending ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          {!isReadonly && <button onClick={handleSend} disabled={sending} style={{ ...btn('primary'), padding: '11px 0', width: '100%', opacity: sending ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Send size={14} /> {sending ? 'Enviando...' : 'Enviar mensaje'}
-          </button>
+          </button>}
         </div>
       </div>
     </div>
