@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import {
-  UserCheck, CalendarClock, TrendingUp, AlertCircle,
+  UserCheck, CalendarClock, MapPin, Clock, User, Users, ThermometerSun, Cloud, CloudRain, CloudSnow, CloudLightning, TrendingUp, AlertCircle,
   FilePlus, ArrowDownCircle, Package, CheckCircle2,
   MessageSquare, Cake, Wallet, TrendingDown, LayoutDashboard, BarChart2, CalendarDays, ChevronLeft, ChevronRight,
 } from 'lucide-react'
@@ -18,6 +18,32 @@ const fmt = (n) =>
 const fmtDate = (str) => {
   const d = new Date(str)
   return { day: d.getDate(), month: d.toLocaleString('es', { month: 'short' }).toUpperCase() }
+}
+
+const WEATHER_CODES = {
+  0:  { label: 'Despejado',           icon: <ThermometerSun size={14} />, color: '#f59e0b' },
+  1:  { label: 'Principalmente claro', icon: <ThermometerSun size={14} />, color: '#f59e0b' },
+  2:  { label: 'Parcialmente nublado', icon: <Cloud size={14} />, color: '#64748b' },
+  3:  { label: 'Nublado',             icon: <Cloud size={14} />, color: '#64748b' },
+  45: { label: 'Niebla',              icon: <Cloud size={14} />, color: '#64748b' },
+  48: { label: 'Niebla helada',       icon: <Cloud size={14} />, color: '#64748b' },
+  51: { label: 'Llovizna ligera',     icon: <CloudRain size={14} />, color: '#3b82f6' },
+  53: { label: 'Llovizna',            icon: <CloudRain size={14} />, color: '#3b82f6' },
+  55: { label: 'Llovizna intensa',    icon: <CloudRain size={14} />, color: '#3b82f6' },
+  61: { label: 'Lluvia ligera',       icon: <CloudRain size={14} />, color: '#3b82f6' },
+  63: { label: 'Lluvia',              icon: <CloudRain size={14} />, color: '#3b82f6' },
+  65: { label: 'Lluvia intensa',      icon: <CloudRain size={14} />, color: '#3b82f6' },
+  66: { label: 'Aguanieve ligera',    icon: <CloudSnow size={14} />, color: '#60a5fa' },
+  67: { label: 'Aguanieve intensa',   icon: <CloudSnow size={14} />, color: '#60a5fa' },
+  71: { label: 'Nieve ligera',        icon: <CloudSnow size={14} />, color: '#60a5fa' },
+  73: { label: 'Nieve',               icon: <CloudSnow size={14} />, color: '#60a5fa' },
+  75: { label: 'Nieve intensa',       icon: <CloudSnow size={14} />, color: '#60a5fa' },
+  80: { label: 'Lluvias dispersas',   icon: <CloudRain size={14} />, color: '#3b82f6' },
+  81: { label: 'Lluvias',             icon: <CloudRain size={14} />, color: '#3b82f6' },
+  82: { label: 'Lluvias fuertes',     icon: <CloudRain size={14} />, color: '#3b82f6' },
+  95: { label: 'Tormenta eléctrica',  icon: <CloudLightning size={14} />, color: '#f97316' },
+  96: { label: 'Tormenta con granizo',icon: <CloudLightning size={14} />, color: '#f97316' },
+  99: { label: 'Tormenta grave',      icon: <CloudLightning size={14} />, color: '#f97316' },
 }
 
 const fmtAgo = (str) => {
@@ -695,7 +721,44 @@ function MiniMonth({ year, month, events, onEventClick }) {
   )
 }
 
-function EventPopover({ evs, onClose }) {
+function EventPopover({ evs, year, month, day, onClose }) {
+  const [weather, setWeather] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherError, setWeatherError] = useState(false)
+
+  useEffect(() => {
+    if (!year || month == null || day == null) return
+    const date = new Date(year, month, day).toISOString().slice(0, 10)
+
+    setWeatherLoading(true)
+    setWeatherError(false)
+
+    const fetchWeather = async () => {
+      try {
+        const LAT = -30.2283 // San Cristóbal, Santa Fe
+        const LON = -61.4474
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${date}&end_date=${date}`
+        )
+        const data = await res.json()
+        const code = data.daily?.weathercode?.[0]
+        const max = data.daily?.temperature_2m_max?.[0]
+        const min = data.daily?.temperature_2m_min?.[0]
+        if (typeof code === 'undefined') throw new Error('no forecast')
+        setWeather({ code, max, min })
+      } catch (e) {
+        setWeather(null)
+        setWeatherError(true)
+      } finally {
+        setWeatherLoading(false)
+      }
+    }
+
+    fetchWeather()
+  }, [year, month, day])
+
+  const weatherInfo = weather ? (WEATHER_CODES[weather.code] || { label: 'Clima', icon: <ThermometerSun size={14} />, color: 'var(--text-muted)' }) : null
+
   if (!evs || evs.length === 0) return null
   return (
     <div style={{
@@ -705,11 +768,29 @@ function EventPopover({ evs, onClose }) {
     }} onClick={onClose}>
       <div style={{
         background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
-        borderRadius: 16, padding: 24, minWidth: 300, maxWidth: 400,
+        borderRadius: 16, padding: 24, minWidth: 320, maxWidth: 440,
         boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
-          {evs.length === 1 ? 'Evento' : `${evs.length} eventos`}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+              {evs.length === 1 ? 'Evento' : `${evs.length} eventos`}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--text-faint)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><CalendarClock size={14} /> {day}/{String(month + 1).padStart(2, '0')}/{year}</div>
+              {weatherInfo && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 12, background: `${weatherInfo.color}20`, color: weatherInfo.color }}>
+                    {weatherInfo.icon}
+                  </span>
+                  {weatherLoading ? 'Cargando clima…' : weather ? `${Math.round(weather.max)}° / ${Math.round(weather.min)}°` : 'Clima no disponible'}
+                </div>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14 }}>
+            ✕
+          </button>
         </div>
         {evs.map(ev => {
           const c = EV_COLORS[ev.status] || EV_COLORS.Propuesta
@@ -719,23 +800,23 @@ function EventPopover({ evs, onClose }) {
               padding: '12px 14px', borderRadius: 10, marginBottom: 8,
               background: c.bg + '14', border: `1px solid ${c.bg}30`,
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{ev.name}</div>
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: c.bg + '22', color: c.bg }}>
                   {ev.status}
                 </span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                📅 {d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                {ev.time && ` · ${ev.time} hs`}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><User size={14} />{ev.client?.name || '—'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={14} />{ev.venue || '—'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} />{ev.time || '—'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Users size={14} />{ev.guests} invitados</div>
               </div>
-              {ev.venue  && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📍 {ev.venue}</div>}
-              {ev.client && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>👤 {ev.client.name}</div>}
             </div>
           )
         })}
         <button onClick={onClose} style={{
-          width: '100%', padding: '10px', marginTop: 4,
+          width: '100%', padding: '10px', marginTop: 8,
           background: 'transparent', border: '1px solid var(--border)',
           borderRadius: 9, color: 'var(--text-muted)', fontSize: 13,
           cursor: 'pointer', fontWeight: 600,
@@ -749,7 +830,7 @@ function EventPopover({ evs, onClose }) {
 
 function CalendarioTab({ data, loading }) {
   const [year, setYear] = useState(new Date().getFullYear())
-  const [popover, setPopover] = useState(null) // { evs }
+  const [popover, setPopover] = useState(null) // { evs, year, month, day }
 
   if (!data) return null
 
@@ -851,14 +932,14 @@ function CalendarioTab({ data, loading }) {
               year={year}
               month={m}
               events={events}
-              onEventClick={(evs) => setPopover({ evs })}
+              onEventClick={(evs, y, mo, d) => setPopover({ evs, year: y, month: mo, day: d })}
             />
           ))}
         </div>
       )}
 
       {/* Popover de evento */}
-      {popover && <EventPopover evs={popover.evs} onClose={() => setPopover(null)} />}
+      {popover && <EventPopover evs={popover.evs} year={popover.year} month={popover.month} day={popover.day} onClose={() => setPopover(null)} />}
     </div>
   )
 }
