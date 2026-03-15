@@ -34,7 +34,7 @@ export default function Dashboard() {
           safeGet('/api/supplier-payments/pending-total'),
           safeGet('/api/payments/all'),
           safeGet('/api/supplier-payments/all'),
-          safeGet('/api/activity?limit=60'),
+          safeGet('/api/activity?limit=20'),
           safeGet('/api/portal-queries'),
         ])
         setData({
