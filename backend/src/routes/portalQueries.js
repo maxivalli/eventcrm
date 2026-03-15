@@ -25,6 +25,22 @@ protectedRouter.get('/', async (req, res) => {
   }
 })
 
+// PATCH /api/portal-queries/:id/guest-phone — guardar teléfono del invitado (público)
+publicRouter.patch('/:id/guest-phone', async (req, res) => {
+  try {
+    const { guestPhone } = req.body
+    if (!guestPhone?.trim()) return res.status(400).json({ error: 'Teléfono requerido' })
+    const query = await prisma.portalQuery.update({
+      where: { id: Number(req.params.id) },
+      data: { guestPhone: guestPhone.trim() },
+    })
+    res.json(query)
+  } catch (e) {
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Consulta no encontrada' })
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // POST /api/portal-queries — guardar nueva consulta (público, desde el portal)
 publicRouter.post('/', async (req, res) => {
   try {

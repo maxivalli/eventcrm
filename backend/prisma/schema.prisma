@@ -216,9 +216,10 @@ model PortalQuery {
   id        Int      @id @default(autoincrement())
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId   Int
-  question  String
-  status    String   @default("pending") // pending | resolved
-  createdAt DateTime @default(now())
+  question   String
+  status     String   @default("pending") // pending | resolved
+  guestPhone String?  // teléfono del invitado que consultó (opcional)
+  createdAt  DateTime @default(now())
 }
 
 // ── Lista de invitados por evento ─────────────────────────

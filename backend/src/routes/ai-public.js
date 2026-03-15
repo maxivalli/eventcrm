@@ -242,16 +242,18 @@ REGLAS IMPORTANTES:
 
     let answer = data.content?.map(b => b.text || '').join('') || ''
 
+    let queryId = null
     if (answer.includes('[CONSULTA_PENDIENTE]')) {
       answer = answer.replace('[CONSULTA_PENDIENTE]', '').trim()
       try {
-        await prisma.portalQuery.create({ data: { eventId: event.id, question } })
+        const q = await prisma.portalQuery.create({ data: { eventId: event.id, question } })
+        queryId = q.id
       } catch (e) {
         console.error('Error guardando consulta pendiente (guest):', e.message)
       }
     }
 
-    res.json({ answer })
+    res.json({ answer, queryId })
   } catch (e) {
     res.status(502).json({ error: 'No se pudo procesar la pregunta' })
   }

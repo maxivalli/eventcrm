@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, CheckCheck, Clock, ExternalLink, Check } from 'lucide-react'
+import { MessageSquare, CheckCheck, Clock, Check } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 
@@ -160,9 +160,14 @@ export default function PortalQueries() {
                       <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>Cliente</div>
                       <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>{q.event.client.name}</div>
                     </div>
-                    {q.event.client.phone && (
+                    {q.guestPhone ? (
                       <div>
-                        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>Teléfono</div>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: '#22c55e', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>Tel. invitado</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{q.guestPhone}</div>
+                      </div>
+                    ) : q.event.client.phone && (
+                      <div>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>Tel. cliente</div>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{q.event.client.phone}</div>
                       </div>
                     )}
@@ -182,9 +187,9 @@ export default function PortalQueries() {
                 {/* Acciones */}
                 {isPending && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flexShrink: 0, alignItems: 'stretch', justifyContent: 'center', width: 110 }}>
-                    {q.event.client.phone && (
+                    {(q.guestPhone || q.event.client.phone) && (
                       <a
-                        href={buildWhatsAppUrl(q.event.client.phone, q.event.name, q.question)}
+                        href={buildWhatsAppUrl(q.guestPhone || q.event.client.phone, q.event.name, q.question)}
                         target="_blank" rel="noreferrer"
                         style={{
                           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,

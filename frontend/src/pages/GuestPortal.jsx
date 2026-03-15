@@ -90,10 +90,13 @@ export default function GuestPortal() {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError]   = useState('')
 
-  const [chatOpen, setChatOpen]       = useState(false)
-  const [chatMessages, setChatMessages] = useState([])
-  const [chatInput, setChatInput]     = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
+  const [chatOpen, setChatOpen]           = useState(false)
+  const [chatMessages, setChatMessages]   = useState([])
+  const [chatInput, setChatInput]         = useState('')
+  const [chatLoading, setChatLoading]     = useState(false)
+  const [pendingQueryId, setPendingQueryId] = useState(null)
+  const [phoneInput, setPhoneInput]       = useState('')
+  const [phoneSent, setPhoneSent]         = useState(false)
 
   const setPerson = (i, field, val) =>
     setPeople(prev => prev.map((p, j) => j === i ? { ...p, [field]: val } : p))
@@ -123,16 +126,29 @@ export default function GuestPortal() {
     const q = chatInput.trim()
     if (!q || chatLoading) return
     setChatInput('')
+    setPendingQueryId(null)
+    setPhoneSent(false)
     setChatMessages(prev => [...prev, { role: 'user', text: q }])
     setChatLoading(true)
     try {
       const res = await axios.post(`${API}/api/ai/guest-portal-chat`, { token, question: q })
       setChatMessages(prev => [...prev, { role: 'assistant', text: res.data.answer }])
+      if (res.data.queryId) setPendingQueryId(res.data.queryId)
     } catch {
       setChatMessages(prev => [...prev, { role: 'assistant', text: 'No pude responder eso ahora. Por favor contactá a Haus directamente.' }])
     } finally {
       setChatLoading(false)
     }
+  }
+
+  const submitPhone = async () => {
+    if (!phoneInput.trim() || !pendingQueryId) return
+    try {
+      await axios.patch(`${API}/api/portal-queries/${pendingQueryId}/guest-phone`, { guestPhone: phoneInput.trim() })
+    } catch { /* silently fail */ }
+    setPhoneSent(true)
+    setPendingQueryId(null)
+    setPhoneInput('')
   }
 
   const fmtDate = (str) =>
@@ -472,6 +488,35 @@ export default function GuestPortal() {
               {chatLoading && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                   <div style={{ padding: '9px 13px', borderRadius: '12px 12px 12px 2px', background: col.bg, border: `1px solid ${col.border}`, color: col.faint, fontSize: 13 }}>...</div>
+                </div>
+              )}
+              {pendingQueryId && !phoneSent && !chatLoading && (
+                <div style={{ background: col.bg, border: `1px solid ${col.gold}40`, borderRadius: 12, padding: '12px 14px', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, color: col.muted, marginBottom: 10, lineHeight: 1.5 }}>
+                    ¿Querés que te contactemos? Dejanos tu número de WhatsApp <span style={{ color: col.faint }}>(opcional)</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      value={phoneInput}
+                      onChange={e => setPhoneInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && submitPhone()}
+                      placeholder="Ej: 1155667788"
+                      style={{ flex: 1, background: col.surface, border: `1px solid ${col.border}`, borderRadius: 8, padding: '8px 10px', color: col.text, fontSize: 12, outline: 'none' }}
+                    />
+                    <button onClick={submitPhone} disabled={!phoneInput.trim()}
+                      style={{ background: `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`, border: 'none', borderRadius: 8, padding: '8px 12px', color: '#09090F', fontWeight: 700, fontSize: 12, cursor: phoneInput.trim() ? 'pointer' : 'default', opacity: phoneInput.trim() ? 1 : 0.5 }}>
+                      Enviar
+                    </button>
+                    <button onClick={() => { setPendingQueryId(null); setPhoneSent(true) }}
+                      style={{ background: 'transparent', border: `1px solid ${col.border}`, borderRadius: 8, padding: '8px 10px', color: col.faint, fontSize: 12, cursor: 'pointer' }}>
+                      Omitir
+                    </button>
+                  </div>
+                </div>
+              )}
+              {phoneSent && (
+                <div style={{ fontSize: 12, color: col.gold, textAlign: 'center', padding: '4px 0', opacity: 0.8 }}>
+                  ✓ ¡Gracias! Te contactamos pronto.
                 </div>
               )}
             </div>
