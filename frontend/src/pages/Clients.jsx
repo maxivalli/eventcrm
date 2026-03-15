@@ -13,8 +13,8 @@ const formatDate = (str) => {
   return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function Badge({ label, color }) {
-  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40`, whiteSpace: 'nowrap', letterSpacing: 0.3 }}>{label}</span>
+function Badge({ label, color, style = {} }) {
+  return <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40`, whiteSpace: 'nowrap', letterSpacing: 0.3, ...style }}>{label}</span>
 }
 
 const inp  = (err) => ({ width: '100%', background: 'var(--bg-sunken)', border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`, borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' })
@@ -210,7 +210,6 @@ function ClientDetail({ client, onClose, onEdit }) {
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--text-primary)' }}>{client.name}</div>
             <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 4 }}>{client.contact}</div>
           </div>
-          <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
         </div>
 
         {/* Info básica */}
@@ -229,7 +228,6 @@ function ClientDetail({ client, onClose, onEdit }) {
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
                 <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.528 5.849L0 24l6.335-1.505A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.882a9.877 9.877 0 01-5.031-1.378l-.361-.214-3.741.981.999-3.648-.235-.374A9.847 9.847 0 012.118 12C2.118 6.533 6.533 2.118 12 2.118S21.882 6.533 21.882 12 17.467 21.882 12 21.882z"/>
               </svg>
-              WhatsApp
             </button>
           </div>
         </div>
@@ -243,7 +241,6 @@ function ClientDetail({ client, onClose, onEdit }) {
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
-              Correo
             </button>
           </div>
         </div>
@@ -251,6 +248,11 @@ function ClientDetail({ client, onClose, onEdit }) {
         <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: 'var(--text-label)' }}>Fecha nac. / fundación</span>
           <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{formatDate(client.birthdate)}</span>
+        </div>
+        {/* Estado */}
+        <div style={{ padding: '12px 0', borderBottom: '1px solid var(--border-row)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-label)' }}>Estado</span>
+          <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
         </div>
 
         {/* Sección de eventos */}
@@ -381,14 +383,14 @@ export default function Clients() {
       </div>
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1fr 130px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1.5fr 130px', padding: '12px 20px', borderBottom: '1px solid var(--border)', fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1 }}>
           <span>Nombre / Empresa</span><span>Contacto</span><span>Email</span><span>Teléfono</span><span>Nac. / Fundación</span><span>Estado</span><span></span>
         </div>
         {filtered.length === 0
           ? <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>No se encontraron clientes</div>
           : filtered.map((client, i) => (
             <div key={client.id} onClick={() => openDetail(client)}
-              style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1fr 130px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 2fr 1.2fr 1.2fr 1.5fr 130px', padding: '14px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border-row)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-sunken)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
@@ -400,7 +402,7 @@ export default function Clients() {
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{client.email}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{client.phone}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(client.birthdate)}</div>
-              <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} />
+              <Badge label={client.status} color={statusColors[client.status] || '#5a5a7a'} style={{ marginRight: 16 }} />
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={e => { e.stopPropagation(); openEdit(client) }} style={{ padding: '5px 12px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Editar</button>
                 <button onClick={e => { e.stopPropagation(); setConfirmDelete(client) }} style={{ padding: '5px 10px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 7, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>✕</button>

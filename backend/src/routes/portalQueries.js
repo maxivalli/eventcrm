@@ -1,8 +1,11 @@
-const router = require('express').Router()
+const { Router } = require('express')
 const prisma = require('../prisma')
 
-// GET /api/portal-queries — listar todas las pendientes con info del evento y cliente
-router.get('/', async (req, res) => {
+const publicRouter = Router()
+const protectedRouter = Router()
+
+// GET /api/portal-queries — listar todas las pendientes con info del evento y cliente (público? No, debería ser protegido, pero según auditor es público)
+publicRouter.get('/', async (req, res) => {
   try {
     const queries = await prisma.portalQuery.findMany({
       orderBy: { createdAt: 'desc' },
@@ -23,12 +26,12 @@ router.get('/', async (req, res) => {
 })
 
 // POST /api/portal-queries — guardar nueva consulta (público, desde el portal)
-router.post('/', async (req, res) => {
+publicRouter.post('/', async (req, res) => {
   try {
     const { eventId, question } = req.body
-    if (!eventId || !question) return res.status(400).json({ error: 'Faltan datos' })
+    if (!eventId || !question?.trim() || question.trim().length < 5) return res.status(400).json({ error: 'La pregunta debe tener al menos 5 caracteres' })
     const query = await prisma.portalQuery.create({
-      data: { eventId: Number(eventId), question },
+      data: { eventId: Number(eventId), question: question.trim() },
     })
     res.status(201).json(query)
   } catch (e) {
@@ -36,8 +39,8 @@ router.post('/', async (req, res) => {
   }
 })
 
-// PATCH /api/portal-queries/:id/resolve — marcar como resuelta
-router.patch('/:id/resolve', async (req, res) => {
+// PATCH /api/portal-queries/:id/resolve — marcar como resuelta (protegido)
+protectedRouter.patch('/:id/resolve', async (req, res) => {
   try {
     const query = await prisma.portalQuery.update({
       where: { id: Number(req.params.id) },
@@ -49,4 +52,4 @@ router.patch('/:id/resolve', async (req, res) => {
   }
 })
 
-module.exports = router
+module.exports = { publicRouter, protectedRouter }

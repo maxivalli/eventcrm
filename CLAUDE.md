@@ -174,7 +174,7 @@ npx prisma studio
 | GET/POST | `/api/users` | ✅ | Usuarios del sistema |
 | GET/POST/PUT/DELETE | `/api/catering` | ✅ | Insumos de catering |
 | GET/POST/PUT/DELETE | `/api/dishes` | ✅ | Platos del recetario |
-| GET/POST/PUT/DELETE | `/api/menu` | ✅ | Menú por evento |
+| GET/POST/PUT/DELETE | `/api/event-menu` | ✅ | Menú por evento |
 | GET/POST | `/api/schedule/event/:eventId` | ✅ | Cronograma por evento |
 | GET | `/api/activity` | ✅ | Log de actividad |
 | GET/POST/DELETE | `/api/contacts` | ✅ | Agenda de contactos |

@@ -22,7 +22,7 @@ model Client {
   email     String    @unique
   phone     String
   birthdate DateTime?
-  status    String    @default("Activo")
+  status    String    @default("Inactivo")
   events    Event[]
   createdAt DateTime  @default(now())
 }
@@ -49,6 +49,7 @@ model Event {
   createdAt        DateTime          @default(now())
   checklist      ChecklistItem[]
   files          EventFile[]
+  cateringItems  CateringItem[]
   portalQueries  PortalQuery[]
   scheduleItems  ScheduleItem[]
   eventGuests    EventGuest[]
@@ -115,6 +116,7 @@ model Supplier {
   status           String            @default("Activo")
   alias            String?
   supplierPayments SupplierPayment[]
+  cateringItems    CateringItem[]
   createdAt        DateTime          @default(now())
 }
 
@@ -137,6 +139,22 @@ model EventFile {
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId      Int
   createdAt    DateTime @default(now())
+}
+
+model CateringItem {
+  id             Int       @id @default(autoincrement())
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId        Int
+  categoria      String
+  descripcion    String
+  cantidad       Float
+  unidad         String    @default("unidad")
+  precioUnitario Float     @default(0)
+  proveedor      Supplier? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  proveedorId    Int?
+  proveedorLibre String?
+  nota           String?
+  createdAt      DateTime  @default(now())
 }
 
 

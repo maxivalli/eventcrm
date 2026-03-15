@@ -21,6 +21,7 @@ exports.create = async (req, res) => {
     if (!categoria)   return res.status(400).json({ error: 'La categoría es requerida' })
     if (!descripcion) return res.status(400).json({ error: 'La descripción es requerida' })
     if (!cantidad || Number(cantidad) <= 0) return res.status(400).json({ error: 'La cantidad debe ser mayor a 0' })
+    if (precioUnitario !== undefined && Number(precioUnitario) < 0) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
 
     const item = await prisma.cateringItem.create({
       data: {
@@ -46,6 +47,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { categoria, descripcion, cantidad, unidad, precioUnitario, proveedorId, proveedorLibre, nota } = req.body
+    if (precioUnitario !== undefined && Number(precioUnitario) < 0) return res.status(400).json({ error: 'El precio unitario no puede ser negativo' })
     const item = await prisma.cateringItem.update({
       where: { id: Number(req.params.id) },
       data: {
