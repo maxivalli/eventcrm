@@ -91,6 +91,31 @@ input, textarea, select {
 ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 99px; }
 
+/* ─── SIDEBAR ─── */
+.sidebar-nav-item {
+  transition: background 0.18s, color 0.18s, transform 0.18s, border-color 0.18s !important;
+}
+.sidebar-nav-item:not(.active):hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  transform: translateX(3px);
+}
+.sidebar-btn {
+  transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s !important;
+}
+.sidebar-btn:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-secondary) !important;
+  transform: translateY(-1px);
+}
+.sidebar-btn-logout:hover {
+  background: rgba(239,68,68,0.12) !important;
+  border-color: rgba(239,68,68,0.45) !important;
+  color: #f87171 !important;
+  transform: translateY(-1px);
+}
+
 /* Animación skeleton */
 @keyframes shimmer {
   0%   { background-position: 200% 0; }

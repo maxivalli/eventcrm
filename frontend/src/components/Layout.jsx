@@ -220,6 +220,7 @@ export default function Layout() {
                 <NavLink
                   key={path}
                   to={path}
+                  className="sidebar-nav-item"
                   style={({ isActive }) => ({
                     display: "flex",
                     alignItems: "center",
@@ -344,6 +345,7 @@ export default function Layout() {
             <button
               onClick={handleLogout}
               title="Cerrar sesión"
+              className="sidebar-btn sidebar-btn-logout"
               style={{
                 flex: 1,
                 padding: "9px 0",
@@ -368,6 +370,7 @@ export default function Layout() {
             <button
               onClick={toggleTheme}
               title={isLight ? "Modo oscuro" : "Modo claro"}
+              className="sidebar-btn"
               style={{
                 flex: 1,
                 padding: "9px 0",
@@ -388,6 +391,7 @@ export default function Layout() {
             {/* Toggle sidebar */}
             <button
               onClick={() => setOpen(!open)}
+              className="sidebar-btn"
               style={{
                 flex: 1,
                 padding: "9px 0",
