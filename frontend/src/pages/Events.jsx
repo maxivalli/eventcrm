@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip, Link2, AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, UtensilsCrossed, Sparkles, Wheat, Leaf, Salad, Stethoscope, Milk, Check, Copy } from "lucide-react";
+import { MessageCircle, Paperclip, Link2, AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, UtensilsCrossed, Sparkles, Wheat, Leaf, Salad, Stethoscope, Milk, Check, Copy, Sun, Cloud, CloudRain, CloudSnow, CloudLightning } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -59,6 +59,32 @@ const typeColors = {
   Social:      "#ec4899",
 };
 const ESTADOS = ["Todos", "Propuesta", "Confirmado", "Finalizado"];
+
+const WEATHER_CODES = {
+  0:  { label: 'Despejado',           icon: <Sun size={14} />,           color: '#f59e0b' },
+  1:  { label: 'Principalmente claro', icon: <Sun size={14} />,           color: '#f59e0b' },
+  2:  { label: 'Parcialmente nublado', icon: <Cloud size={14} />,         color: '#64748b' },
+  3:  { label: 'Nublado',             icon: <Cloud size={14} />,         color: '#64748b' },
+  45: { label: 'Niebla',              icon: <Cloud size={14} />,         color: '#64748b' },
+  48: { label: 'Niebla helada',       icon: <Cloud size={14} />,         color: '#64748b' },
+  51: { label: 'Llovizna ligera',     icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  53: { label: 'Llovizna',            icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  55: { label: 'Llovizna intensa',    icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  61: { label: 'Lluvia ligera',       icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  63: { label: 'Lluvia',              icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  65: { label: 'Lluvia intensa',      icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  66: { label: 'Aguanieve ligera',    icon: <CloudSnow size={14} />,     color: '#60a5fa' },
+  67: { label: 'Aguanieve intensa',   icon: <CloudSnow size={14} />,     color: '#60a5fa' },
+  71: { label: 'Nieve ligera',        icon: <CloudSnow size={14} />,     color: '#60a5fa' },
+  73: { label: 'Nieve',               icon: <CloudSnow size={14} />,     color: '#60a5fa' },
+  75: { label: 'Nieve intensa',       icon: <CloudSnow size={14} />,     color: '#60a5fa' },
+  80: { label: 'Lluvias dispersas',   icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  81: { label: 'Lluvias',             icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  82: { label: 'Lluvias fuertes',     icon: <CloudRain size={14} />,     color: '#3b82f6' },
+  95: { label: 'Tormenta eléctrica',  icon: <CloudLightning size={14} />, color: '#f97316' },
+  96: { label: 'Tormenta con granizo',icon: <CloudLightning size={14} />, color: '#f97316' },
+  99: { label: 'Tormenta grave',      icon: <CloudLightning size={14} />, color: '#f97316' },
+};
 
 const fmt = (n) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
@@ -507,6 +533,9 @@ function EventDetail({ event, onClose, onEdit }) {
   const [proposalLoading, setProposalLoading] = useState(false);
   const [proposalCopied, setProposalCopied]   = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  const [weather, setWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState(false);
   const [guests, setGuests]             = useState([]);
   const [guestsLoaded, setGuestsLoaded] = useState(false);
   const [checkinToken, setCheckinToken] = useState(event.checkinToken || null);
@@ -645,6 +674,40 @@ function EventDetail({ event, onClose, onEdit }) {
     }).catch(console.error).finally(() => setLoading(false));
   }, [event.id]);
 
+  useEffect(() => {
+    if (tab !== 'info') return;
+    if (!event.date) return;
+
+    const date = new Date(event.date).toISOString().slice(0, 10);
+    setWeatherLoading(true);
+    setWeatherError(false);
+
+    const fetchWeather = async () => {
+      try {
+        const LAT = -30.2283;  // San Cristóbal, Santa Fe
+        const LON = -61.4474;
+
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=${date}&end_date=${date}`
+        );
+        const w = await weatherRes.json();
+        const code = w.daily?.weathercode?.[0];
+        const max = w.daily?.temperature_2m_max?.[0];
+        const min = w.daily?.temperature_2m_min?.[0];
+        if (typeof code === 'undefined') throw new Error('no forecast');
+
+        setWeather({ code, max, min, location: 'San Cristóbal, Santa Fe' });
+      } catch (e) {
+        setWeather(null);
+        setWeatherError(true);
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+
+    fetchWeather();
+  }, [tab, event.date]);
+
   const calcQuoteTotal = q => {
     const items    = (q.items || []).reduce((a, i) => a + i.quantity * i.unitPrice, 0);
     const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0;
@@ -666,6 +729,10 @@ function EventDetail({ event, onClose, onEdit }) {
     </div>
   );
 
+  const weatherInfo = weather
+    ? (WEATHER_CODES[weather.code] || { label: 'Clima', icon: <Cloud size={14} />, color: 'var(--text-muted)' })
+    : null;
+
   const SECCION_COLORS = { 'Entrada': '#3b82f6', 'Plato principal': '#8b5cf6', 'Guarnición': '#22c55e', 'Bebidas': '#06b6d4', 'Postre': '#ec4899', 'Trasnoche': '#f97316', 'Otros': '#6b7280' };
 
   // Cotizaciones agrupadas por tipo
@@ -674,10 +741,10 @@ function EventDetail({ event, onClose, onEdit }) {
   const cateringConfirmed = quotes.filter(q => q.kind === 'Catering' && q.clientStatus === 'Aprobado');
 
   const TABS = [
-    { id: 'info',       label: 'Info',       icon: <ClipboardList size={14} /> },
-    { id: 'servicios',  label: 'Servicios',  icon: <Star size={14} />, badge: confirmedQuotes.length },
-    { id: 'finanzas',   label: 'Finanzas',   icon: <CreditCard size={14} /> },
-    { id: 'invitados',  label: 'Invitados',  icon: <Users size={14} />, badge: guests.length || null },
+    { id: 'info',       label: 'Info',       icon: <ClipboardList size={13} /> },
+    { id: 'servicios',  label: 'Servicios',  icon: <Star size={13} />, badge: confirmedQuotes.length },
+    { id: 'finanzas',   label: 'Finanzas',   icon: <CreditCard size={13} /> },
+    { id: 'invitados',  label: 'Invitados',  icon: <Users size={13} />, badge: guests.length || null },
   ];
 
   return (
@@ -714,7 +781,7 @@ function EventDetail({ event, onClose, onEdit }) {
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(37,211,102,0.4)', borderRadius: 8, background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, cursor: event.client?.phone ? 'pointer' : 'not-allowed', opacity: event.client?.phone ? 1 : 0.4 }}>
                   <MessageCircle size={13} /> WA
                 </button>
-                <button onClick={handleCopyPortal} style={{ padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
+                <button onClick={handleCopyPortal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
                   {portalCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Portal</>}
                 </button>
               </>
@@ -865,6 +932,36 @@ function EventDetail({ event, onClose, onEdit }) {
                       )
                     })()}
                   </Card>
+
+                  {(weatherLoading || weather || weatherError) && (
+                    <div style={{ marginTop: 20 }}>
+                      <div style={SL}>Clima estimado</div>
+                      <Card>
+                        {weatherLoading ? (
+                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>Cargando clima…</div>
+                        ) : weather ? (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 38, height: 38, borderRadius: 16, background: `${weatherInfo.color}20`, color: weatherInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {weatherInfo.icon}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{weatherInfo.label}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{weather.location}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{Math.round(weather.max)}° / {Math.round(weather.min)}°</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>max / min</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>Clima no disponible para esta ubicación.</div>
+                        )}
+                      </Card>
+                    </div>
+                  )}
+
                 </section>
 
                 {/* Cronograma */}
