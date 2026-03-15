@@ -932,6 +932,36 @@ function EventDetail({ event, onClose, onEdit }) {
                       )
                     })()}
                   </Card>
+
+                  {(weatherLoading || weather || weatherError) && (
+                    <div style={{ marginTop: 20 }}>
+                      <div style={SL}>Clima estimado</div>
+                      <Card>
+                        {weatherLoading ? (
+                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>Cargando clima…</div>
+                        ) : weather ? (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 38, height: 38, borderRadius: 16, background: `${weatherInfo.color}20`, color: weatherInfo.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {weatherInfo.icon}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{weatherInfo.label}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{weather.location}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{Math.round(weather.max)}° / {Math.round(weather.min)}°</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>max / min</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>Clima no disponible para esta ubicación.</div>
+                        )}
+                      </Card>
+                    </div>
+                  )}
+
                 </section>
 
                 {/* Cronograma */}
