@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Paperclip, CloudRain } from "lucide-react";
+import { Paperclip, CloudRain, FileCheck } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -232,9 +232,7 @@ export default function Events() {
                     </span>
                   )}
                   {ev.paidGuestListUrl && (
-                    <span title={`Lista de pagados cargada${ev.paidGuestListCount ? `: ${ev.paidGuestListCount} personas` : ''}`} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 700, background: "rgba(201,168,76,0.15)", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.35)", whiteSpace: "nowrap" }}>
-                      📄 Pagados{ev.paidGuestListCount ? ` · ${ev.paidGuestListCount}` : ''}
-                    </span>
+                    <FileCheck size={13} title={`Lista de pagados cargada${ev.paidGuestListCount ? `: ${ev.paidGuestListCount} personas` : ''}`} style={{ color: "var(--gold)", flexShrink: 0 }} />
                   )}
                   {isPastEvent(ev) && (
                     <span style={{
