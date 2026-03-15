@@ -3,6 +3,7 @@ import { X, Upload, Phone, Mail, Trash2, BookUser } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import SkeletonTable from '../components/SkeletonTable'
 
 // ── Quoted-Printable decoder ──────────────────────────────────────────────────
 // Algunos exportadores (Google, Android) codifican tildes y ñ como =C3=B3, etc.
@@ -494,11 +495,10 @@ export default function Contacts() {
     window.open(`https://wa.me/${p}`, '_blank')
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>
-      Cargando contactos...
-    </div>
-  )
+  if (loading) return <SkeletonTable cols={[
+    { width: '40px', skeletonWidth: '60%' }, { width: '2fr' }, { width: '1.4fr' },
+    { width: '2fr' }, { width: '120px', skeletonWidth: '50%' },
+  ]} />
 
   return (
     <div>

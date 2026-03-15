@@ -11,6 +11,7 @@ import {
   statusColors, typeColors, ESTADOS,
   isPastEvent, isBadWeather, WEATHER_CODES,
 } from "../utils/eventUtils";
+import SkeletonTable from "../components/SkeletonTable";
 
 // Keyframe for "Ya pasó" pulse animation
 if (!document.getElementById('past-event-style')) {
@@ -168,7 +169,11 @@ export default function Events() {
     color:       active ? "var(--gold)" : "var(--text-muted)",
   });
 
-  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "var(--text-label)" }}>Cargando eventos...</div>;
+  if (loading) return <SkeletonTable cols={[
+    { width: '90px', skeletonWidth: '60%' }, { width: '2.5fr' }, { width: '1fr' },
+    { width: '1fr' }, { width: '1.5fr' }, { width: '1fr' },
+    { width: '130px', skeletonWidth: '50%' }, { width: '160px', skeletonWidth: '50%' },
+  ]} />;
 
   return (
     <div>

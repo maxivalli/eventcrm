@@ -4,6 +4,7 @@ import { Phone, Mail, Plus, Search } from 'lucide-react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import SkeletonTable from '../components/SkeletonTable'
 
 const statusColors = { 'Activo': '#22c55e', 'Inactivo': '#94a3b8' }
 const ESTADOS = ['Todos', 'Activo', 'Inactivo']
@@ -359,7 +360,10 @@ export default function Clients() {
       color:       active ? c : 'var(--text-faint)' }
   }
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>Cargando clientes...</div>
+  if (loading) return <SkeletonTable cols={[
+    { width: '2fr' }, { width: '1.5fr' }, { width: '2fr' },
+    { width: '1.2fr' }, { width: '1.2fr' }, { width: '1.5fr' }, { width: '130px', skeletonWidth: '50%' },
+  ]} />
 
   return (
     <div>

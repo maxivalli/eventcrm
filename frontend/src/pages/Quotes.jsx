@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import { useToast } from '../components/Toast'
 import ConfirmDialog from '../components/ConfirmDialog'
+import SkeletonTable from '../components/SkeletonTable'
 
 const statusColors = { 'Aprobado': '#22c55e', 'Pendiente': '#f59e0b', 'Rechazado': '#ef4444' }
 const kindColors   = { 'General': '#8b5cf6', 'Catering': '#f97316' }
@@ -487,7 +488,10 @@ export default function Quotes() {
     color:       active ? (color || 'var(--gold)') : 'var(--text-muted)',
   })
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-label)', fontSize: 14 }}>Cargando cotizaciones...</div>
+  if (loading) return <SkeletonTable cols={[
+    { width: '40px', skeletonWidth: '60%' }, { width: '2fr' }, { width: '1.4fr' },
+    { width: '2fr' }, { width: '120px', skeletonWidth: '50%' },
+  ]} />
 
   return (
     <div>
