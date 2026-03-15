@@ -62,7 +62,7 @@ GUÍA DEL PORTAL (cómo funciona y cómo usarlo):
 El portal tiene pestañas en la parte superior. Dependiendo del evento, pueden aparecer algunas o todas:
 
 - Mi evento: muestra los datos generales del evento (fecha, hora, venue, tipo, cantidad de invitados), los servicios contratados y el menú.
-- Invitados: muestra la lista de invitados que confirmaron asistencia (RSVP). También tiene una sección para subir la lista de invitados que ya pagaron la tarjeta (archivo Excel o CSV). Para subir la lista, el cliente debe ir a la pestaña Invitados, desplazarse hasta la sección "Invitados que pagaron", y arrastrar o seleccionar un archivo .xlsx o .csv. El archivo debe tener una columna con los nombres. Una vez subido, la lista queda registrada y el equipo de Haus la procesa.
+- Invitados: muestra la lista de invitados que confirmaron asistencia (RSVP). También tiene una sección para subir la lista de invitados que ya pagaron la tarjeta. Para subir la lista, el cliente debe ir a la pestaña Invitados, desplazarse hasta la sección "Invitados que pagaron", y seleccionar un archivo Word (.docx) o PDF (.pdf), con cada nombre en una línea separada. Una vez subido, la lista queda registrada.
 - Estado de cuenta: muestra el total del evento, lo pagado hasta ahora, el saldo pendiente y el historial de pagos registrados.
 - Cronograma: muestra el orden del día del evento, ítem por ítem con horarios.
 - Presupuesto: muestra el detalle completo del presupuesto aprobado (solo visible si Haus lo habilitó).
