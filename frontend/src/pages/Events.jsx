@@ -86,6 +86,10 @@ const WEATHER_CODES = {
   99: { label: 'Tormenta grave',      icon: <CloudLightning size={14} />, color: '#f97316' },
 };
 
+const BAD_WEATHER_CODES = new Set([51, 53, 55, 61, 63, 65, 66, 67, 71, 73, 75, 80, 81, 82, 95, 96, 99]);
+const isBadWeather = (code) => BAD_WEATHER_CODES.has(code);
+
+
 const fmt = (n) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (str) =>
@@ -759,7 +763,14 @@ function EventDetail({ event, onClose, onEdit }) {
         <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.2 }}>{event.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.2 }}>{event.name}</div>
+                {weatherInfo && isBadWeather(weather.code) && (
+                  <div title="Pronóstico adverso" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ef4444' }}>
+                    <AlertCircle size={14} /> Mal clima
+                  </div>
+                )}
+              </div>
               <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 3 }}>
                 {event.client?.name} · {fmtDate(event.date)}{event.time ? ` · ${event.time}` : ''}
               </div>
@@ -956,7 +967,7 @@ function EventDetail({ event, onClose, onEdit }) {
                             </div>
                           </div>
                         ) : (
-                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>Clima no disponible para esta ubicación.</div>
+                          <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-faint)' }}>El pronóstico del clima no está disponible para esta fecha.</div>
                         )}
                       </Card>
                     </div>
@@ -1304,6 +1315,7 @@ export default function Events() {
   const [selected, setSelected]       = useState(null);
   const [detailKey, setDetailKey]     = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [weatherByDate, setWeatherByDate] = useState({});
 
   const fetchData = async () => {
     try {
@@ -1339,6 +1351,45 @@ export default function Events() {
     if (va > vb) return sortDir === "asc" ? 1 : -1
     return 0
   })
+
+  useEffect(() => {
+    const dates = Array.from(new Set(filtered.map(e => new Date(e.date).toISOString().slice(0, 10))))
+    const missing = dates.filter(d => !(d in weatherByDate))
+    if (missing.length === 0) return
+
+    let cancelled = false
+    const controller = new AbortController()
+
+    const fetchForDate = async (date) => {
+      try {
+        const LAT = -30.2283;  // San Cristóbal, Santa Fe
+        const LON = -61.4474;
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=weathercode&timezone=auto&start_date=${date}&end_date=${date}`,
+          { signal: controller.signal }
+        )
+        const json = await res.json()
+        const code = json.daily?.weathercode?.[0]
+        if (typeof code === 'undefined') throw new Error('no forecast')
+
+        if (cancelled) return
+        setWeatherByDate(prev => ({
+          ...prev,
+          [date]: { code, bad: isBadWeather(code), label: WEATHER_CODES[code]?.label || 'Clima' }
+        }))
+      } catch {
+        if (cancelled) return
+        setWeatherByDate(prev => ({ ...prev, [date]: { error: true } }))
+      }
+    }
+
+    ;(async () => {
+      await Promise.all(missing.map(d => fetchForDate(d)))
+    })()
+
+    return () => { cancelled = true; controller.abort() }
+  }, [filtered, weatherByDate])
+
 
   const toggleSort = (col) => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc")
@@ -1443,8 +1494,11 @@ export default function Events() {
         </div>
         {filtered.length === 0
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
-          : filtered.map((ev, i) => (
-            <div key={ev.id} onClick={() => openDetail(ev)}
+          : filtered.map((ev, i) => {
+            const dateKey = new Date(ev.date).toISOString().slice(0, 10);
+            const weather = weatherByDate[dateKey];
+            return (
+              <div key={ev.id} onClick={() => openDetail(ev)}
               style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}

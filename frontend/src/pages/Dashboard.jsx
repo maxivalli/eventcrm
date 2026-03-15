@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
 import {
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, Sector,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import {
@@ -87,8 +87,10 @@ const ACTION_COLORS = {
 
 const tooltipStyle = {
   background: 'var(--chart-tooltip-bg)', border: '1px solid var(--chart-tooltip-border)',
-  borderRadius: 8, color: 'var(--chart-tooltip-color)', fontSize: 12,
+  borderRadius: 8, color: 'var(--text-primary)', fontSize: 12,
 }
+const tooltipItemStyle = { color: 'var(--text-primary)', fontSize: 12 }
+const tooltipLabelStyle = { color: 'var(--text-primary)', fontSize: 12 }
 
 // ── Componentes compartidos ───────────────────────────────────────────────────
 
@@ -100,13 +102,56 @@ function Badge({ label, color }) {
   )
 }
 
-function KpiCard({ label, value, sub, icon, color }) {
+function PendingBalanceCard({ ev }) {
+  const [hovered, setHovered] = useState(false)
+  const pct = ev.total > 0 ? Math.min((ev.paid / ev.total) * 100, 100) : 0
   return (
-    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 22px', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 14, right: 16, opacity: 0.1, color }}>{icon}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color, fontFamily: "'Playfair Display', serif", marginBottom: 4 }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{sub}</div>
+    <div
+      style={{
+        padding: '10px 0',
+        ...rowBorder,
+        background: hovered ? 'var(--bg-hover)' : 'transparent',
+        cursor: 'pointer',
+        transition: 'background 0.2s'
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>{ev.name}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', flexShrink: 0 }}>{fmt(ev.balance)}</div>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-label)', marginBottom: 6 }}>{ev.client?.name || '—'}</div>
+      <div style={{ height: 4, background: 'var(--bg-sunken)', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', width: `${pct}%`, transition: 'width 0.3s' }} />
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 3 }}>{fmt(ev.paid)} cobrado de {fmt(ev.total)}</div>
+    </div>
+  )
+}
+
+function QuoteCard({ q }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      style={{
+        padding: '14px 16px',
+        background: hovered ? 'var(--bg-hover)' : 'var(--bg-sunken)',
+        borderRadius: 12,
+        border: '1px solid var(--border)',
+        cursor: 'pointer',
+        transition: 'background 0.2s'
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 600, background: q.kind === 'Catering' ? 'rgba(59,130,246,0.12)' : 'rgba(139,92,246,0.12)', color: q.kind === 'Catering' ? '#3b82f6' : '#8b5cf6' }}>{q.kind}</span>
+        <Badge label={q.status} color={STATUS_COLORS[q.status] || '#5a5a7a'} />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.event?.name || '—'}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-label)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.event?.client?.name || '—'}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>{fmt(calcTotal(q))}</div>
     </div>
   )
 }
@@ -123,6 +168,31 @@ function Card({ children, style = {} }) {
   return (
     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, ...style }}>
       {children}
+    </div>
+  )
+}
+
+function KpiCard({ label, value, sub, icon, color }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      style={{
+        background: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 16,
+        padding: '20px 22px',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'background 0.2s'
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ position: 'absolute', top: 14, right: 16, opacity: 0.1, color }}>{icon}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 700, color, fontFamily: "'Playfair Display', serif", marginBottom: 4 }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{sub}</div>
     </div>
   )
 }
@@ -468,6 +538,8 @@ function FinanzasTab({ data, loading }) {
     { label: 'En propuesta',          value: fmt(pipeline),     sub: `${data.quotes.filter(q => q.status === 'Pendiente').length} cotizaciones pendientes`, icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#f59e0b' },
   ]
 
+  const [activeIndex, setActiveIndex] = useState(-1)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* KPIs */}
@@ -494,8 +566,8 @@ function FinanzasTab({ data, loading }) {
             <BarChart data={cashFlow} margin={{ top: 0, right: 0, left: -10, bottom: 0 }}>
               <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-label)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--text-label)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => fmt(v)} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--text-label)' }} />
+              <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} formatter={(v) => fmt(v)} cursor={{ fill: 'rgba(201,168,76,0.4)' }} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: 'var(--text-primary)' }} />
               <Bar dataKey="Ingresos" fill="#22c55e" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Egresos"  fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -511,22 +583,7 @@ function FinanzasTab({ data, loading }) {
           <SectionTitle>Saldos pendientes por evento</SectionTitle>
           {loading ? <Skeleton height={120} /> : pendingBalances.length === 0 ? (
             <EmptyState icon={<CheckCircle2 size={22} />} text="Todos los eventos están saldados" />
-          ) : pendingBalances.map(ev => {
-            const pct = ev.total > 0 ? Math.min((ev.paid / ev.total) * 100, 100) : 0
-            return (
-              <div key={ev.id} style={{ padding: '10px 0', ...rowBorder }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>{ev.name}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', flexShrink: 0 }}>{fmt(ev.balance)}</div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-label)', marginBottom: 6 }}>{ev.client?.name || '—'}</div>
-                <div style={{ height: 4, background: 'var(--bg-sunken)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 99, background: 'linear-gradient(135deg, var(--gold), var(--gold-light))', width: `${pct}%`, transition: 'width 0.3s' }} />
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 3 }}>{fmt(ev.paid)} cobrado de {fmt(ev.total)}</div>
-              </div>
-            )
-          })}
+          ) : pendingBalances.map(ev => <PendingBalanceCard key={ev.id} ev={ev} />)}
         </Card>
 
         {/* Estado de cotizaciones */}
@@ -537,13 +594,29 @@ function FinanzasTab({ data, loading }) {
           ) : (
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
-                <Pie data={quoteStatusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                <Pie 
+                  data={quoteStatusData} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={45} 
+                  outerRadius={70} 
+                  paddingAngle={3} 
+                  dataKey="value"
+                  activeIndex={activeIndex}
+                  activeShape={(props) => (
+                    <Sector {...props} outerRadius={75} fill={props.fill} stroke="var(--gold)" strokeWidth={2} />
+                  )}
+                  onMouseEnter={(data, index) => setActiveIndex(index)}
+                  onMouseLeave={() => setActiveIndex(-1)}
+                  label={({ percent }) => percent > 0.1 ? `${(percent * 100).toFixed(0)}%` : ''}
+                  labelStyle={{ fontSize: 11, fill: 'var(--text-primary)' }}
+                >
                   {quoteStatusData.map((entry, i) => (
                     <Cell key={i} fill={STATUS_COLORS[entry.name] || CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--text-label)' }} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: 'var(--text-primary)' }} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -559,7 +632,7 @@ function FinanzasTab({ data, loading }) {
               <BarChart data={eventsByMonth} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis dataKey="mes" tick={{ fontSize: 10, fill: 'var(--text-label)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-label)' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--gold-glow)' }} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={tooltipItemStyle} labelStyle={tooltipLabelStyle} cursor={{ fill: 'rgba(201,168,76,0.4)' }} />
                 <Bar dataKey="value" name="Eventos" fill="var(--gold)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -578,17 +651,7 @@ function FinanzasTab({ data, loading }) {
           <div style={{ fontSize: 13, color: 'var(--text-faint)', textAlign: 'center', padding: '20px 0' }}>No hay cotizaciones</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-            {recentQuotes.map(q => (
-              <div key={q.id} style={{ padding: '14px 16px', background: 'var(--bg-sunken)', borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 600, background: q.kind === 'Catering' ? 'rgba(59,130,246,0.12)' : 'rgba(139,92,246,0.12)', color: q.kind === 'Catering' ? '#3b82f6' : '#8b5cf6' }}>{q.kind}</span>
-                  <Badge label={q.status} color={STATUS_COLORS[q.status] || '#5a5a7a'} />
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.event?.name || '—'}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-label)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.event?.client?.name || '—'}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>{fmt(calcTotal(q))}</div>
-              </div>
-            ))}
+            {recentQuotes.map(q => <QuoteCard key={q.id} q={q} />)}
           </div>
         )}
       </Card>
