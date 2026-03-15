@@ -276,7 +276,7 @@ function MenuDetail({ menu, dishes, onUpdate, onAddSection, onDeleteSection, onA
                             <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2, fontStyle: 'italic' }}>{item.dish.descripcion}</div>
                           )}
                         </div>
-                        <button onClick={() => onRemoveDish(section.id, item.id)}
+                        <button onClick={() => onRemoveDish(section.id, item.id, item.dish?.name)}
                           style={{ background: 'none', border: 'none', color: 'var(--text-faint)', cursor: 'pointer', padding: 4, borderRadius: 5, transition: 'color 0.1s' }}
                           onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                           onMouseLeave={e => e.currentTarget.style.color = 'var(--text-faint)'}>
@@ -433,18 +433,24 @@ export default function Menus() {
     } catch { toast('Error al agregar plato') }
   }
 
-  const handleRemoveDish = async (sectionId, itemId) => {
-    try {
-      await api.delete(`/api/menus/items/${itemId}`)
-      setMenus(prev => prev.map(m => m.id === selected ? {
-        ...m,
-        sections: m.sections.map(s => s.id === sectionId
-          ? { ...s, items: s.items.filter(i => i.id !== itemId) }
-          : s
-        )
-      } : m))
-      toast('Plato quitado', 'success')
-    } catch { toast('Error al eliminar plato') }
+  const handleRemoveDish = (sectionId, itemId, dishName) => {
+    setConfirm({
+      title: 'Quitar plato',
+      msg: `¿Quitar "${dishName}" de esta sección?`,
+      onOk: async () => {
+        try {
+          await api.delete(`/api/menus/items/${itemId}`)
+          setMenus(prev => prev.map(m => m.id === selected ? {
+            ...m,
+            sections: m.sections.map(s => s.id === sectionId
+              ? { ...s, items: s.items.filter(i => i.id !== itemId) }
+              : s
+            )
+          } : m))
+          toast('Plato quitado', 'success')
+        } catch { toast('Error al eliminar plato') }
+      }
+    })
   }
 
   const filteredMenus = menus.filter(m =>

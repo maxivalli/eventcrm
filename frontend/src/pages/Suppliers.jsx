@@ -66,8 +66,6 @@ function SupplierForm({ initial, onSave, onClose }) {
     setErrors(e); return Object.keys(e).length === 0
   }
 
-  const catMeta = CATEGORY_META[form.category]
-
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', borderRadius: 18, padding: 32, width: 480, maxWidth: '90vw' }}>
@@ -348,7 +346,7 @@ export default function Suppliers() {
       {/* ── Tabla ── */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.5fr 1fr 1fr 110px', padding: '10px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.5fr 1fr 1fr 110px', columnGap: 12, padding: '10px 20px', borderBottom: '1px solid var(--border)' }}>
           {['Proveedor', 'Categoría', 'Contacto', 'Email', 'Calificación', 'Estado', ''].map((h, i) => (
             <span key={i} style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 1.5 }}>{h}</span>
           ))}
@@ -364,7 +362,7 @@ export default function Suppliers() {
           const color = meta?.color || '#94a3b8'
           return (
             <div key={s.id} onClick={() => openDetail(s)}
-              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.5fr 1fr 1fr 110px', padding: '13px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr 1.5fr 1fr 1fr 110px', columnGap: 12, padding: '13px 20px', alignItems: 'center', borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-sunken)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import ConfirmDialog from './ConfirmDialog'
 
 const GROUP_COLORS = {
   'Coordinación': '#c9a84c',
@@ -54,10 +55,13 @@ export default function Checklist({ eventId, event }) {
     } catch { showError('No se pudo actualizar la tarea') }
   }
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+
   const handleDelete = async (id) => {
     try {
       await api.delete(`/api/checklist/${id}`)
       setItems(prev => prev.filter(i => i.id !== id))
+      setConfirmDeleteId(null)
     } catch { showError('No se pudo eliminar la tarea') }
   }
 
@@ -212,7 +216,7 @@ export default function Checklist({ eventId, event }) {
               color: item.done ? 'var(--text-faint)' : 'var(--text-secondary)',
               textDecoration: item.done ? 'line-through' : 'none', transition: 'all 0.2s',
             }}>{item.title}</span>
-            <button onClick={() => handleDelete(item.id)} style={{
+            <button onClick={() => setConfirmDeleteId(item.id)} style={{
               width: 26, height: 26, border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6,
               background: 'rgba(239,68,68,0.06)', color: '#ef4444',
               cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -373,6 +377,15 @@ export default function Checklist({ eventId, event }) {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
       `}</style>
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="¿Eliminar tarea?"
+          message="Esta acción no se puede deshacer."
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </div>
   )
 }

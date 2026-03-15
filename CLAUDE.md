@@ -31,29 +31,43 @@ eventcrm-main/
         ├── index.css             # Variables CSS globales (temas dark/light)
         ├── api/
         │   └── axios.js          # Instancia axios con interceptors JWT
+        ├── utils/
+        │   └── eventUtils.jsx    # Constantes, formatters y componentes compartidos de eventos
+        │                         # (statusColors, typeColors, DIETARY_OPTIONS, WEATHER_CODES, fmt, Badge, BalanceBar...)
         ├── components/
         │   ├── Layout.jsx        # Sidebar + Outlet
         │   ├── Checklist.jsx     # Checklist por evento
+        │   ├── Cronograma.jsx    # Timeline del evento
         │   ├── EventFiles.jsx    # Gestión de archivos por evento
+        │   ├── DatePicker.jsx    # Calendario selector de fecha reutilizable
+        │   ├── EventForm.jsx     # Formulario crear/editar evento
         │   ├── ConfirmDialog.jsx # Modal de confirmación reutilizable
-        │   └── Toast.jsx         # Sistema de notificaciones (hook useToast)
+        │   ├── Toast.jsx         # Sistema de notificaciones (hook useToast)
+        │   ├── dashboard/        # Componentes del Dashboard
+        │   │   ├── dashboardUtils.jsx  # Constantes, formatters y componentes UI del dashboard
+        │   │   ├── ResumenTab.jsx      # Tab operativo diario
+        │   │   ├── FinanzasTab.jsx     # Tab analítica financiera (Recharts)
+        │   │   └── CalendarioTab.jsx   # Tab calendario anual con mini-meses
+        │   └── events/           # Componentes del modal de eventos
+        │       ├── EventDetail.jsx     # Modal completo del evento (tabs: Info, Servicios, Finanzas, Invitados)
+        │       └── QuoteDetailCard.jsx # Tarjeta de detalle de cotización
         ├── contexts/
         │   └── ThemeContext.jsx  # Contexto dark/light mode
         └── pages/
-            ├── Dashboard.jsx
+            ├── Dashboard.jsx         # Shell del dashboard (fetch + tab switcher)
             ├── Login.jsx
             ├── Clients.jsx
-            ├── Events.jsx
+            ├── Events.jsx            # Lista de eventos + filtros/ordenamiento
             ├── Quotes.jsx
             ├── Suppliers.jsx
             ├── Payments.jsx
             ├── SupplierPayments.jsx
             ├── Budget.jsx
-            ├── Catering.jsx        # Gestión de insumos de catering por evento
-            ├── Recetario.jsx       # CRUD de platos con ingredientes
-            ├── Contacts.jsx        # Agenda de contactos independiente
-            ├── WhatsApp.jsx        # Automatizaciones de WhatsApp con Evolution API
-            ├── ClientPortal.jsx    # Portal público para clientes (sin auth)
+            ├── Catering.jsx          # Gestión de insumos de catering por evento
+            ├── Recetario.jsx         # CRUD de platos con ingredientes
+            ├── Contacts.jsx          # Agenda de contactos independiente
+            ├── WhatsApp.jsx          # Automatizaciones de WhatsApp con Evolution API
+            ├── ClientPortal.jsx      # Portal público para clientes (sin auth)
             └── Users.jsx
 ```
 
@@ -321,7 +335,7 @@ Usar `axios` directo (no `api/axios.js` que requiere token).
 10. **Fechas**: Normalizar con `new Date(\`${date.slice(0,10)}T12:00:00\`)`.
 11. **Admin**: No hay campo `role` en `User`. El administrador principal se identifica por `req.user.id === 1`. Solo el admin puede eliminar usuarios.
 12. **Precios**: Validar que `unitPrice >= 0` y `quantity > 0` en QuoteItems. `pricePerCover > 0` y `covers > 0` en cotizaciones Catering.
-13. **Dashboard**: Tiene dos tabs — `Resumen` (operativo diario) y `Finanzas` (analítica e ingresos/egresos).
+13. **Dashboard**: Tiene tres tabs — `Resumen` (operativo diario), `Finanzas` (analítica e ingresos/egresos) y `Calendario` (vista anual con mini-meses).
 14. **Importación VCF**: Muestra spinner + barra de progreso en tiempo real mientras importa contactos (puede tardar varios minutos).
 
 ---

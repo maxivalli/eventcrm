@@ -30,7 +30,7 @@ function UserForm({ initial, onSave, onClose }) {
   }
 
   const inputStyle = {
-    width: '100%', background: 'var(--bg-sunken)', border: '1px solid #1e1e30',
+    width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)',
     borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)',
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   }
@@ -45,7 +45,7 @@ function UserForm({ initial, onSave, onClose }) {
       zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--bg-surface)', border: '1px solid #2a2a40',
+        background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
         borderRadius: 18, padding: 32, width: 440, maxWidth: '90vw',
       }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: '#c9a84c', marginBottom: 24 }}>
@@ -74,7 +74,7 @@ function UserForm({ initial, onSave, onClose }) {
         )}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{
-            flex: 1, padding: 11, border: '1px solid #1e1e30', borderRadius: 8,
+            flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8,
             background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
           }}>Cancelar</button>
           <button onClick={handleSave} style={{
@@ -101,7 +101,7 @@ function PasswordForm({ user, onSave, onClose }) {
   }
 
   const inputStyle = {
-    width: '100%', background: 'var(--bg-sunken)', border: '1px solid #1e1e30',
+    width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)',
     borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)',
     fontSize: 13, outline: 'none', boxSizing: 'border-box',
   }
@@ -116,7 +116,7 @@ function PasswordForm({ user, onSave, onClose }) {
       zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: 'var(--bg-surface)', border: '1px solid #2a2a40',
+        background: 'var(--bg-surface)', border: '1px solid var(--border-strong)',
         borderRadius: 18, padding: 32, width: 400, maxWidth: '90vw',
       }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: '#c9a84c', marginBottom: 6 }}>
@@ -140,7 +140,7 @@ function PasswordForm({ user, onSave, onClose }) {
         )}
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{
-            flex: 1, padding: 11, border: '1px solid #1e1e30', borderRadius: 8,
+            flex: 1, padding: 11, border: '1px solid var(--border)', borderRadius: 8,
             background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
           }}>Cancelar</button>
           <button onClick={handleSave} style={{
@@ -241,10 +241,10 @@ export default function Users() {
       </div>
 
       {/* Tabla */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid #1e1e30', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 140px',
-          padding: '12px 20px', borderBottom: '1px solid #1e1e30',
+          padding: '12px 20px', borderBottom: '1px solid var(--border)',
           fontSize: 11, color: 'var(--text-label)', textTransform: 'uppercase', letterSpacing: 1,
         }}>
           <span>Nombre</span>
@@ -261,7 +261,7 @@ export default function Users() {
           <div key={user.id} style={{
             display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 140px',
             padding: '14px 20px', alignItems: 'center',
-            borderBottom: i < users.length - 1 ? '1px solid #1a1a28' : 'none',
+            borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none',
             transition: 'background 0.15s',
           }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -287,7 +287,7 @@ export default function Users() {
               <button
                 onClick={() => { setSelected(user); setModal('edit') }}
                 style={{
-                  padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
+                  padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6,
                   background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
                 }}
               >Editar</button>
@@ -295,7 +295,7 @@ export default function Users() {
                 title="Cambiar contraseña"
                 onClick={() => { setSelected(user); setModal('password') }}
                 style={{
-                  padding: '6px 10px', border: '1px solid #1e1e30', borderRadius: 6,
+                  padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 6,
                   background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer',
                 }}
               ><KeyRound size={13} /></button>
@@ -303,8 +303,8 @@ export default function Users() {
                 <button
                   onClick={() => setConfirmDelete(user)}
                   style={{
-                    padding: '6px 10px', border: '1px solid #2a1a1a', borderRadius: 6,
-                    background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontSize: 11, cursor: 'pointer',
+                    padding: '6px 10px', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6,
+                    background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer',
                   }}
                 >Eliminar</button>
               )}

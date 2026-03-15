@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api/axios'
+import ConfirmDialog from './ConfirmDialog'
 
 const CAT_COLORS = {
   'Preparación':     { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.25)' },
@@ -92,6 +93,7 @@ export default function Cronograma({ event }) {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [addingNew, setAddingNew]   = useState(false)
   const [newItem, setNewItem]       = useState({ hora: '', titulo: '', descripcion: '', categoria: 'Protocolo' })
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState(null)
 
   const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000) }
   const cat = (categoria) => CAT_COLORS[categoria] || DEFAULT
@@ -505,7 +507,7 @@ export default function Cronograma({ event }) {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                             <button onClick={e => startEdit(idx, e)} title="Editar" style={{ width: 22, height: 22, border: '1px solid var(--border)', borderRadius: 5, background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><EditIcon /></button>
-                            <button onClick={e => deleteItem(idx, e)} title="Eliminar" style={{ width: 22, height: 22, border: '1px solid rgba(239,68,68,0.2)', borderRadius: 5, background: 'transparent', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrashIcon /></button>
+                            <button onClick={e => { e.stopPropagation(); setConfirmDeleteIdx(idx) }} title="Eliminar" style={{ width: 22, height: 22, border: '1px solid rgba(239,68,68,0.2)', borderRadius: 5, background: 'transparent', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><TrashIcon /></button>
                             <span style={{ fontSize: 10, color: 'var(--text-faint)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▾</span>
                           </div>
                         </div>
@@ -534,6 +536,15 @@ export default function Cronograma({ event }) {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
       `}</style>
+
+      {confirmDeleteIdx !== null && (
+        <ConfirmDialog
+          title="¿Eliminar momento?"
+          message="Se eliminará este ítem del cronograma. Esta acción no se puede deshacer."
+          onConfirm={() => { deleteItem(confirmDeleteIdx, { stopPropagation: () => {} }); setConfirmDeleteIdx(null) }}
+          onCancel={() => setConfirmDeleteIdx(null)}
+        />
+      )}
     </div>
   )
 }

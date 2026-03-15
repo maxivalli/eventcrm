@@ -143,9 +143,21 @@ eventcrm-main/
     └── src/
         ├── App.jsx               # Router: rutas protegidas + /portal/:token pública
         ├── api/axios.js
-        ├── components/
         ├── contexts/
-        └── pages/                # Una página por módulo + ClientPortal.jsx
+        ├── utils/
+        │   └── eventUtils.jsx    # Constantes, formatters y componentes compartidos de eventos
+        ├── components/
+        │   ├── Layout.jsx
+        │   ├── Checklist.jsx
+        │   ├── Cronograma.jsx
+        │   ├── EventFiles.jsx
+        │   ├── DatePicker.jsx
+        │   ├── EventForm.jsx
+        │   ├── ConfirmDialog.jsx
+        │   ├── Toast.jsx
+        │   ├── dashboard/        # ResumenTab, FinanzasTab, CalendarioTab, dashboardUtils
+        │   └── events/           # EventDetail, QuoteDetailCard
+        └── pages/                # Una página por módulo
 ```
 
 ---
