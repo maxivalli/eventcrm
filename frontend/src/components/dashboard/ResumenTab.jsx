@@ -7,28 +7,32 @@ import {
 } from './dashboardUtils'
 
 export default function ResumenTab({ data, activityLogs, portalQueries, loading }) {
-  if (!data) return null
+  const events      = data?.events      || []
+  const quotes      = data?.quotes      || []
+  const clients     = data?.clients     || []
+  const allPayments = data?.allPayments || []
+  const allSpPayments = data?.allSpPayments || []
 
   const now  = new Date()
   const in30 = new Date(now.getTime() + 30 * 86400000)
 
-  const upcomingEvents = [...data.events]
+  const upcomingEvents = [...events]
     .filter(e => { const d = new Date(e.date); return d >= now && d <= in30 && e.status !== 'Finalizado' })
     .sort((a, b) => new Date(a.date) - new Date(b.date))
 
-  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
+  const paymentsByEvent = allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
 
   const totalByEvent = (eventId) => {
-    const quotes = data.quotes.filter(q => q.eventId === eventId && q.status === 'Aprobado')
-    const total  = quotes.reduce((a, q) => a + calcTotal(q), 0)
-    const paid   = paymentsByEvent[eventId] || 0
+    const evQuotes = quotes.filter(q => q.eventId === eventId && q.status === 'Aprobado')
+    const total    = evQuotes.reduce((a, q) => a + calcTotal(q), 0)
+    const paid     = paymentsByEvent[eventId] || 0
     return { total, paid, balance: total - paid }
   }
 
-  const pendingQuotes       = [...data.quotes].filter(q => q.status === 'Pendiente').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  const eventsWithoutQuotes = data.events.filter(e => e.status !== 'Finalizado' && !data.quotes.some(q => q.eventId === e.id))
+  const pendingQuotes       = [...quotes].filter(q => q.status === 'Pendiente').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  const eventsWithoutQuotes = events.filter(e => e.status !== 'Finalizado' && !quotes.some(q => q.eventId === e.id))
   const suppliersPending    = Object.values(
-    data.allSpPayments.filter(p => p.status === 'Pendiente').reduce((acc, p) => {
+    allSpPayments.filter(p => p.status === 'Pendiente').reduce((acc, p) => {
       const k = p.supplierId
       if (!acc[k]) acc[k] = { name: p.supplier?.name || '—', total: 0, count: 0 }
       acc[k].total += Number(p.amount); acc[k].count++
@@ -36,14 +40,14 @@ export default function ResumenTab({ data, activityLogs, portalQueries, loading 
     }, {})
   ).sort((a, b) => b.total - a.total)
 
-  const birthdays      = getUpcomingBirthdays(data.clients)
+  const birthdays      = getUpcomingBirthdays(clients)
   const pendingQueries = portalQueries.filter(q => q.status === 'pending')
 
   const kpis = [
-    { label: 'Clientes activos',   value: data.clients.filter(c => c.status === 'Activo').length,            sub: `${data.clients.length} clientes en total`,             icon: <UserCheck size={28} strokeWidth={1.5} />,  color: 'var(--gold)' },
-    { label: 'Eventos en curso',   value: data.events.filter(e => e.status !== 'Finalizado').length,          sub: `${data.events.length} eventos en total`,               icon: <CalendarClock size={28} strokeWidth={1.5} />, color: '#3b82f6' },
-    { label: 'Ingresos aprobados', value: fmt(data.quotes.filter(q => q.status === 'Aprobado').reduce((a, q) => a + calcTotal(q), 0)), sub: `${data.quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`, icon: <TrendingUp size={28} strokeWidth={1.5} />, color: '#22c55e' },
-    { label: 'Deuda proveedores',  value: fmt(data.pendingTotal || 0),                                        sub: 'Pagos pendientes a proveedores',                       icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#ef4444' },
+    { label: 'Clientes activos',   value: clients.filter(c => c.status === 'Activo').length,            sub: `${clients.length} clientes en total`,             icon: <UserCheck size={28} strokeWidth={1.5} />,  color: 'var(--gold)' },
+    { label: 'Eventos en curso',   value: events.filter(e => e.status !== 'Finalizado').length,          sub: `${events.length} eventos en total`,               icon: <CalendarClock size={28} strokeWidth={1.5} />, color: '#3b82f6' },
+    { label: 'Ingresos aprobados', value: fmt(quotes.filter(q => q.status === 'Aprobado').reduce((a, q) => a + calcTotal(q), 0)), sub: `${quotes.filter(q => q.status === 'Aprobado').length} cotizaciones aprobadas`, icon: <TrendingUp size={28} strokeWidth={1.5} />, color: '#22c55e' },
+    { label: 'Deuda proveedores',  value: fmt(data?.pendingTotal || 0),                                  sub: 'Pagos pendientes a proveedores',                   icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#ef4444' },
   ]
 
   return (

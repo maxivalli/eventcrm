@@ -196,9 +196,7 @@ export default function CalendarioTab({ data, loading }) {
   const [year, setYear]     = useState(new Date().getFullYear())
   const [popover, setPopover] = useState(null)
 
-  if (!data) return null
-
-  const events      = data.events || []
+  const events      = data?.events || []
   const yearEvents  = events.filter(e => new Date(e.date).getFullYear() === year)
   const confirmed   = yearEvents.filter(e => e.status === 'Confirmado').length
   const proposals   = yearEvents.filter(e => e.status === 'Propuesta').length

@@ -10,17 +10,20 @@ import {
 } from './dashboardUtils'
 
 export default function FinanzasTab({ data, loading }) {
-  if (!data) return null
+  const allPayments   = data?.allPayments   || []
+  const allSpPayments = data?.allSpPayments || []
+  const events        = data?.events        || []
+  const quotes        = data?.quotes        || []
 
-  const totalCobrado = data.allPayments.reduce((a, p) => a + Number(p.amount), 0)
-  const totalGastado = data.allSpPayments.filter(p => p.status === 'Pagado').reduce((a, p) => a + Number(p.amount), 0)
+  const totalCobrado = allPayments.reduce((a, p) => a + Number(p.amount), 0)
+  const totalGastado = allSpPayments.filter(p => p.status === 'Pagado').reduce((a, p) => a + Number(p.amount), 0)
   const margenNeto   = totalCobrado - totalGastado
 
-  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
+  const paymentsByEvent = allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
 
-  const pendingBalances = data.events
+  const pendingBalances = events
     .map(ev => {
-      const evQuotes = data.quotes.filter(q => q.eventId === ev.id && q.status === 'Aprobado')
+      const evQuotes = quotes.filter(q => q.eventId === ev.id && q.status === 'Aprobado')
       const total    = evQuotes.reduce((a, q) => a + calcTotal(q), 0)
       const paid     = paymentsByEvent[ev.id] || 0
       return { ...ev, total, paid, balance: total - paid }
@@ -30,25 +33,25 @@ export default function FinanzasTab({ data, loading }) {
 
   const quoteStatusData = (() => {
     const counts = {}
-    data.quotes.forEach(q => { counts[q.status] = (counts[q.status] || 0) + 1 })
+    quotes.forEach(q => { counts[q.status] = (counts[q.status] || 0) + 1 })
     return Object.entries(counts).map(([name, value]) => ({ name, value }))
   })()
 
   const eventsByMonth = (() => {
     const counts = Array(12).fill(0)
-    data.events.forEach(e => { counts[new Date(e.date).getMonth()]++ })
+    events.forEach(e => { counts[new Date(e.date).getMonth()]++ })
     return counts.map((value, i) => ({ mes: MESES[i], value })).filter(d => d.value > 0)
   })()
 
-  const cashFlow    = getCashFlow(data.allPayments, data.allSpPayments)
-  const recentQuotes = [...data.quotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)
-  const pipeline    = data.quotes.filter(q => q.status === 'Pendiente').reduce((a, q) => a + calcTotal(q), 0)
+  const cashFlow     = getCashFlow(allPayments, allSpPayments)
+  const recentQuotes = [...quotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)
+  const pipeline     = quotes.filter(q => q.status === 'Pendiente').reduce((a, q) => a + calcTotal(q), 0)
 
   const kpis = [
-    { label: 'Total cobrado',            value: fmt(totalCobrado), sub: `${data.allPayments.length} cobro${data.allPayments.length !== 1 ? 's' : ''} registrado${data.allPayments.length !== 1 ? 's' : ''}`, icon: <Wallet size={28} strokeWidth={1.5} />, color: '#22c55e' },
+    { label: 'Total cobrado',            value: fmt(totalCobrado), sub: `${allPayments.length} cobro${allPayments.length !== 1 ? 's' : ''} registrado${allPayments.length !== 1 ? 's' : ''}`, icon: <Wallet size={28} strokeWidth={1.5} />, color: '#22c55e' },
     { label: 'Total pagado proveedores', value: fmt(totalGastado), sub: 'Pagos a proveedores confirmados',          icon: <TrendingDown size={28} strokeWidth={1.5} />, color: '#ef4444' },
     { label: 'Margen neto',              value: fmt(margenNeto),   sub: 'Cobrado menos gastado en proveedores',     icon: <TrendingUp  size={28} strokeWidth={1.5} />, color: margenNeto >= 0 ? '#22c55e' : '#ef4444' },
-    { label: 'En propuesta',             value: fmt(pipeline),     sub: `${data.quotes.filter(q => q.status === 'Pendiente').length} cotizaciones pendientes`, icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#f59e0b' },
+    { label: 'En propuesta',             value: fmt(pipeline),     sub: `${quotes.filter(q => q.status === 'Pendiente').length} cotizaciones pendientes`, icon: <AlertCircle size={28} strokeWidth={1.5} />, color: '#f59e0b' },
   ]
 
   const [activeIndex, setActiveIndex] = useState(-1)
