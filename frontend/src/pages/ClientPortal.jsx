@@ -404,9 +404,16 @@ export default function ClientPortal() {
     </div>
   )
   if (error) return (
-    <div style={{ minHeight: '100vh', background: col.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 32, color: col.border }}>✕</div>
-      <div style={{ fontSize: 14, color: col.faint }}>{error}</div>
+    <div style={{ minHeight: '100vh', background: col.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', textAlign: 'center', fontFamily: "'DM Sans', sans-serif" }}>
+      <img src="/haus-logo.svg" alt="Haus" style={{ width: 64, height: 64, borderRadius: '50%', marginBottom: 24 }} />
+      <div style={{ width: 64, height: 64, borderRadius: '50%', marginBottom: 24, background: 'rgba(166,121,45,0.08)', border: `1px solid ${col.goldBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={col.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 600, color: col.text, marginBottom: 10 }}>Link no válido</div>
+      <div style={{ fontSize: 14, color: col.muted, lineHeight: 1.6, maxWidth: 300, marginBottom: 32 }}>{error}</div>
+      <div style={{ fontSize: 11, color: col.faint, letterSpacing: 2, textTransform: 'uppercase' }}>Haus · Producción de Eventos</div>
     </div>
   )
 

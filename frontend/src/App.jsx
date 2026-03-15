@@ -20,6 +20,7 @@ import ClientPortal from "./pages/ClientPortal";
 import CheckinPortal from "./pages/CheckinPortal";
 import GuestPortal from "./pages/GuestPortal";
 import PortalQueries from "./pages/PortalQueries";
+import NotFound from "./pages/NotFound";
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -48,12 +49,7 @@ function MobileBlock() {
       padding: '40px 32px', textAlign: 'center',
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      <div style={{
-        width: 64, height: 64, borderRadius: 18, marginBottom: 28,
-        background: 'linear-gradient(135deg, #c9a84c, #e8c97a)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 28, fontWeight: 900, color: '#09090f',
-      }}>H</div>
+      <img src="/haus-logo.svg" alt="Haus" style={{ width: 72, height: 72, borderRadius: '50%', marginBottom: 28 }} />
 
       <div style={{ marginBottom: 24 }}>
         <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -136,6 +132,7 @@ function AppRoutes() {
         <Route path="whatsapp"       element={<WhatsApp />} />
         <Route path="portal-queries" element={<PortalQueries />} />
       </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
