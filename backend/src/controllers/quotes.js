@@ -103,10 +103,12 @@ exports.update = async (req, res) => {
 
     const id = Number(req.params.id)
 
-    // Reemplazar items, dishes y menus
-    await prisma.quoteItem.deleteMany({ where: { quoteId: id } })
-    await prisma.quoteDish.deleteMany({ where: { quoteId: id } })
-    await prisma.quoteMenu.deleteMany({ where: { quoteId: id } })
+    // Reemplazar items, dishes y menus en una transacción atómica
+    await prisma.$transaction([
+      prisma.quoteItem.deleteMany({ where: { quoteId: id } }),
+      prisma.quoteDish.deleteMany({ where: { quoteId: id } }),
+      prisma.quoteMenu.deleteMany({ where: { quoteId: id } }),
+    ])
 
     const quote = await prisma.quote.update({
       where: { id },

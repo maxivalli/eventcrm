@@ -120,11 +120,7 @@ REGLAS IMPORTANTES:
       answer = answer.replace('[CONSULTA_PENDIENTE]', '').trim()
       if (context?.event?.id) {
         try {
-          await fetch(`${process.env.INTERNAL_API_URL || 'http://localhost:3001'}/api/portal-queries`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ eventId: context.event.id, question }),
-          })
+          await prisma.portalQuery.create({ data: { eventId: Number(context.event.id), question } })
         } catch (e) {
           console.error('Error guardando consulta pendiente:', e.message)
         }

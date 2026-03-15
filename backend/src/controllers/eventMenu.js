@@ -82,7 +82,9 @@ exports.removeItem = async (req, res) => {
     await prisma.eventMenuItem.delete({ where: { id: Number(req.params.id) } })
     res.json({ success: true })
   } catch (e) {
-    if (e.code === 'P2025') return res.status(404).json({ error: 'Item no encontrado' })}
+    if (e.code === 'P2025') return res.status(404).json({ error: 'Item no encontrado' })
+    res.status(500).json({ error: e.message })
+  }
 }
 
 // ─── Conversión a unidad base ─────────────────────────────────────────────────

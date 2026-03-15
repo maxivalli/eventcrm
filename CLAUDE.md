@@ -193,7 +193,8 @@ npx prisma studio
 | GET | `/api/activity` | ✅ | Log de actividad |
 | GET/POST/DELETE | `/api/contacts` | ✅ | Agenda de contactos |
 | GET/POST/PUT/DELETE | `/api/menus` | ✅ | Menús reutilizables (para cotizaciones Catering) |
-| GET/POST | `/api/portal-queries` | ✅ | Consultas de clientes desde el portal |
+| GET | `/api/portal-queries` | ✅ | Listar consultas pendientes (protegido) |
+| POST | `/api/portal-queries` | ❌ | Crear consulta desde el portal (público) |
 | PATCH | `/api/portal-queries/:id/resolve` | ✅ | Marcar consulta como resuelta |
 | GET | `/api/whatsapp/status` | ✅ | Estado de conexión Evolution API |
 | GET | `/api/whatsapp/qr` | ✅ | QR code para vincular instancia |
@@ -337,6 +338,8 @@ Usar `axios` directo (no `api/axios.js` que requiere token).
 12. **Precios**: Validar que `unitPrice >= 0` y `quantity > 0` en QuoteItems. `pricePerCover > 0` y `covers > 0` en cotizaciones Catering.
 13. **Dashboard**: Tiene tres tabs — `Resumen` (operativo diario), `Finanzas` (analítica e ingresos/egresos) y `Calendario` (vista anual con mini-meses).
 14. **Importación VCF**: Muestra spinner + barra de progreso en tiempo real mientras importa contactos (puede tardar varios minutos).
+15. **Transacciones**: Cuando se hacen múltiples `deleteMany`/`create` relacionados en una misma operación, usar `prisma.$transaction([...])` para garantizar atomicidad (ej: reemplazo de items/dishes/menus en `quotes.update`).
+16. **Rutas públicas vs. protegidas**: El GET de `portal-queries` es protegido (solo admin/staff). El POST es público (lo llaman los clientes desde el portal sin auth). Siempre revisar `publicRouter` vs `protectedRouter` al agregar rutas nuevas.
 
 ---
 

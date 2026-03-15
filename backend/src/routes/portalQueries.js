@@ -4,8 +4,8 @@ const prisma = require('../prisma')
 const publicRouter = Router()
 const protectedRouter = Router()
 
-// GET /api/portal-queries — listar todas las pendientes con info del evento y cliente (público? No, debería ser protegido, pero según auditor es público)
-publicRouter.get('/', async (req, res) => {
+// GET /api/portal-queries — listar todas las pendientes con info del evento y cliente (protegido)
+protectedRouter.get('/', async (req, res) => {
   try {
     const queries = await prisma.portalQuery.findMany({
       orderBy: { createdAt: 'desc' },

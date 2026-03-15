@@ -78,9 +78,10 @@ function DishPicker({ dishes, onSelect, onCancel }) {
 function ShoppingList({ eventId, guests, eventName, onClose }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
-    api.get(`/api/menu/shopping/${eventId}`)
+    api.get(`/api/event-menu/shopping/${eventId}`)
       .then(r => setData(r.data))
       .catch(() => toast('Error al cargar la lista de compras'))
       .finally(() => setLoading(false))
