@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
-import { Search, Check, X, Users, CalendarDays, MapPin, Clock } from 'lucide-react'
+import { Search, Check, X, Users, CalendarDays, MapPin, Clock, CreditCard } from 'lucide-react'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
 
@@ -35,7 +35,8 @@ export default function CheckinPortal() {
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState(null)
   const [search, setSearch] = useState('')
-  const [toggling, setToggling] = useState(null) // guestId being toggled
+  const [toggling, setToggling] = useState(null)   // guestId being toggled ingreso
+  const [togglingPago, setTogglingPago] = useState(null) // guestId being toggled pagado
   const [filter, setFilter] = useState('todos') // todos | pendiente | ingresó
 
   useEffect(() => {
@@ -44,6 +45,18 @@ export default function CheckinPortal() {
       .catch(() => setError('Este link no es válido o ya no está disponible.'))
       .finally(() => setLoading(false))
   }, [token])
+
+  const togglePago = async (guest) => {
+    setTogglingPago(guest.id)
+    try {
+      const res = await axios.patch(`${API}/api/checkin/${token}/guests/${guest.id}/pagado`)
+      setGuests(prev => prev.map(g => g.id === guest.id ? { ...g, ...res.data } : g))
+    } catch {
+      // silently fail
+    } finally {
+      setTogglingPago(null)
+    }
+  }
 
   const toggleIngreso = async (guest) => {
     setToggling(guest.id)
@@ -117,6 +130,14 @@ export default function CheckinPortal() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <MapPin size={13} color={col.gold} />
                 {event.venue}
+              </div>
+            )}
+            {event.ticketPrice && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <CreditCard size={13} color={col.gold} />
+                <span style={{ color: col.text, fontWeight: 600 }}>
+                  {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(event.ticketPrice)}
+                </span>
               </div>
             )}
           </div>
@@ -223,11 +244,20 @@ export default function CheckinPortal() {
                       background: guest.tipo === 'Menor' ? col.purpleBg : 'rgba(201,168,76,0.1)',
                       color: guest.tipo === 'Menor' ? col.purple : col.gold,
                     }}>{guest.tipo}</span>
-                    {guest.pagado && (
-                      <span style={{
-                        fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 700,
-                        background: col.greenBg, color: col.green,
-                      }}>Pagó</span>
+                    {guest.pagado ? (
+                      <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 700, background: col.greenBg, color: col.green, border: `1px solid ${col.greenBorder}` }}>Pagó</span>
+                    ) : (
+                      <button
+                        onClick={() => togglePago(guest)}
+                        disabled={togglingPago === guest.id}
+                        style={{
+                          fontSize: 10, padding: '2px 7px', borderRadius: 20, fontWeight: 700,
+                          cursor: togglingPago === guest.id ? 'wait' : 'pointer',
+                          border: `1px solid ${guest.pagadoEnPuerta ? col.greenBorder : col.redBorder}`,
+                          background: guest.pagadoEnPuerta ? col.greenBg : col.redBg,
+                          color: guest.pagadoEnPuerta ? col.green : col.red,
+                        }}
+                      >{togglingPago === guest.id ? '...' : guest.pagadoEnPuerta ? 'Pagó en puerta' : 'Sin pagar'}</button>
                     )}
                   </div>
                 </div>

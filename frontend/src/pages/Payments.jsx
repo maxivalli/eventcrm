@@ -154,11 +154,11 @@ export default function Payments() {
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>Progreso de cobro</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: pct >= 100 ? '#22c55e' : pct >= 60 ? '#c9a84c' : '#ef4444' }}>{pct}%</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: pct >= 70 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444' }}>{pct}%</span>
               </div>
               <div style={{ background: 'var(--bg-sunken)', borderRadius: 99, height: 7, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width 0.7s ease',
-                  background: pct >= 100 ? '#22c55e' : pct >= 60 ? 'linear-gradient(90deg,#c9a84c,#4ade80)' : 'linear-gradient(90deg,#b91c1c,#ef4444)' }} />
+                  background: pct >= 70 ? 'linear-gradient(90deg,#22c55e,#16a34a)' : pct >= 30 ? 'linear-gradient(90deg,#f59e0b,#d97706)' : 'linear-gradient(90deg,#ef4444,#dc2626)' }} />
               </div>
             </div>
           )}

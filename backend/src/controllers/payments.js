@@ -11,10 +11,10 @@ exports.getByEvent = async (req, res) => {
       prisma.quote.findMany({ where: { eventId, status: 'Aprobado' }, include: { items: true } }),
     ])
     const totalQuotes = quotes.reduce((sum, q) => {
-      if (q.kind === 'Catering') return sum + (q.covers || 0) * (q.pricePerCover || 0) + q.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
-      return sum + q.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+      if (q.kind === 'Catering') return sum + (q.covers || 0) * Number(q.pricePerCover || 0) + q.items.reduce((s, i) => s + i.quantity * Number(i.unitPrice), 0)
+      return sum + q.items.reduce((s, i) => s + i.quantity * Number(i.unitPrice), 0)
     }, 0)
-    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+    const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0)
     res.json({ payments, totalQuotes, totalPaid, balance: totalQuotes - totalPaid })
   } catch (e) { res.status(500).json({ error: e.message }) }
 }

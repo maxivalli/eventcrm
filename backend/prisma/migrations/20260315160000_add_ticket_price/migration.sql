@@ -1,0 +1,1 @@
+ALTER TABLE "Event" ADD COLUMN "ticketPrice" DECIMAL(65,30);

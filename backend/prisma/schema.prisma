@@ -37,10 +37,15 @@ model Event {
   status           String            @default("Propuesta")
   guests           Int
   budget           Decimal
+  ticketPrice      Decimal?
   dietaryOptions   String?   // JSON: [{ key, label, cantidad }]
   portalToken      String?           @unique
   checkinToken     String?           @unique
-  budgetPublished  Boolean           @default(false)
+  guestPortalToken   String?           @unique
+  paidGuestListUrl   String?
+  paidGuestListName  String?
+  paidGuestListCount Int?
+  budgetPublished    Boolean           @default(false)
   client           Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId         Int
   quotes           Quote[]
@@ -224,8 +229,10 @@ model EventGuest {
   eventId   Int
   name      String
   tipo      String   @default("Mayor") // "Mayor" | "Menor"
-  pagado    Boolean  @default(false)
-  ingreso   Boolean  @default(false)
+  pagado         Boolean  @default(false)
+  pagadoEnPuerta Boolean  @default(false)
+  ingreso        Boolean  @default(false)
+  confirmed      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 

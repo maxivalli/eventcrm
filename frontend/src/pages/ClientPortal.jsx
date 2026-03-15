@@ -100,8 +100,8 @@ const SECCION_COLORS_PORTAL = {
 
 function QuoteCard({ quote, onDecide, deciding, groupHasApproved, isApprovedOne }) {
   const cs = quote.clientStatus
-  const cateringBase = quote.kind === 'Catering' ? (quote.covers || 0) * (quote.pricePerCover || 0) : 0
-  const extrasTotal  = (quote.items || []).reduce((a, i) => a + i.quantity * i.unitPrice, 0)
+  const cateringBase = quote.kind === 'Catering' ? (quote.covers || 0) * Number(quote.pricePerCover || 0) : 0
+  const extrasTotal  = (quote.items || []).reduce((a, i) => a + i.quantity * Number(i.unitPrice), 0)
   const total        = cateringBase + extrasTotal
   const isApproved   = cs === 'Aprobado'
   const isRejected   = cs === 'Rechazado'
@@ -274,47 +274,61 @@ export default function ClientPortal() {
       setPdfLoading(false)
     }
   }
-  const [guestUploadState, setGuestUploadState] = useState(null) // null | 'parsing' | 'preview' | 'confirming' | 'done'
-  const [parsedGuests, setParsedGuests]         = useState([])
-  const [uploadError, setUploadError]           = useState(null)
-  const [existingGuests, setExistingGuests]     = useState(null) // null = no cargado, [] = vacío
+  const [confirmedGuests, setConfirmedGuests]   = useState([])
+  const [guestsLoaded, setGuestsLoaded]         = useState(false)
   const fileInputRef = useRef(null)
 
-  const loadExistingGuests = async () => {
+  const [guestPortalToken, setGuestPortalToken]   = useState(null)
+  const [guestPortalCopied, setGuestPortalCopied] = useState(false)
+  const [guestPortalLoading, setGuestPortalLoading] = useState(false)
+  const guestPortalUrl = guestPortalToken ? `${window.location.origin}/evento/${guestPortalToken}` : null
+
+  const [paidList, setPaidList]           = useState(null) // { url, name, count }
+  const [paidListUploading, setPaidListUploading] = useState(false)
+  const [paidListError, setPaidListError] = useState(null)
+
+  const handleGenerateGuestPortal = async () => {
+    setGuestPortalLoading(true)
     try {
-      const res = await axios.get(`${API}/api/portal/${token}/guests`)
-      setExistingGuests(res.data.guests)
-    } catch { setExistingGuests([]) }
+      const res = await axios.post(`${API}/api/portal/${token}/guest-portal-token`)
+      setGuestPortalToken(res.data.guestPortalToken)
+    } catch { } finally { setGuestPortalLoading(false) }
+  }
+  const handleCopyGuestPortal = () => {
+    navigator.clipboard.writeText(guestPortalUrl)
+    setGuestPortalCopied(true); setTimeout(() => setGuestPortalCopied(false), 2500)
   }
 
-  const handleGuestFile = async (e) => {
+  const loadConfirmedGuests = async () => {
+    try {
+      const res = await axios.get(`${API}/api/portal/${token}/guests`)
+      setConfirmedGuests(res.data.confirmed ?? [])
+    } catch { }
+    setGuestsLoaded(true)
+  }
+
+  const handleDeleteGuest = async (id) => {
+    try {
+      await axios.delete(`${API}/api/portal/${token}/guests/${id}`)
+      setConfirmedGuests(prev => prev.filter(g => g.id !== id))
+    } catch { }
+  }
+
+  const handlePaidListFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
-    setUploadError(null)
-    setGuestUploadState('parsing')
+    setPaidListError(null)
+    setPaidListUploading(true)
     const form = new FormData()
     form.append('file', file)
     try {
-      const res = await axios.post(`${API}/api/portal/${token}/guests/parse`, form)
-      setParsedGuests(res.data.guests)
-      setGuestUploadState('preview')
+      const res = await axios.post(`${API}/api/portal/${token}/guests/paid-list`, form)
+      setPaidList({ url: res.data.url, name: res.data.name, count: res.data.count })
     } catch (err) {
-      setUploadError(err.response?.data?.error || 'No se pudo leer el archivo')
-      setGuestUploadState(null)
-    }
-  }
-
-  const handleGuestConfirm = async () => {
-    setGuestUploadState('confirming')
-    try {
-      await axios.post(`${API}/api/portal/${token}/guests/confirm`, { guests: parsedGuests })
-      setExistingGuests([...parsedGuests])
-      setParsedGuests([])
-      setGuestUploadState(null)
-    } catch (err) {
-      setUploadError(err.response?.data?.error || 'Error al guardar la lista')
-      setGuestUploadState('preview')
+      setPaidListError(err.response?.data?.error || 'No se pudo subir el archivo')
+    } finally {
+      setPaidListUploading(false)
     }
   }
 
@@ -326,7 +340,17 @@ export default function ClientPortal() {
 
   useEffect(() => {
     axios.get(`${API}/api/portal/${token}`)
-      .then(res => setData(res.data))
+      .then(res => {
+        setData(res.data)
+        setGuestPortalToken(res.data.event?.guestPortalToken ?? null)
+        if (res.data.event?.paidGuestListUrl) {
+          setPaidList({
+            url:   res.data.event.paidGuestListUrl,
+            name:  res.data.event.paidGuestListName,
+            count: res.data.event.paidGuestListCount,
+          })
+        }
+      })
       .catch(() => setError('Este portal no existe o el link no es válido.'))
       .finally(() => setLoading(false))
   }, [token])
@@ -413,10 +437,10 @@ export default function ClientPortal() {
     }).filter(([, qs]) => qs.length > 0)
   )
 
-  const totalPaid     = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const totalPaid     = (payments || []).reduce((a, p) => a + Number(p.amount), 0)
   const approvedTotal = (quotes || []).filter(q => q.clientStatus === 'Aprobado').reduce((a, q) => {
-    const items = (q.items||[]).reduce((s, i) => s + i.quantity*i.unitPrice, 0)
-    const cat   = q.kind === 'Catering' ? (q.covers||0)*(q.pricePerCover||0) : 0
+    const items = (q.items||[]).reduce((s, i) => s + i.quantity * Number(i.unitPrice), 0)
+    const cat   = q.kind === 'Catering' ? (q.covers||0) * Number(q.pricePerCover||0) : 0
     return a + items + cat
   }, 0)
   const balance = approvedTotal - totalPaid
@@ -525,6 +549,7 @@ export default function ClientPortal() {
               { label: 'Venue',     value: event.venue },
               { label: 'Tipo',      value: event.type },
               { label: 'Invitados', value: `${event.guests} personas` },
+              ...(event.ticketPrice ? [{ label: 'Precio tarjeta', value: fmt(event.ticketPrice) }] : []),
             ].map(({ label, value }, i, arr) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 18px', borderBottom: i < arr.length - 1 ? `1px solid ${col.border}` : 'none' }}>
                 <span style={{ fontSize: 12, color: col.faint }}>{label}</span>
@@ -604,40 +629,54 @@ export default function ClientPortal() {
 
       {/* Tab Invitados */}
       {activeTab === 'invitados' && (() => {
-        // Cargar invitados existentes la primera vez que se abre el tab
-        if (existingGuests === null) loadExistingGuests()
-
-        const mayores  = (existingGuests || []).filter(g => g.tipo === 'Mayor').length
-        const menores  = (existingGuests || []).filter(g => g.tipo === 'Menor').length
-        const pagados  = (existingGuests || []).filter(g => g.pagado).length
-
+        if (!guestsLoaded) loadConfirmedGuests()
         return (
           <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 100px' }}>
-            <input ref={fileInputRef} type="file" accept=".docx,.pdf" style={{ display: 'none' }} onChange={handleGuestFile} />
+            <input ref={fileInputRef} type="file" accept=".docx,.pdf" style={{ display: 'none' }} onChange={handlePaidListFile} />
 
-            {/* Lista existente */}
-            {existingGuests === null ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: col.faint, fontSize: 13 }}>Cargando...</div>
-            ) : existingGuests.length > 0 && guestUploadState !== 'preview' && (
-              <div style={{ marginBottom: 28 }}>
-                {/* Stats */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
-                  {[
-                    { label: 'Total',   value: existingGuests.length, color: col.gold },
-                    { label: 'Mayores', value: mayores,               color: col.muted },
-                    { label: 'Menores', value: menores,               color: '#8b5cf6' },
-                    { label: 'Pagaron', value: pagados,               color: col.green },
-                  ].map(s => (
-                    <div key={s.label} style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 10, padding: '14px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                      <div style={{ fontSize: 10, color: col.faint, marginTop: 4, textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</div>
-                    </div>
-                  ))}
+            {/* Link del portal de invitados */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: col.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>Link para invitados</div>
+              <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ fontSize: 12, color: col.faint, marginBottom: 14 }}>
+                  Compartí este link con tus invitados para que puedan confirmar asistencia y ver el menú del evento.
                 </div>
-                {/* Lista */}
-                <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden', maxHeight: 360, overflowY: 'auto', marginBottom: 16 }}>
-                  {existingGuests.map((g, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderBottom: i < existingGuests.length - 1 ? `1px solid ${col.border}` : 'none' }}>
+                {guestPortalUrl ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ flex: 1, fontSize: 12, color: col.muted, background: col.bg, border: `1px solid ${col.border}`, borderRadius: 8, padding: '9px 12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {guestPortalUrl}
+                    </div>
+                    <button onClick={handleCopyGuestPortal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8, border: `1px solid ${guestPortalCopied ? col.greenBorder : col.goldBorder}`, background: guestPortalCopied ? col.greenBg : col.goldBg, color: guestPortalCopied ? col.green : col.gold, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {guestPortalCopied ? '✓ Copiado' : 'Copiar link'}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleGenerateGuestPortal} disabled={guestPortalLoading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, border: `1px solid ${col.goldBorder}`, background: col.goldBg, color: col.gold, fontSize: 13, fontWeight: 600, cursor: guestPortalLoading ? 'wait' : 'pointer', opacity: guestPortalLoading ? 0.6 : 1 }}>
+                    {guestPortalLoading ? 'Generando...' : 'Generar link para invitados'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Confirmados via portal */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: col.green, textTransform: 'uppercase', letterSpacing: 2 }}>
+                  Confirmados via portal
+                </div>
+                <span style={{ fontSize: 11, color: col.faint, background: col.surface, border: `1px solid ${col.border}`, borderRadius: 20, padding: '2px 10px' }}>
+                  {confirmedGuests.length} {confirmedGuests.length === 1 ? 'persona' : 'personas'}
+                </span>
+              </div>
+              {confirmedGuests.length === 0 ? (
+                <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, padding: '28px 20px', textAlign: 'center', fontSize: 13, color: col.faint }}>
+                  Nadie confirmó asistencia todavía
+                </div>
+              ) : (
+                <div style={{ background: col.surface, border: `1px solid rgba(34,197,94,0.2)`, borderRadius: 12, overflow: 'hidden' }}>
+                  {confirmedGuests.map((g, i) => (
+                    <div key={g.id ?? i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderBottom: i < confirmedGuests.length - 1 ? `1px solid ${col.border}` : 'none' }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: col.green, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 13, color: col.text }}>{g.name}</span>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                         background: g.tipo === 'Menor' ? 'rgba(139,92,246,0.15)' : col.border,
@@ -645,61 +684,50 @@ export default function ClientPortal() {
                         border: `1px solid ${g.tipo === 'Menor' ? 'rgba(139,92,246,0.3)' : col.border}` }}>
                         {g.tipo}
                       </span>
-                      {g.pagado && <span style={{ fontSize: 10, color: col.green, background: col.greenBg, border: `1px solid ${col.greenBorder}`, borderRadius: 20, padding: '2px 8px', fontWeight: 700 }}>Pagó</span>}
+                      <button onClick={() => handleDeleteGuest(g.id)} style={{ background: 'none', border: 'none', color: col.red, cursor: 'pointer', fontSize: 14, lineHeight: 1, opacity: 0.6, padding: '0 2px' }} title="Eliminar">✕</button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Upload / preview */}
-            {guestUploadState === 'preview' || guestUploadState === 'confirming' ? (
-              <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 18px', borderBottom: `1px solid ${col.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: col.text }}>Revisá antes de confirmar</span>
-                  <span style={{ fontSize: 12, color: col.faint }}>{parsedGuests.length} invitados</span>
-                </div>
-                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                  {parsedGuests.map((g, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: i < parsedGuests.length - 1 ? `1px solid ${col.border}` : 'none' }}>
-                      <span style={{ flex: 1, fontSize: 13, color: col.text }}>{g.name}</span>
-                      <select value={g.tipo} onChange={e => setParsedGuests(prev => prev.map((x, j) => j === i ? { ...x, tipo: e.target.value } : x))}
-                        style={{ fontSize: 11, background: col.bg, border: `1px solid ${col.border}`, borderRadius: 6, padding: '3px 6px', color: g.tipo === 'Menor' ? '#8b5cf6' : col.faint, cursor: 'pointer' }}>
-                        <option value="Mayor">Mayor</option>
-                        <option value="Menor">Menor</option>
-                      </select>
-                      <button onClick={() => setParsedGuests(prev => prev.filter((_, j) => j !== i))}
-                        style={{ background: 'none', border: 'none', color: col.faint, cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>✕</button>
+            {/* Lista de invitados que pagaron */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: col.muted, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>Lista que pagaron</div>
+              {paidList ? (
+                <div style={{ background: col.surface, border: `1px solid rgba(201,168,76,0.25)`, borderRadius: 12, padding: '16px 18px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: col.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{paidList.name}</div>
+                      {paidList.count != null && (
+                        <div style={{ fontSize: 11, color: col.faint, marginTop: 2 }}>{paidList.count} personas detectadas</div>
+                      )}
                     </div>
-                  ))}
-                </div>
-                {uploadError && <div style={{ fontSize: 12, color: col.red, padding: '10px 18px' }}>{uploadError}</div>}
-                <div style={{ display: 'flex', gap: 8, padding: '14px 18px', borderTop: `1px solid ${col.border}` }}>
-                  <button onClick={handleGuestConfirm} disabled={parsedGuests.length === 0 || guestUploadState === 'confirming'}
-                    style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${col.gold}, ${col.goldLight})`, color: '#09090F', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                    {guestUploadState === 'confirming' ? 'Enviando...' : `Confirmar ${parsedGuests.length} invitados`}
-                  </button>
-                  <button onClick={() => { setGuestUploadState(null); setParsedGuests([]); setUploadError(null) }}
-                    style={{ padding: '11px 16px', borderRadius: 10, border: `1px solid ${col.border}`, background: 'transparent', color: col.faint, fontSize: 13, cursor: 'pointer' }}>
-                    Cancelar
+                    <span style={{ fontSize: 11, background: 'rgba(201,168,76,0.12)', color: col.gold, border: `1px solid rgba(201,168,76,0.3)`, borderRadius: 20, padding: '3px 10px', fontWeight: 700, flexShrink: 0 }}>
+                      Cargada
+                    </span>
+                  </div>
+                  {paidListError && <div style={{ fontSize: 12, color: col.red, marginBottom: 10 }}>{paidListError}</div>}
+                  <button onClick={() => fileInputRef.current?.click()} disabled={paidListUploading}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: `1px solid ${col.border}`, background: 'transparent', color: col.faint, fontSize: 12, cursor: paidListUploading ? 'wait' : 'pointer' }}>
+                    <FileUp size={13} />
+                    {paidListUploading ? 'Subiendo...' : 'Reemplazar archivo'}
                   </button>
                 </div>
-              </div>
-            ) : (
-              <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, padding: '24px 20px', textAlign: 'center' }}>
-                <FileUp size={28} style={{ color: col.faint, marginBottom: 12 }} />
-                <div style={{ fontSize: 14, color: col.muted, marginBottom: 6, fontWeight: 500 }}>
-                  {existingGuests?.length ? 'Actualizá tu lista de invitados' : 'Subí tu lista de invitados'}
+              ) : (
+                <div style={{ background: col.surface, border: `1px solid ${col.border}`, borderRadius: 12, padding: '28px 20px', textAlign: 'center' }}>
+                  <FileUp size={28} style={{ color: col.faint, marginBottom: 12 }} />
+                  <div style={{ fontSize: 14, color: col.muted, marginBottom: 6, fontWeight: 500 }}>Subí la lista de invitados que pagaron</div>
+                  <div style={{ fontSize: 12, color: col.faint, marginBottom: 20 }}>Formato Word (.docx) o PDF. Cada nombre en una línea.</div>
+                  {paidListError && <div style={{ fontSize: 12, color: col.red, marginBottom: 14 }}>{paidListError}</div>}
+                  <button onClick={() => fileInputRef.current?.click()} disabled={paidListUploading}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 10, border: `1px solid ${col.goldBorder}`, background: col.goldBg, color: col.gold, fontSize: 13, fontWeight: 600, cursor: paidListUploading ? 'wait' : 'pointer' }}>
+                    <FileUp size={15} />
+                    {paidListUploading ? 'Subiendo...' : 'Seleccionar archivo'}
+                  </button>
                 </div>
-                <div style={{ fontSize: 12, color: col.faint, marginBottom: 20 }}>Formato Word (.docx) o PDF. Cada nombre en una línea. Si hay menores, aclaralo al lado del nombre.</div>
-                {uploadError && <div style={{ fontSize: 12, color: col.red, marginBottom: 14 }}>{uploadError}</div>}
-                <button onClick={() => fileInputRef.current?.click()} disabled={guestUploadState === 'parsing'}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 10, border: `1px solid ${col.goldBorder}`, background: col.goldBg, color: col.gold, fontSize: 13, fontWeight: 600, cursor: guestUploadState === 'parsing' ? 'wait' : 'pointer' }}>
-                  <FileUp size={15} />
-                  {guestUploadState === 'parsing' ? 'Leyendo archivo...' : 'Seleccionar archivo'}
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )
       })()}

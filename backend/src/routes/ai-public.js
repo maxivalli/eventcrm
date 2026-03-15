@@ -13,7 +13,7 @@ router.post('/portal-chat', async (req, res) => {
   const fmtARS = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
   const fmtDate = (str) => new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 
-  const { event, menu, payments, finance, services, dietaryOptions } = context
+  const { event, menu, payments, finance, dietaryOptions } = context
 
   // Fetchear guests directamente de la DB para garantizar datos frescos
   let guestsArr = []
@@ -37,13 +37,22 @@ router.post('/portal-chat', async (req, res) => {
     ? dietaryArr.map(d => `- ${d.label}${d.cantidad ? `: ${d.cantidad} personas` : ''}`).join('\n')
     : 'Sin necesidades alimentarias especiales registradas'
 
-  const mayores  = guestsArr.filter(g => g.tipo === 'Mayor')
-  const menores  = guestsArr.filter(g => g.tipo === 'Menor')
-  const pagaron  = guestsArr.filter(g => g.pagado)
-  const ingresaron = guestsArr.filter(g => g.ingreso)
+  const mayores        = guestsArr.filter(g => g.tipo === 'Mayor')
+  const menores        = guestsArr.filter(g => g.tipo === 'Menor')
+  const pagaron        = guestsArr.filter(g => g.pagado)
+  const pagaronEnPuerta = guestsArr.filter(g => g.pagadoEnPuerta && !g.pagado)
+  const sinPagar       = guestsArr.filter(g => !g.pagado && !g.pagadoEnPuerta)
+  const confirmados    = guestsArr.filter(g => g.confirmed)
+  const ingresaron     = guestsArr.filter(g => g.ingreso)
   const guestsText = guestsArr.length === 0
     ? 'No hay invitados cargados en el sistema todavía.'
-    : `Total cargados: ${guestsArr.length} (${mayores.length} mayores, ${menores.length} menores)\nPagaron tarjeta: ${pagaron.length} — Sin pagar: ${guestsArr.length - pagaron.length}\nYa ingresaron al evento: ${ingresaron.length} — Aún no ingresaron: ${guestsArr.length - ingresaron.length}\nLista: ${guestsArr.map(g => `${g.name} (${g.tipo}${g.pagado ? ', pagó' : ''}${g.ingreso ? ', ingresó' : ''})`).join(', ')}`
+    : `Total cargados: ${guestsArr.length} (${mayores.length} mayores, ${menores.length} menores)
+Confirmaron asistencia (RSVP): ${confirmados.length}
+Pagaron tarjeta (registrado en CRM): ${pagaron.length}
+Pagaron en puerta: ${pagaronEnPuerta.length}
+Sin pagar: ${sinPagar.length}
+Ya ingresaron al evento: ${ingresaron.length} — Aún no ingresaron: ${guestsArr.length - ingresaron.length}
+Lista: ${guestsArr.map(g => `${g.name} (${g.tipo}${g.confirmed ? ', confirmó' : ''}${g.pagado ? ', pagó tarjeta' : g.pagadoEnPuerta ? ', pagó en puerta' : ', sin pagar'}${g.ingreso ? ', ingresó' : ''})`).join(', ')}`
 
   const systemPrompt = `Sos el asistente virtual de Haus, empresa de organización de eventos en Argentina. Estás en el portal de seguimiento del evento del cliente.
 
@@ -57,6 +66,7 @@ INFORMACIÓN DEL EVENTO:
 - Tipo: ${event?.type}
 - Invitados: ${event?.guests}
 - Estado: ${event?.status}
+${event?.ticketPrice ? `- Precio de la tarjeta: ${fmtARS(event.ticketPrice)}` : '- Precio de la tarjeta: No definido'}
 
 MENÚ:
 ${menuText || 'Sin menú cargado aún'}
@@ -118,6 +128,130 @@ REGLAS IMPORTANTES:
         } catch (e) {
           console.error('Error guardando consulta pendiente:', e.message)
         }
+      }
+    }
+
+    res.json({ answer })
+  } catch (e) {
+    res.status(502).json({ error: 'No se pudo procesar la pregunta' })
+  }
+})
+
+// ── Chatbot del portal de invitados (ruta pública, sin authMiddleware) ────────
+router.post('/guest-portal-chat', async (req, res) => {
+  const { token, question } = req.body
+  if (!token)    return res.status(400).json({ error: 'Token requerido' })
+  if (!question) return res.status(400).json({ error: 'Pregunta requerida' })
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return res.status(500).json({ error: 'API key de Anthropic no configurada' })
+
+  const fmtARS  = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0)
+  const fmtDate = (str) => new Date(str).toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Fetch solo lo necesario — sin datos financieros ni lista de invitados
+  let event = null
+  let menuSections = []
+  try {
+    const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
+    const ev = await prisma.event.findUnique({
+      where: { guestPortalToken: token },
+      include: {
+        client: { select: { name: true } },
+        quotes: {
+          where: { kind: 'Catering', clientStatus: 'Aprobado' },
+          include: {
+            menus: {
+              include: {
+                menu: {
+                  include: {
+                    sections: {
+                      orderBy: { orden: 'asc' },
+                      include: { items: { include: { dish: { select: { name: true, descripcion: true } } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    if (!ev) return res.status(404).json({ error: 'Portal no encontrado' })
+
+    event = ev
+    const seen = new Set()
+    menuSections = ev.quotes
+      .flatMap(q => q.menus || [])
+      .flatMap(qm => qm.menu?.sections || [])
+      .filter(s => { if (seen.has(s.nombre)) return false; seen.add(s.nombre); return true })
+      .sort((a, b) => {
+        const ia = SECCION_ORDER.indexOf(a.nombre), ib = SECCION_ORDER.indexOf(b.nombre)
+        if (ia === -1 && ib === -1) return 0
+        if (ia === -1) return 1
+        if (ib === -1) return -1
+        return ia - ib
+      })
+  } catch (e) {
+    return res.status(500).json({ error: 'Error al cargar datos del evento' })
+  }
+
+  const menuText = menuSections.map(s =>
+    `${s.nombre}: ${(s.items || []).map(i => i.dish?.name || '').filter(Boolean).join(', ')}`
+  ).join('\n')
+
+  const systemPrompt = `Sos el asistente virtual de Haus, empresa de organización de eventos en Argentina. Estás en el portal de invitados del evento.
+
+Tu rol es responder preguntas de los invitados sobre el evento de forma amable, clara y profesional. Tuteá a los invitados.
+
+INFORMACIÓN DEL EVENTO:
+- Nombre: ${event.name}
+- Fecha: ${fmtDate(event.date)}
+- Hora: ${event.time || 'A confirmar'}
+- Lugar: ${event.venue}
+- Tipo: ${event.type}
+${event.ticketPrice ? `- Precio de entrada: ${fmtARS(event.ticketPrice)}` : ''}
+
+MENÚ:
+${menuText || 'Sin menú confirmado aún'}
+
+REGLAS IMPORTANTES:
+- Solo respondé preguntas relacionadas al evento (fecha, hora, lugar, menú, precio de entrada).
+- PROHIBIDO revelar información financiera del evento, datos del organizador, o información de otros invitados.
+- PROHIBIDO responder sobre quiénes más fueron invitados, cuánta gente hay, o el estado de pagos de nadie.
+- Si la respuesta está en los datos: respondé con confianza.
+- Si la respuesta NO está en los datos, o si el invitado necesita hablar con el equipo: usá OBLIGATORIAMENTE [CONSULTA_PENDIENTE] al inicio de tu respuesta, seguido de un mensaje cálido diciéndoles que registraste su consulta y que Haus se contacta a la brevedad.
+- Ejemplos de [CONSULTA_PENDIENTE]: estacionamiento, dresscode, regalos, cambios de menú, solicitudes especiales, cualquier detalle no listado arriba.
+- RESPUESTAS CORTAS Y DIRECTAS. Máximo 2 oraciones. Sin relleno.
+- No uses markdown, solo texto plano con emojis si es necesario.`
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question }],
+      }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) return res.status(502).json({ error: data.error?.message || 'Error al consultar la IA' })
+
+    let answer = data.content?.map(b => b.text || '').join('') || ''
+
+    if (answer.includes('[CONSULTA_PENDIENTE]')) {
+      answer = answer.replace('[CONSULTA_PENDIENTE]', '').trim()
+      try {
+        await prisma.portalQuery.create({ data: { eventId: event.id, question } })
+      } catch (e) {
+        console.error('Error guardando consulta pendiente (guest):', e.message)
       }
     }
 

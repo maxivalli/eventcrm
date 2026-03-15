@@ -27,6 +27,7 @@ const whatsappRoutes   = require('./routes/whatsapp')
 const { publicRouter: portalPublic, protectedRouter: portalProtected } = require('./routes/portal')
 const { publicRouter: guestPublic, protectedRouter: guestProtected } = require('./routes/guests')
 const { publicRouter: portalQueriesPublic, protectedRouter: portalQueriesProtected } = require('./routes/portalQueries')
+const { publicRouter: guestPortalPublic, protectedRouter: guestPortalProtected } = require('./routes/guestPortal')
 const scheduleRoutes       = require('./routes/schedule')
 const cron             = require('./services/cron')
 
@@ -76,7 +77,8 @@ app.use("/api/auth/login", loginLimiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/portal", portalLimiter)
 app.use("/api", portalPublic);   // GET /api/portal/:token — sin auth
-app.use('/api', guestPublic);    // GET /api/checkin/:token + PATCH .../ingreso — sin auth
+app.use('/api', guestPublic);         // GET /api/checkin/:token + PATCH .../ingreso — sin auth
+app.use('/api', guestPortalPublic);   // GET /api/guest-portal/:token + POST .../rsvp — sin auth
 
 // Rutas protegidas
 app.use("/api/clients", authMiddleware, clientRoutes);
@@ -100,8 +102,9 @@ app.use('/api/schedule',       authMiddleware, scheduleRoutes)
 app.use('/api/activity',    authMiddleware, activityRoutes)
 app.use('/api/contacts',   authMiddleware, contactRoutes)
 app.use('/api/whatsapp',   authMiddleware, whatsappRoutes)
-app.use('/api',            authMiddleware, portalProtected)  // POST /api/events/:id/portal-token
-app.use('/api',            authMiddleware, guestProtected)  // CRUD event-guests + POST /api/events/:id/checkin-token
+app.use('/api',            authMiddleware, portalProtected)       // POST /api/events/:id/portal-token
+app.use('/api',            authMiddleware, guestProtected)       // CRUD event-guests + POST /api/events/:id/checkin-token
+app.use('/api',            authMiddleware, guestPortalProtected) // POST /api/events/:id/guest-portal-token
 
 async function start() {
   // Correr migraciones antes de levantar el servidor

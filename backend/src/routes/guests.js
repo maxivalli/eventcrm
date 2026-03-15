@@ -4,10 +4,21 @@ const multer = require('multer')
 const mammoth = require('mammoth')
 const pdfParse = require('pdf-parse')
 const prisma = require('../prisma')
+const cloudinary = require('../cloudinary')
 const { log } = require('../utils/activity')
 
 // Multer en memoria para extracción de texto (no sube a Cloudinary)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } })
+
+function uploadBufferToCloudinary(buffer, options) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+      if (err) reject(err)
+      else resolve(result)
+    })
+    stream.end(buffer)
+  })
+}
 
 // Extrae nombres y tipo (Mayor/Menor) de texto plano línea por línea
 function parseGuestsFromText(text) {
@@ -64,7 +75,8 @@ publicRouter.post('/portal/:token/guests/parse', upload.single('file'), async (r
     if (guests.length === 0) return res.status(422).json({ error: 'No se encontraron nombres en el archivo' })
     res.json({ guests })
   } catch (e) {
-    res.status(500).json({ error: 'No se pudo leer el archivo' })
+    console.error('PARSE ERROR:', e)
+    res.status(500).json({ error: 'No se pudo leer el archivo', detail: e.message })
   }
 })
 
@@ -77,13 +89,68 @@ publicRouter.get('/portal/:token/guests', async (req, res) => {
   if (!event) return res.status(404).json({ error: 'Token inválido' })
 
   try {
-    const guests = await prisma.eventGuest.findMany({
+    const all = await prisma.eventGuest.findMany({
       where: { eventId: event.id },
       orderBy: { name: 'asc' },
     })
-    res.json({ guests })
+    res.json({
+      guests:    all,
+      confirmed: all.filter(g => g.confirmed),
+      manual:    all.filter(g => !g.confirmed),
+    })
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener invitados' })
+  }
+})
+
+// POST /api/portal/:token/guests/paid-list — sube archivo de invitados que pagaron a Cloudinary
+publicRouter.post('/portal/:token/guests/paid-list', upload.single('file'), async (req, res) => {
+  const event = await prisma.event.findUnique({
+    where: { portalToken: req.params.token },
+    select: { id: true, name: true },
+  })
+  if (!event) return res.status(404).json({ error: 'Token inválido' })
+  if (!req.file) return res.status(400).json({ error: 'Archivo requerido' })
+
+  const { mimetype, buffer, originalname } = req.file
+  const ext = originalname.split('.').pop().toLowerCase()
+
+  try {
+    let text = ''
+    if (ext === 'docx' || mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const result = await mammoth.extractRawText({ buffer })
+      text = result.value
+    } else if (ext === 'pdf' || mimetype === 'application/pdf') {
+      const result = await pdfParse(buffer)
+      text = result.text
+    } else {
+      return res.status(400).json({ error: 'Solo se aceptan archivos .docx o .pdf' })
+    }
+
+    const count = parseGuestsFromText(text).length
+
+    // Subir archivo a Cloudinary
+    const uploaded = await uploadBufferToCloudinary(buffer, {
+      folder: 'paid-guest-lists',
+      resource_type: 'raw',
+      public_id: `event-${event.id}-paid-list`,
+      overwrite: true,
+    })
+
+    await prisma.event.update({
+      where: { id: event.id },
+      data: {
+        paidGuestListUrl:   uploaded.secure_url,
+        paidGuestListName:  originalname,
+        paidGuestListCount: count,
+      },
+    })
+
+    log({ action: 'paid_guest_list', entity: 'event', entityId: event.id, label: event.name, detail: `Lista de pagados cargada: ${originalname} (${count} personas)` })
+    res.json({ url: uploaded.secure_url, name: originalname, count })
+  } catch (e) {
+    console.error('PAID LIST ERROR:', e)
+    res.status(500).json({ error: 'No se pudo procesar el archivo' })
   }
 })
 
@@ -100,12 +167,14 @@ publicRouter.post('/portal/:token/guests/confirm', async (req, res) => {
   if (!event) return res.status(404).json({ error: 'Token inválido' })
 
   try {
-    await prisma.eventGuest.deleteMany({ where: { eventId: event.id } })
+    // Solo borrar los manuales — los confirmados via portal se preservan
+    await prisma.eventGuest.deleteMany({ where: { eventId: event.id, confirmed: false } })
     await prisma.eventGuest.createMany({
       data: guests.map(g => ({
         eventId: event.id,
         name: g.name.trim(),
         tipo: g.tipo || 'Mayor',
+        confirmed: false,
       })),
     })
     log({ action: 'portal_guests', entity: 'event', entityId: event.id, label: event.name, detail: `${guests.length} invitados enviados desde el portal` })
@@ -120,7 +189,7 @@ publicRouter.get('/checkin/:token', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { checkinToken: req.params.token },
-      select: { id: true, name: true, date: true, time: true, venue: true, guests: true },
+      select: { id: true, name: true, date: true, time: true, venue: true, guests: true, ticketPrice: true, paidGuestListUrl: true, paidGuestListName: true, paidGuestListCount: true },
     })
     if (!event) return res.status(404).json({ error: 'Token inválido' })
 
@@ -131,6 +200,29 @@ publicRouter.get('/checkin/:token', async (req, res) => {
     res.json({ event, guests })
   } catch (e) {
     res.status(500).json({ error: 'Error al cargar el evento' })
+  }
+})
+
+// PATCH /api/checkin/:token/guests/:id/pagado — marcar pago en puerta (solo una vez, sin desmarcar)
+publicRouter.patch('/checkin/:token/guests/:id/pagado', async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { checkinToken: req.params.token },
+      select: { id: true },
+    })
+    if (!event) return res.status(404).json({ error: 'Token inválido' })
+
+    const guest = await prisma.eventGuest.findUnique({ where: { id: Number(req.params.id) } })
+    if (!guest || guest.eventId !== event.id) return res.status(404).json({ error: 'Invitado no encontrado' })
+    if (guest.pagado) return res.status(400).json({ error: 'Pago registrado desde el CRM, no editable' })
+
+    const updated = await prisma.eventGuest.update({
+      where: { id: guest.id },
+      data: { pagadoEnPuerta: !guest.pagadoEnPuerta },
+    })
+    res.json(updated)
+  } catch (e) {
+    res.status(500).json({ error: 'Error al actualizar pago' })
   }
 })
 
@@ -153,6 +245,23 @@ publicRouter.patch('/checkin/:token/guests/:id/ingreso', async (req, res) => {
     res.json(updated)
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar ingreso' })
+  }
+})
+
+// DELETE /api/portal/:token/guests/:id — elimina un invitado (confirmado o manual) desde el portal del cliente
+publicRouter.delete('/portal/:token/guests/:id', async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { portalToken: req.params.token },
+      select: { id: true },
+    })
+    if (!event) return res.status(404).json({ error: 'Token inválido' })
+    const guest = await prisma.eventGuest.findUnique({ where: { id: Number(req.params.id) } })
+    if (!guest || guest.eventId !== event.id) return res.status(404).json({ error: 'Invitado no encontrado' })
+    await prisma.eventGuest.delete({ where: { id: guest.id } })
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: 'Error al eliminar invitado' })
   }
 })
 

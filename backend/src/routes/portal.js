@@ -59,7 +59,7 @@ publicRouter.get("/portal/:token", async (req, res) => {
 
     const schedule = event.scheduleItems || [];
 
-    const totalPaid = event.payments.reduce((a, p) => a + p.amount, 0);
+    const totalPaid = event.payments.reduce((a, p) => a + Number(p.amount), 0);
     const totalQuotes = event.quotes.reduce((a, q) => {
       const items = (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0);
       const catering = q.kind === "Catering" ? (q.covers || 0) * (q.pricePerCover || 0) : 0;
@@ -95,9 +95,14 @@ publicRouter.get("/portal/:token", async (req, res) => {
         type: event.type,
         status: event.status,
         guests: event.guests,
+        ticketPrice: event.ticketPrice ?? null,
         clientName: event.client?.name,
         dietaryOptions: event.dietaryOptions ?? null,
         budgetPublished: event.budgetPublished ?? false,
+        guestPortalToken:   event.guestPortalToken ?? null,
+        paidGuestListUrl:   event.paidGuestListUrl ?? null,
+        paidGuestListName:  event.paidGuestListName ?? null,
+        paidGuestListCount: event.paidGuestListCount ?? null,
       },
       payments: event.payments,
       menuSections,
@@ -111,6 +116,25 @@ publicRouter.get("/portal/:token", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// POST /api/portal/:token/guest-portal-token — genera/regenera token del portal de invitados (público, autenticado por portalToken)
+publicRouter.post('/portal/:token/guest-portal-token', async (req, res) => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { portalToken: req.params.token },
+      select: { id: true },
+    })
+    if (!event) return res.status(404).json({ error: 'Portal no encontrado' })
+    const updated = await prisma.event.update({
+      where: { id: event.id },
+      data: { guestPortalToken: randomUUID() },
+      select: { guestPortalToken: true },
+    })
+    res.json({ guestPortalToken: updated.guestPortalToken })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
 
 // PATCH /api/portal/:token/quotes/:quoteId/decision — cliente aprueba o rechaza
 publicRouter.patch("/portal/:token/quotes/:quoteId/decision", async (req, res) => {
@@ -164,6 +188,20 @@ publicRouter.patch("/portal/:token/quotes/:quoteId/decision", async (req, res) =
   }
 })
 
+
+// DELETE /api/events/:id/paid-guest-list
+protectedRouter.delete("/events/:id/paid-guest-list", async (req, res) => {
+  try {
+    await prisma.event.update({
+      where: { id: Number(req.params.id) },
+      data: { paidGuestListUrl: null, paidGuestListName: null, paidGuestListCount: null },
+    })
+    res.json({ ok: true })
+  } catch (e) {
+    if (e.code === "P2025") return res.status(404).json({ error: "Evento no encontrado" })
+    res.status(500).json({ error: e.message })
+  }
+})
 
 // PATCH /api/events/:id/publish-budget
 protectedRouter.patch("/events/:id/publish-budget", async (req, res) => {

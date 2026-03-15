@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { MessageCircle, Paperclip, Link2, AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, UtensilsCrossed, Sparkles, Wheat, Leaf, Salad, Stethoscope, Milk, Check, Copy, Sun, Cloud, CloudRain, CloudSnow, CloudLightning } from "lucide-react";
+import { Paperclip, Link2, AlertCircle, FileText, ClipboardList, Star, CreditCard, Users, X, UtensilsCrossed, Sparkles, Wheat, Leaf, Salad, Stethoscope, Milk, Check, Copy, Sun, Cloud, CloudRain, CloudSnow, CloudLightning } from "lucide-react";
 import api from "../api/axios";
 import { useToast } from "../components/Toast";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -266,11 +266,11 @@ const DIETARY_OPTIONS = [
   { key: 'lactose',    label: 'Sin lactosa',   icon: <Milk size={14} /> },
 ]
 
-const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "", dietaryOptions: [] };
+const emptyForm = { name: "", clientId: "", date: "", time: "", venue: "", type: "Corporativo", status: "Propuesta", guests: "", budget: "", ticketPrice: "", dietaryOptions: [] };
 
 function EventForm({ initial, clients, onSave, onClose }) {
   const [form, setForm] = useState(
-    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "", dietaryOptions: (() => { try { const d = typeof initial.dietaryOptions === 'string' ? JSON.parse(initial.dietaryOptions) : (initial.dietaryOptions || []); return Array.isArray(d) ? d : [] } catch { return [] } })() } : emptyForm
+    initial ? { ...initial, clientId: String(initial.clientId), date: initial.date?.slice(0, 10), time: initial.time || "", ticketPrice: initial.ticketPrice != null ? String(initial.ticketPrice) : "", dietaryOptions: (() => { try { const d = typeof initial.dietaryOptions === 'string' ? JSON.parse(initial.dietaryOptions) : (initial.dietaryOptions || []); return Array.isArray(d) ? d : [] } catch { return [] } })() } : emptyForm
   );
   const [errors, setErrors] = useState({});
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: "" })) };
@@ -296,48 +296,27 @@ function EventForm({ initial, clients, onSave, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 18, padding: 32, width: 520, maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "var(--gold)", marginBottom: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-strong)", borderRadius: 18, padding: "24px 28px", width: 760, maxWidth: "95vw", maxHeight: "95vh", overflowY: "auto" }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "var(--gold)", marginBottom: 20 }}>
           {initial ? "Editar evento" : "Nuevo evento"}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+
+          {/* Fila 1: Nombre */}
           <div style={{ gridColumn: "1/-1" }}>
             <label style={lbl}>Nombre *</label>
             <input style={inp(errors.name)} value={form.name} onChange={e => set("name", e.target.value)} />
             {errors.name && <div style={err}>{errors.name}</div>}
           </div>
-          <div style={{ gridColumn: "1/-1" }}>
+
+          {/* Fila 2: Cliente · Tipo · Estado */}
+          <div style={{ gridColumn: "span 2" }}>
             <label style={lbl}>Cliente *</label>
             <select style={inp(errors.clientId)} value={form.clientId} onChange={e => set("clientId", e.target.value)}>
-              <option value="">— Seleccionar cliente —</option>
+              <option value="">— Seleccionar —</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             {errors.clientId && <div style={err}>{errors.clientId}</div>}
-          </div>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Venue *</label>
-            <input style={inp(errors.venue)} value={form.venue} onChange={e => set("venue", e.target.value)} />
-            {errors.venue && <div style={err}>{errors.venue}</div>}
-          </div>
-          <div>
-            <label style={lbl}>Fecha *</label>
-            <DatePicker value={form.date} onChange={v => set("date", v)} hasError={!!errors.date} />
-            {errors.date && <div style={err}>{errors.date}</div>}
-          </div>
-          <div>
-            <label style={lbl}>Hora del evento</label>
-            <input
-              type="time"
-              style={inp()}
-              value={form.time}
-              onChange={e => set("time", e.target.value)}
-            />
-          </div>
-          <div>
-            <label style={lbl}>Tipo</label>
-            <select style={inp()} value={form.type} onChange={e => set("type", e.target.value)}>
-              {["Corporativo", "Cultural", "Social"].map(t => <option key={t}>{t}</option>)}
-            </select>
           </div>
           <div>
             <label style={lbl}>Estado</label>
@@ -345,19 +324,51 @@ function EventForm({ initial, clients, onSave, onClose }) {
               {["Propuesta", "Confirmado", "Finalizado"].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
+
+          {/* Fila 3: Venue */}
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={lbl}>Venue *</label>
+            <input style={inp(errors.venue)} value={form.venue} onChange={e => set("venue", e.target.value)} />
+            {errors.venue && <div style={err}>{errors.venue}</div>}
+          </div>
+
+          {/* Fila 4: Fecha · Hora · Tipo */}
+          <div>
+            <label style={lbl}>Fecha *</label>
+            <DatePicker value={form.date} onChange={v => set("date", v)} hasError={!!errors.date} />
+            {errors.date && <div style={err}>{errors.date}</div>}
+          </div>
+          <div>
+            <label style={lbl}>Hora</label>
+            <input type="time" style={inp()} value={form.time} onChange={e => set("time", e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Tipo</label>
+            <select style={inp()} value={form.type} onChange={e => set("type", e.target.value)}>
+              {["Corporativo", "Cultural", "Social"].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {/* Fila 5: Invitados · Presupuesto · Precio tarjeta */}
           <div>
             <label style={lbl}>Invitados *</label>
             <input type="number" style={inp(errors.guests)} value={form.guests} onChange={e => set("guests", e.target.value)} />
             {errors.guests && <div style={err}>{errors.guests}</div>}
           </div>
-          <div style={{ gridColumn: "1/-1" }}>
-            <label style={lbl}>Presupuesto estimado (ARS) *</label>
+          <div>
+            <label style={lbl}>Presupuesto (ARS) *</label>
             <input type="number" style={inp(errors.budget)} value={form.budget} onChange={e => set("budget", e.target.value)} />
             {errors.budget && <div style={err}>{errors.budget}</div>}
           </div>
+          <div>
+            <label style={lbl}>Precio tarjeta (ARS)</label>
+            <input type="number" style={inp()} value={form.ticketPrice} onChange={e => set("ticketPrice", e.target.value)} placeholder="Opcional" />
+          </div>
+
+          {/* Fila 6: Necesidades alimentarias (2 cols internas) */}
           <div style={{ gridColumn: "1/-1" }}>
             <label style={lbl}>Necesidades alimentarias</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
               {DIETARY_OPTIONS.map(opt => {
                 const current = (form.dietaryOptions || []).find(d => d.key === opt.key)
                 const checked = !!current
@@ -371,7 +382,7 @@ function EventForm({ initial, clients, onSave, onClose }) {
                   set("dietaryOptions", (form.dietaryOptions || []).map(d => d.key === opt.key ? { ...d, cantidad: val } : d))
                 }
                 return (
-                  <div key={opt.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: checked ? "rgba(201,168,76,0.06)" : "var(--bg-sunken)", border: `1px solid ${checked ? "rgba(201,168,76,0.25)" : "var(--border)"}`, borderRadius: 8, transition: "all 0.15s" }}>
+                  <div key={opt.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: checked ? "rgba(201,168,76,0.06)" : "var(--bg-sunken)", border: `1px solid ${checked ? "rgba(201,168,76,0.25)" : "var(--border)"}`, borderRadius: 8, transition: "all 0.15s" }}>
                     <input type="checkbox" id={`diet-${opt.key}`} checked={checked} onChange={toggle}
                       style={{ width: 15, height: 15, accentColor: "#c9a84c", cursor: "pointer", flexShrink: 0 }} />
                     <label htmlFor={`diet-${opt.key}`} style={{ fontSize: 13, color: "var(--text-secondary)", cursor: "pointer", flex: 1, display: "flex", alignItems: "center", gap: 7 }}>
@@ -379,12 +390,11 @@ function EventForm({ initial, clients, onSave, onClose }) {
                     </label>
                     {checked && (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <input
-                          type="number" min="1" placeholder="Cant."
+                        <input type="number" min="1" placeholder="Cant."
                           value={current.cantidad}
                           onChange={e => setCantidad(e.target.value)}
                           onClick={e => e.stopPropagation()}
-                          style={{ width: 70, padding: "5px 8px", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontSize: 12, outline: "none", textAlign: "center" }}
+                          style={{ width: 60, padding: "4px 8px", background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-primary)", fontSize: 12, outline: "none", textAlign: "center" }}
                         />
                         <span style={{ fontSize: 11, color: "var(--text-faint)" }}>pers.</span>
                       </div>
@@ -395,7 +405,7 @@ function EventForm({ initial, clients, onSave, onClose }) {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
           <button onClick={onClose} style={{ flex: 1, padding: 11, border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
           <button onClick={() => { if (validate()) onSave(form) }} style={{ flex: 1, padding: 11, border: "none", borderRadius: 8, background: "linear-gradient(135deg, #c9a84c, #e8c97a)", color: "#09090f", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Guardar</button>
         </div>
@@ -544,14 +554,13 @@ function EventDetail({ event, onClose, onEdit }) {
   const [guestsLoaded, setGuestsLoaded] = useState(false);
   const [checkinToken, setCheckinToken] = useState(event.checkinToken || null);
   const [checkinCopied, setCheckinCopied] = useState(false);
-  const [guestForm, setGuestForm]       = useState({ name: '', tipo: 'Mayor' });
-  const [guestAdding, setGuestAdding]   = useState(false);
-  const [importParsed, setImportParsed] = useState(null);   // [{ name, tipo }] para preview
-  const [importLoading, setImportLoading] = useState(false);
-  const [importConfirming, setImportConfirming] = useState(false);
+  const [guestSearch, setGuestSearch] = useState('');
+  const [paidListUrl, setPaidListUrl]     = useState(event.paidGuestListUrl || null);
+  const [paidListName, setPaidListName]   = useState(event.paidGuestListName || null);
+  const [paidListCount, setPaidListCount] = useState(event.paidGuestListCount ?? null);
 
-  const portalUrl   = portalToken   ? `${window.location.origin}/portal/${portalToken}`   : null;
-  const checkinUrl  = checkinToken  ? `${window.location.origin}/checkin/${checkinToken}`  : null;
+  const portalUrl  = portalToken  ? `${window.location.origin}/portal/${portalToken}`  : null;
+  const checkinUrl = checkinToken ? `${window.location.origin}/checkin/${checkinToken}` : null;
 
   const handleGeneratePortal = async () => {
     setPortalLoading(true)
@@ -607,17 +616,6 @@ function EventDetail({ event, onClose, onEdit }) {
     setGuestsLoaded(true)
   }
 
-  const handleAddGuest = async (e) => {
-    e.preventDefault()
-    if (!guestForm.name.trim()) return
-    setGuestAdding(true)
-    try {
-      const res = await api.post('/api/event-guests', { eventId: event.id, name: guestForm.name, tipo: guestForm.tipo })
-      setGuests(prev => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)))
-      setGuestForm({ name: '', tipo: 'Mayor' })
-    } finally { setGuestAdding(false) }
-  }
-
   const handleTogglePagado = async (guest) => {
     const res = await api.put(`/api/event-guests/${guest.id}`, { pagado: !guest.pagado })
     setGuests(prev => prev.map(g => g.id === guest.id ? res.data : g))
@@ -628,6 +626,13 @@ function EventDetail({ event, onClose, onEdit }) {
     setGuests(prev => prev.filter(g => g.id !== id))
   }
 
+  const handleDeletePaidList = async () => {
+    try {
+      await api.delete(`/api/events/${event.id}/paid-guest-list`)
+      setPaidListUrl(null); setPaidListName(null); setPaidListCount(null)
+    } catch { toast.error('No se pudo eliminar la lista') }
+  }
+
   const handleGenerateCheckin = async () => {
     const res = await api.post(`/api/events/${event.id}/checkin-token`)
     setCheckinToken(res.data.checkinToken)
@@ -636,29 +641,6 @@ function EventDetail({ event, onClose, onEdit }) {
   const handleCopyCheckin = () => {
     navigator.clipboard.writeText(checkinUrl)
     setCheckinCopied(true); setTimeout(() => setCheckinCopied(false), 2000)
-  }
-
-  const handleImportFile = async (file) => {
-    if (!file) return
-    setImportLoading(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await api.post('/api/event-guests/parse', form, { headers: { 'Content-Type': 'multipart/form-data' } })
-      setImportParsed(res.data.guests)
-    } catch (e) {
-      toast.error(e.response?.data?.error || 'No se pudo leer el archivo')
-    } finally { setImportLoading(false) }
-  }
-
-  const handleConfirmImport = async () => {
-    if (!importParsed?.length) return
-    setImportConfirming(true)
-    try {
-      const res = await api.post('/api/event-guests/bulk', { eventId: event.id, guests: importParsed })
-      setGuests(res.data)
-      setImportParsed(null)
-    } finally { setImportConfirming(false) }
   }
 
   useEffect(() => {
@@ -774,28 +756,6 @@ function EventDetail({ event, onClose, onEdit }) {
             <Badge label={event.type}   color={typeColors[event.type]   || 'var(--text-muted)'} />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {portalUrl ? (
-              <>
-                <button onClick={() => {
-                  const phone = event.client?.phone?.replace(/\D/g, '')
-                  if (!phone) return
-                  const msg = encodeURIComponent(`Hola ${event.client?.name}, te comparto el seguimiento de tu evento "${event.name}" 🎉\n\n${portalUrl}`)
-                  window.open(`https://wa.me/54${phone.slice(-10)}?text=${msg}`, '_blank')
-                }}
-                disabled={!event.client?.phone}
-                title={!event.client?.phone ? 'El cliente no tiene teléfono registrado' : 'Enviar por WhatsApp'}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(37,211,102,0.4)', borderRadius: 8, background: 'rgba(37,211,102,0.08)', color: '#25d366', fontSize: 12, cursor: event.client?.phone ? 'pointer' : 'not-allowed', opacity: event.client?.phone ? 1 : 0.4 }}>
-                  <MessageCircle size={13} /> WA
-                </button>
-                <button onClick={handleCopyPortal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
-                  {portalCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Portal</>}
-                </button>
-              </>
-            ) : (
-              <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-                {portalLoading ? 'Generando...' : <><Link2 size={13} /> Portal</>}
-              </button>
-            )}
             <button onClick={handleAlerts} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
               <AlertCircle size={13} /> Alertas
             </button>
@@ -917,7 +877,10 @@ function EventDetail({ event, onClose, onEdit }) {
                     <Row label="Hora"           value={event.time || '—'} />
                     <Row label="Venue"          value={event.venue} />
                     <Row label="Invitados"      value={`${event.guests} personas`} />
-                    <Row label="Pres. estimado" value={fmt(event.budget)} last={!event.dietaryOptions} />
+                    <Row label="Pres. estimado" value={fmt(event.budget)} last={!event.ticketPrice && !event.dietaryOptions} />
+                    {event.ticketPrice && (
+                      <Row label="Precio tarjeta" value={fmt(event.ticketPrice)} last={!event.dietaryOptions} />
+                    )}
                     {(() => {
                       const raw = (() => { try { return typeof event.dietaryOptions === 'string' ? JSON.parse(event.dietaryOptions) : (event.dietaryOptions || []) } catch { return [] } })()
                       const opts = Array.isArray(raw) ? raw : []
@@ -1171,11 +1134,37 @@ function EventDetail({ event, onClose, onEdit }) {
                       </div>
                     ))}
                   </div>
-                  {/* Check-in link */}
+                  {/* Botones derecha: lista pagados + check-in */}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {paidListUrl && (
+                      <>
+                        <a href={paidListUrl} target="_blank" rel="noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 8, background: 'rgba(201,168,76,0.07)', color: 'var(--gold)', fontSize: 12, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                          <FileText size={13} /> Lista pagados
+                          {paidListCount != null && (
+                            <span style={{ background: 'var(--gold)', color: '#09090f', borderRadius: 99, fontSize: 10, fontWeight: 800, padding: '1px 6px', marginLeft: 2 }}>
+                              {paidListCount}
+                            </span>
+                          )}
+                        </a>
+                        <button onClick={handleDeletePaidList} title="Eliminar lista" style={{ padding: '7px 10px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer', opacity: 0.8 }}>✕</button>
+                      </>
+                    )}
+                    {portalUrl ? (
+                      <>
+                        <button onClick={handleCopyPortal} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, background: portalCopied ? 'rgba(34,197,94,0.1)' : 'rgba(201,168,76,0.06)', color: portalCopied ? '#22c55e' : 'var(--gold)', fontSize: 12, cursor: 'pointer' }}>
+                          {portalCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Link cliente</>}
+                        </button>
+                        <button onClick={handleGeneratePortal} disabled={portalLoading} title="Regenerar link" style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-faint)', fontSize: 11, cursor: 'pointer' }}>↺</button>
+                      </>
+                    ) : (
+                      <button onClick={handleGeneratePortal} disabled={portalLoading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+                        {portalLoading ? 'Generando...' : <><Link2 size={13} /> Generar link cliente</>}
+                      </button>
+                    )}
                     {checkinUrl ? (
                       <>
-                        <button onClick={handleCopyCheckin} style={{ padding: '7px 12px', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 8, background: checkinCopied ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)', color: checkinCopied ? '#22c55e' : '#3b82f6', fontSize: 12, cursor: 'pointer' }}>
+                        <button onClick={handleCopyCheckin} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', border: '1px solid rgba(59,130,246,0.35)', borderRadius: 8, background: checkinCopied ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.08)', color: checkinCopied ? '#22c55e' : '#3b82f6', fontSize: 12, cursor: 'pointer' }}>
                           {checkinCopied ? <><Check size={13} /> Copiado</> : <><Link2 size={13} /> Link portero</>}
                         </button>
                         <button onClick={handleGenerateCheckin} title="Regenerar link" style={{ padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-faint)', fontSize: 11, cursor: 'pointer' }}>↺</button>
@@ -1188,103 +1177,81 @@ function EventDetail({ event, onClose, onEdit }) {
                   </div>
                 </div>
 
-                {/* Formulario agregar invitado */}
-                <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <form onSubmit={handleAddGuest} style={{ display: 'flex', gap: 8, flex: 1 }}>
-                    <input
-                      value={guestForm.name}
-                      onChange={e => setGuestForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="Nombre completo del invitado..."
-                      style={{ flex: 1, background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
-                    />
-                    <select
-                      value={guestForm.tipo}
-                      onChange={e => setGuestForm(f => ({ ...f, tipo: e.target.value }))}
-                      style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}
-                    >
-                      <option value="Mayor">Mayor</option>
-                      <option value="Menor">Menor</option>
-                    </select>
-                    <button type="submit" disabled={guestAdding || !guestForm.name.trim()} style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: guestAdding || !guestForm.name.trim() ? 0.5 : 1 }}>
-                      + Agregar
-                    </button>
-                  </form>
-                  {/* Importar desde archivo */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-sunken)', color: importLoading ? 'var(--text-faint)' : 'var(--text-muted)', fontSize: 13, cursor: importLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {importLoading ? 'Leyendo...' : '↑ Importar'}
-                    <input
-                      type="file"
-                      accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      style={{ display: 'none' }}
-                      disabled={importLoading}
-                      onChange={e => { handleImportFile(e.target.files[0]); e.target.value = '' }}
-                    />
-                  </label>
+                {/* Búsqueda */}
+                <div style={{ padding: '12px 28px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                  <input
+                    value={guestSearch}
+                    onChange={e => setGuestSearch(e.target.value)}
+                    placeholder="Buscar invitado..."
+                    style={{ width: '100%', background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
 
-                {/* Modal preview importación */}
-                {importParsed && (
-                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-                    onClick={e => e.target === e.currentTarget && setImportParsed(null)}>
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '75vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Previsualización · {importParsed.length} invitados</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>Revisá la lista antes de confirmar. Podés editar tipo abajo.</div>
-                        </div>
-                        <button onClick={() => setImportParsed(null)} style={{ padding: '5px 9px', border: '1px solid var(--border)', borderRadius: 7, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>✕</button>
-                      </div>
-                      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-                        {importParsed.map((g, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 20px', borderBottom: '1px solid var(--border-row)' }}>
-                            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)' }}>{g.name}</span>
-                            <select
-                              value={g.tipo}
-                              onChange={e => setImportParsed(prev => prev.map((x, j) => j === i ? { ...x, tipo: e.target.value } : x))}
-                              style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', color: g.tipo === 'Menor' ? '#8b5cf6' : 'var(--text-muted)', fontSize: 11, cursor: 'pointer' }}
-                            >
-                              <option value="Mayor">Mayor</option>
-                              <option value="Menor">Menor</option>
-                            </select>
-                            <button onClick={() => setImportParsed(prev => prev.filter((_, j) => j !== i))} style={{ padding: '3px 7px', border: 'none', background: 'transparent', color: 'var(--text-faint)', fontSize: 12, cursor: 'pointer' }}>✕</button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button onClick={() => setImportParsed(null)} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
-                        <button onClick={handleConfirmImport} disabled={importConfirming || importParsed.length === 0} style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: 'linear-gradient(135deg,#c9a84c,#e8c97a)', color: '#09090f', fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: importConfirming ? 0.6 : 1 }}>
-                          {importConfirming ? 'Importando...' : `Confirmar ${importParsed.length} invitados`}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Lista */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 28px 24px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {guests.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-faint)', fontSize: 13 }}>
                       Sin invitados cargados aún
                     </div>
-                  ) : guests.map(g => (
-                    <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-row)' }}>
-                      {/* Nombre + tipo */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{g.name}</span>
-                        <span style={{ marginLeft: 8, fontSize: 10, color: g.tipo === 'Menor' ? '#8b5cf6' : 'var(--text-faint)', background: g.tipo === 'Menor' ? 'rgba(139,92,246,0.1)' : 'var(--bg-sunken)', border: `1px solid ${g.tipo === 'Menor' ? 'rgba(139,92,246,0.3)' : 'var(--border)'}`, borderRadius: 20, padding: '1px 7px', fontWeight: 600 }}>{g.tipo}</span>
+                  ) : (() => {
+                    const q = guestSearch.toLowerCase()
+                    const filtered = q ? guests.filter(g => g.name.toLowerCase().includes(q)) : guests
+                    const rsvp  = filtered.filter(g => g.confirmed)
+                    const otros = filtered.filter(g => !g.confirmed)
+
+                    const GuestRow = ({ g }) => (
+                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-row)' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{g.name}</span>
+                          <span style={{ marginLeft: 8, fontSize: 10, color: g.tipo === 'Menor' ? '#8b5cf6' : 'var(--text-faint)', background: g.tipo === 'Menor' ? 'rgba(139,92,246,0.1)' : 'var(--bg-sunken)', border: `1px solid ${g.tipo === 'Menor' ? 'rgba(139,92,246,0.3)' : 'var(--border)'}`, borderRadius: 20, padding: '1px 7px', fontWeight: 600 }}>{g.tipo}</span>
+                        </div>
+                        {g.pagadoEnPuerta ? (
+                          <span style={{ padding: '4px 12px', borderRadius: 20, border: '1px solid rgba(59,130,246,0.35)', background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            <Check size={11} style={{ display: 'inline', marginRight: 3 }} /> Pagó en puerta
+                          </span>
+                        ) : (
+                          <button onClick={() => handleTogglePagado(g)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${g.pagado ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`, background: g.pagado ? 'rgba(34,197,94,0.12)' : 'var(--bg-sunken)', color: g.pagado ? '#22c55e' : 'var(--text-faint)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            {g.pagado ? <><Check size={11} /> Pagó</> : 'Sin pagar'}
+                          </button>
+                        )}
+                        {g.ingreso && <span style={{ fontSize: 10, color: '#3b82f6', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>Ingresó</span>}
+                        <button onClick={() => handleDeleteGuest(g.id)} style={{ padding: '4px 8px', border: '1px solid transparent', borderRadius: 6, background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer', opacity: 0.7 }} title="Eliminar">✕</button>
                       </div>
-                      {/* Toggle pagado */}
-                      <button onClick={() => handleTogglePagado(g)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${g.pagado ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`, background: g.pagado ? 'rgba(34,197,94,0.12)' : 'var(--bg-sunken)', color: g.pagado ? '#22c55e' : 'var(--text-faint)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        {g.pagado ? <><Check size={11} /> Pagó</> : 'Sin pagar'}
-                      </button>
-                      {/* Ingresó (solo lectura en CRM) */}
-                      {g.ingreso && (
-                        <span style={{ fontSize: 10, color: '#3b82f6', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>Ingresó</span>
-                      )}
-                      {/* Eliminar */}
-                      <button onClick={() => handleDeleteGuest(g.id)} style={{ padding: '4px 8px', border: '1px solid transparent', borderRadius: 6, background: 'transparent', color: 'var(--text-faint)', fontSize: 12, cursor: 'pointer', opacity: 0.5 }} title="Eliminar">✕</button>
-                    </div>
-                  ))}
+                    )
+
+                    return (
+                      <>
+                        {/* RSVP via portal de invitados */}
+                        {rsvp.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: '#22c55e', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
+                              Confirmados via portal ({rsvp.length})
+                            </div>
+                            {rsvp.map(g => <GuestRow key={g.id} g={g} />)}
+                          </div>
+                        )}
+
+                        {/* Agregados manualmente desde el CRM */}
+                        {otros.length > 0 && (
+                          <div>
+                            {rsvp.length > 0 && (
+                              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>
+                                Cargados manualmente ({otros.length})
+                              </div>
+                            )}
+                            {otros.map(g => <GuestRow key={g.id} g={g} />)}
+                          </div>
+                        )}
+
+                        {filtered.length === 0 && q && (
+                          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)', fontSize: 13 }}>
+                            Sin resultados para "{guestSearch}"
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             )

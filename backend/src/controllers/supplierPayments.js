@@ -12,8 +12,8 @@ exports.getBySupplierAndEvent = async (req, res) => {
     if (!supplierId) return res.status(400).json({ error: 'supplierId es requerido' })
     if (!eventId)    return res.status(400).json({ error: 'eventId es requerido' })
     const payments = await prisma.supplierPayment.findMany({ where: { supplierId, eventId }, orderBy: { date: 'desc' } })
-    const totalPaid    = payments.filter(p => p.status === 'Pagado').reduce((sum, p) => sum + p.amount, 0)
-    const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0)
+    const totalPaid    = payments.filter(p => p.status === 'Pagado').reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + Number(p.amount), 0)
     res.json({ payments, totalPaid, totalPending })
   } catch (e) { res.status(500).json({ error: e.message }) }
 }
@@ -22,8 +22,8 @@ exports.getByEvent = async (req, res) => {
   try {
     const eventId = Number(req.params.eventId)
     const payments = await prisma.supplierPayment.findMany({ where: { eventId }, orderBy: { date: 'desc' }, include: { supplier: { select: { name: true } } } })
-    const totalPaid    = payments.filter(p => p.status === 'Pagado').reduce((sum, p) => sum + p.amount, 0)
-    const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0)
+    const totalPaid    = payments.filter(p => p.status === 'Pagado').reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + Number(p.amount), 0)
     res.json({ payments, totalPaid, totalPending })
   } catch (e) { res.status(500).json({ error: e.message }) }
 }
@@ -85,7 +85,7 @@ exports.remove = async (req, res) => {
 exports.getPendingTotal = async (req, res) => {
   try {
     const payments = await prisma.supplierPayment.findMany({ where: { status: 'Pendiente' } })
-    const total = payments.reduce((sum, p) => sum + p.amount, 0)
+    const total = payments.reduce((sum, p) => sum + Number(p.amount), 0)
     res.json({ total })
   } catch (e) { res.status(500).json({ error: e.message }) }
 }

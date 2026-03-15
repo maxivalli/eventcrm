@@ -310,9 +310,9 @@ router.post('/event-alerts', async (req, res) => {
     const catering = q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0
     return a + items + catering
   }, 0)
-  const totalCobrado = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const totalCobrado = (payments || []).reduce((a, p) => a + Number(p.amount), 0)
   const saldoPendiente = totalAprobado - totalCobrado
-  const totalProveedores = (spPayments || []).reduce((a, p) => a + p.amount, 0)
+  const totalProveedores = (spPayments || []).reduce((a, p) => a + Number(p.amount), 0)
   const cotizacionesPendientes = (quotes || []).filter(q => q.status === 'Pendiente').length
   const tieneCatering = (quotes || []).some(q => q.kind === 'Catering')
   const tieneCateringAprobado = (quotes || []).some(q => q.kind === 'Catering' && q.status === 'Aprobado')
@@ -421,7 +421,7 @@ router.post('/proposal', async (req, res) => {
   const totalAprobado = (quotes || []).filter(q => q.status === 'Aprobado').reduce((a, q) => {
     return a + (q.items || []).reduce((s, i) => s + i.quantity * i.unitPrice, 0) + (q.kind === 'Catering' ? (q.covers || 0) * (q.pricePerCover || 0) : 0)
   }, 0)
-  const totalCobrado = (payments || []).reduce((a, p) => a + p.amount, 0)
+  const totalCobrado = (payments || []).reduce((a, p) => a + Number(p.amount), 0)
   const saldoPendiente = totalAprobado - totalCobrado
 
   const prompt = `Sos un asesor comercial de Haus, empresa de organización y producción de eventos sociales en Buenos Aires, Argentina. Redactá una propuesta comercial narrativa y profesional para el siguiente evento.

@@ -242,10 +242,10 @@ function getCashFlow(allPayments, allSpPayments) {
   return MESES.map((mes, i) => {
     const income = allPayments
       .filter(p => { const d = new Date(p.date); return d.getFullYear() === year && d.getMonth() === i })
-      .reduce((a, p) => a + p.amount, 0)
+      .reduce((a, p) => a + Number(p.amount), 0)
     const expense = allSpPayments
       .filter(p => { const d = new Date(p.createdAt); return p.status === 'Pagado' && d.getFullYear() === year && d.getMonth() === i })
-      .reduce((a, p) => a + p.amount, 0)
+      .reduce((a, p) => a + Number(p.amount), 0)
     return { mes, Ingresos: income, Egresos: expense }
   }).filter(d => d.Ingresos > 0 || d.Egresos > 0)
 }
@@ -262,7 +262,7 @@ function ResumenTab({ data, activityLogs, portalQueries, loading }) {
     .filter(e => { const d = new Date(e.date); return d >= now && d <= in30 && e.status !== 'Finalizado' })
     .sort((a, b) => new Date(a.date) - new Date(b.date))
 
-  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + p.amount; return acc }, {})
+  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
 
   const totalByEvent = (eventId) => {
     const quotes = data.quotes.filter(q => q.eventId === eventId && q.status === 'Aprobado')
@@ -277,7 +277,7 @@ function ResumenTab({ data, activityLogs, portalQueries, loading }) {
     data.allSpPayments.filter(p => p.status === 'Pendiente').reduce((acc, p) => {
       const k = p.supplierId
       if (!acc[k]) acc[k] = { name: p.supplier?.name || '—', total: 0, count: 0 }
-      acc[k].total += p.amount; acc[k].count++
+      acc[k].total += Number(p.amount); acc[k].count++
       return acc
     }, {})
   ).sort((a, b) => b.total - a.total)
@@ -495,11 +495,11 @@ function ResumenTab({ data, activityLogs, portalQueries, loading }) {
 function FinanzasTab({ data, loading }) {
   if (!data) return null
 
-  const totalCobrado   = data.allPayments.reduce((a, p) => a + p.amount, 0)
-  const totalGastado   = data.allSpPayments.filter(p => p.status === 'Pagado').reduce((a, p) => a + p.amount, 0)
+  const totalCobrado   = data.allPayments.reduce((a, p) => a + Number(p.amount), 0)
+  const totalGastado   = data.allSpPayments.filter(p => p.status === 'Pagado').reduce((a, p) => a + Number(p.amount), 0)
   const margenNeto     = totalCobrado - totalGastado
 
-  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + p.amount; return acc }, {})
+  const paymentsByEvent = data.allPayments.reduce((acc, p) => { acc[p.eventId] = (acc[p.eventId] || 0) + Number(p.amount); return acc }, {})
 
   const pendingBalances = data.events
     .map(ev => {

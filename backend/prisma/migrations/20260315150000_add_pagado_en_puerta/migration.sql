@@ -1,0 +1,1 @@
+ALTER TABLE "EventGuest" ADD COLUMN "pagadoEnPuerta" BOOLEAN NOT NULL DEFAULT false;

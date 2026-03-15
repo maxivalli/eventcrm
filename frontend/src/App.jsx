@@ -17,6 +17,7 @@ import Contacts from "./pages/Contacts";
 import WhatsApp from "./pages/WhatsApp";
 import ClientPortal from "./pages/ClientPortal";
 import CheckinPortal from "./pages/CheckinPortal";
+import GuestPortal from "./pages/GuestPortal";
 import PortalQueries from "./pages/PortalQueries";
 
 function PrivateRoute({ children }) {
@@ -84,15 +85,17 @@ function AppRoutes() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const isPortal   = location.pathname.startsWith('/portal/')
-  const isCheckin  = location.pathname.startsWith('/checkin/')
-  if (isMobile && !isPortal && !isCheckin) return <MobileBlock />;
+  const isPortal      = location.pathname.startsWith('/portal/')
+  const isCheckin     = location.pathname.startsWith('/checkin/')
+  const isGuestPortal = location.pathname.startsWith('/evento/')
+  if (isMobile && !isPortal && !isCheckin && !isGuestPortal) return <MobileBlock />;
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/portal/:token"  element={<ClientPortal />} />
       <Route path="/checkin/:token" element={<CheckinPortal />} />
+      <Route path="/evento/:token"  element={<GuestPortal />} />
       <Route
         path="/"
         element={
