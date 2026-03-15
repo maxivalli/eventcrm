@@ -36,7 +36,7 @@ model Event {
   type             String
   status           String            @default("Propuesta")
   guests           Int
-  budget           Float
+  budget           Decimal
   dietaryOptions   String?   // JSON: [{ key, label, cantidad }]
   portalToken      String?           @unique
   checkinToken     String?           @unique
@@ -65,7 +65,7 @@ model Quote {
   event           Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId         Int
   covers          Int?
-  pricePerCover   Float?
+  pricePerCover   Decimal?
   items           QuoteItem[]
   dishes          QuoteDish[]
   menus           QuoteMenu[]
@@ -76,14 +76,14 @@ model QuoteItem {
   id          Int    @id @default(autoincrement())
   description String
   quantity    Int
-  unitPrice   Float
+  unitPrice   Decimal
   quote       Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   quoteId     Int
 }
 
 model Payment {
   id        Int      @id @default(autoincrement())
-  amount    Float
+  amount    Decimal
   date      DateTime @default(now())
   note      String?
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -93,7 +93,7 @@ model Payment {
 
 model SupplierPayment {
   id         Int      @id @default(autoincrement())
-  amount     Float
+  amount     Decimal
   date       DateTime @default(now())
   note       String?
   method     String   @default("Efectivo")
@@ -147,9 +147,9 @@ model CateringItem {
   eventId        Int
   categoria      String
   descripcion    String
-  cantidad       Float
+  cantidad       Decimal
   unidad         String    @default("unidad")
-  precioUnitario Float     @default(0)
+  precioUnitario Decimal     @default(0)
   proveedor      Supplier? @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
   proveedorId    Int?
   proveedorLibre String?
@@ -176,7 +176,7 @@ model DishIngredient {
   dish         Dish   @relation(fields: [dishId], references: [id], onDelete: Cascade)
   dishId       Int
   nombre       String
-  cantidad     Float  // cantidad por persona
+  cantidad     Decimal  // cantidad por persona
   unidad       String @default("g")
   categoria    String @default("Otros") // "Carnes", "Lácteos", "Verduras", "Bebidas", etc.
 }

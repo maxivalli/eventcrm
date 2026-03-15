@@ -765,11 +765,6 @@ function EventDetail({ event, onClose, onEdit }) {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--text-primary)', lineHeight: 1.2 }}>{event.name}</div>
-                {weatherInfo && isBadWeather(weather.code) && (
-                  <div title="Pronóstico adverso" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ef4444' }}>
-                    <AlertCircle size={14} /> Mal clima
-                  </div>
-                )}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-label)', marginTop: 3 }}>
                 {event.client?.name} · {fmtDate(event.date)}{event.time ? ` · ${event.time}` : ''}
@@ -1494,11 +1489,8 @@ export default function Events() {
         </div>
         {filtered.length === 0
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
-          : filtered.map((ev, i) => {
-            const dateKey = new Date(ev.date).toISOString().slice(0, 10);
-            const weather = weatherByDate[dateKey];
-            return (
-              <div key={ev.id} onClick={() => openDetail(ev)}
+          : filtered.map((ev, i) => (
+            <div key={ev.id} onClick={() => openDetail(ev)}
               style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
@@ -1524,6 +1516,16 @@ export default function Events() {
                       ● Ya pasó
                     </span>
                   )}
+                  {(() => {
+                    const dateKey = new Date(ev.date).toISOString().slice(0, 10)
+                    const w = weatherByDate[dateKey]
+                    if (!w || w.error || !w.bad) return null
+                    return (
+                      <span title={w.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', whiteSpace: 'nowrap' }}>
+                        <CloudRain size={11} /> Mal clima
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
               <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{ev.client?.name}</div>
