@@ -231,6 +231,11 @@ export default function Events() {
                       {ev._count.eventGuests} inv.
                     </span>
                   )}
+                  {ev.paidGuestListUrl && (
+                    <span title={`Lista de pagados cargada${ev.paidGuestListCount ? `: ${ev.paidGuestListCount} personas` : ''}`} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 700, background: "rgba(201,168,76,0.15)", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.35)", whiteSpace: "nowrap" }}>
+                      📄 Pagados{ev.paidGuestListCount ? ` · ${ev.paidGuestListCount}` : ''}
+                    </span>
+                  )}
                   {isPastEvent(ev) && (
                     <span style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 700,
