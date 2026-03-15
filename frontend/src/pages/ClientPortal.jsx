@@ -275,7 +275,6 @@ export default function ClientPortal() {
     }
   }
   const [confirmedGuests, setConfirmedGuests]   = useState([])
-  const [guestsLoaded, setGuestsLoaded]         = useState(false)
   const fileInputRef = useRef(null)
 
   const [guestPortalToken, setGuestPortalToken]   = useState(null)
@@ -304,7 +303,6 @@ export default function ClientPortal() {
       const res = await axios.get(`${API}/api/portal/${token}/guests`)
       setConfirmedGuests(res.data.confirmed ?? [])
     } catch { }
-    setGuestsLoaded(true)
   }
 
   const handleDeleteGuest = async (id) => {
@@ -354,6 +352,10 @@ export default function ClientPortal() {
       .catch(() => setError('Este portal no existe o el link no es válido.'))
       .finally(() => setLoading(false))
   }, [token])
+
+  useEffect(() => {
+    if (activeTab === 'invitados') loadConfirmedGuests()
+  }, [activeTab])
 
   const handleDecide = async (quoteId, clientStatus) => {
     setDeciding(quoteId)
@@ -629,7 +631,6 @@ export default function ClientPortal() {
 
       {/* Tab Invitados */}
       {activeTab === 'invitados' && (() => {
-        if (!guestsLoaded) loadConfirmedGuests()
         return (
           <div className="portal-wrap" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 100px' }}>
             <input ref={fileInputRef} type="file" accept=".docx,.pdf" style={{ display: 'none' }} onChange={handlePaidListFile} />

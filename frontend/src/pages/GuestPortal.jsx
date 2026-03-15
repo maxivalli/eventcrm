@@ -4,7 +4,6 @@ import axios from 'axios'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
 
-const SECCION_ORDER = ['Entrada', 'Plato principal', 'Guarnición', 'Bebidas', 'Postre', 'Trasnoche', 'Otros']
 const SECCION_COLORS = {
   'Entrada':        '#3b82f6',
   'Plato principal':'#8b5cf6',
@@ -16,14 +15,14 @@ const SECCION_COLORS = {
 }
 
 const col = {
-  bg:         '#09090F',
-  surface:    '#12121A',
-  border:     '#1A1A28',
-  gold:       '#C9A84C',
-  goldLight:  '#E8C97A',
-  text:       '#E8E8F0',
-  muted:      '#A0A0B8',
-  faint:      '#606078',
+  bg:         '#FAF9F6',
+  surface:    '#FFFFFF',
+  border:     '#E4DDD0',
+  gold:       '#A6792D',
+  goldLight:  '#C49A45',
+  text:       '#1C1A14',
+  muted:      '#6B6252',
+  faint:      '#9E9080',
 }
 
 function Countdown({ date, time }) {
@@ -79,15 +78,6 @@ function Countdown({ date, time }) {
   )
 }
 
-function Divider() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', margin: '28px 0' }}>
-      <div style={{ height: 1, flex: 1, background: `linear-gradient(to right, transparent, ${col.gold}40)` }} />
-      <div style={{ color: col.gold, fontSize: 12, opacity: 0.7 }}>✦</div>
-      <div style={{ height: 1, flex: 1, background: `linear-gradient(to left, transparent, ${col.gold}40)` }} />
-    </div>
-  )
-}
 
 export default function GuestPortal() {
   const { token } = useParams()
@@ -184,7 +174,7 @@ export default function GuestPortal() {
 
         {/* ── Tarjeta de invitación ── */}
         <div style={{
-          background: `linear-gradient(160deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 100%)`,
+          background: col.surface,
           border: `1px solid ${col.gold}30`,
           borderRadius: 24, padding: 'clamp(32px, 6vw, 52px) clamp(24px, 6vw, 44px)',
           boxShadow: `0 0 80px ${col.gold}0d, inset 0 1px 0 ${col.gold}20`,
@@ -200,7 +190,7 @@ export default function GuestPortal() {
           <h1 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 'clamp(26px, 7vw, 40px)', fontWeight: 700,
-            color: '#fff', lineHeight: 1.2, margin: '0 0 8px',
+            color: col.text, lineHeight: 1.2, margin: '0 0 8px',
           }}>
             {event.name}
           </h1>
@@ -261,14 +251,14 @@ export default function GuestPortal() {
 
         {/* ── RSVP ── */}
         <div style={{
-          background: `rgba(255,255,255,0.025)`,
+          background: col.surface,
           border: `1px solid ${col.gold}25`,
           borderRadius: 20, padding: '32px 28px', marginBottom: 20, textAlign: 'center',
         }}>
           {done ? (
             <div>
               <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: '#fff', marginBottom: 10 }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: col.text, marginBottom: 10 }}>
                 ¡Confirmado!
               </div>
               <div style={{ fontSize: 14, color: col.faint, lineHeight: 1.7 }}>
@@ -280,7 +270,7 @@ export default function GuestPortal() {
             </div>
           ) : showForm ? (
             <form onSubmit={handleRsvp}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: '#fff', marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: col.text, marginBottom: 20 }}>
                 Confirmá tu asistencia
               </div>
 
@@ -294,17 +284,17 @@ export default function GuestPortal() {
                       placeholder={i === 0 ? 'Tu nombre completo' : 'Nombre del acompañante'}
                       autoFocus={i === 0}
                       style={{
-                        flex: 1, background: 'rgba(255,255,255,0.06)',
+                        flex: 1, background: 'rgba(0,0,0,0.04)',
                         border: `1px solid ${formError && !p.name.trim() ? '#ef4444' : col.gold + '35'}`,
                         borderRadius: 10, padding: '10px 14px',
-                        color: '#fff', fontSize: 14, outline: 'none',
+                        color: col.text, fontSize: 14, outline: 'none',
                       }}
                     />
                     <select
                       value={p.tipo}
                       onChange={e => setPerson(i, 'tipo', e.target.value)}
                       style={{
-                        background: 'rgba(255,255,255,0.06)', border: `1px solid ${col.gold}35`,
+                        background: 'rgba(0,0,0,0.04)', border: `1px solid ${col.gold}35`,
                         borderRadius: 10, padding: '10px 10px', color: p.tipo === 'Menor' ? '#8b5cf6' : col.muted,
                         fontSize: 13, cursor: 'pointer', outline: 'none', flexShrink: 0,
                       }}
@@ -332,7 +322,7 @@ export default function GuestPortal() {
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={() => { setShowForm(false); setPeople([{ name: '', tipo: 'Mayor' }]) }}
-                  style={{ flex: 1, padding: 12, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, background: 'transparent', color: col.faint, fontSize: 14, cursor: 'pointer' }}>
+                  style={{ flex: 1, padding: 12, border: `1px solid ${col.border}`, borderRadius: 10, background: 'transparent', color: col.faint, fontSize: 14, cursor: 'pointer' }}>
                   Cancelar
                 </button>
                 <button type="submit" disabled={submitting}
@@ -364,8 +354,8 @@ export default function GuestPortal() {
         {/* ── Menú ── */}
         {menuSections.length > 0 && (
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: col.surface,
+            border: `1px solid ${col.border}`,
             borderRadius: 20, padding: '32px 28px', marginBottom: 20,
           }}>
             <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -390,7 +380,7 @@ export default function GuestPortal() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 14 }}>
                       {(sec.items || []).map((item, j) => (
                         <div key={j}>
-                          <div style={{ fontSize: 15, color: '#fff', fontWeight: 500 }}>{item.dish?.name}</div>
+                          <div style={{ fontSize: 15, color: col.text, fontWeight: 500 }}>{item.dish?.name}</div>
                           {item.dish?.descripcion && (
                             <div style={{ fontSize: 12, color: col.faint, fontStyle: 'italic', marginTop: 3, lineHeight: 1.6 }}>
                               {item.dish.descripcion}
@@ -409,14 +399,14 @@ export default function GuestPortal() {
         {/* ── Contacto ── */}
         <div style={{
           textAlign: 'center', padding: '28px 24px',
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: col.surface,
+          border: `1px solid ${col.border}`,
           borderRadius: 20, marginBottom: 32,
         }}>
           <div style={{ fontSize: 10, color: col.gold, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 14, opacity: 0.7 }}>
             Contacto
           </div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: '#fff', marginBottom: 8 }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: col.text, marginBottom: 8 }}>
             Haus Producción de Eventos
           </div>
           <div style={{ fontSize: 13, color: col.faint, lineHeight: 1.8 }}>
