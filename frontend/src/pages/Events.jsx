@@ -203,7 +203,7 @@ export default function Events() {
 
       {/* Tabla */}
       <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "90px 2.5fr 1fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "12px 20px", borderBottom: "1px solid var(--border)", fontSize: 11, color: "var(--text-label)", textTransform: "uppercase", letterSpacing: 1 }}>
           <span>Tipo</span>
           <span>Evento</span>
           <span>Cliente</span>
@@ -217,22 +217,19 @@ export default function Events() {
           ? <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-faint)", fontSize: 13 }}>No se encontraron eventos</div>
           : filtered.map((ev, i) => (
             <div key={ev.id} onClick={() => openDetail(ev)}
-              style={{ display: "grid", gridTemplateColumns: "90px 2fr 1.5fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
+              style={{ display: "grid", gridTemplateColumns: "90px 2.5fr 1fr 1fr 1.5fr 1fr 130px 160px", gap: "0 16px", padding: "14px 20px", alignItems: "center", borderBottom: i < filtered.length - 1 ? "1px solid var(--border-row)" : "none", cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
               <div><Badge label={ev.type} color={typeColors[ev.type] || "var(--text-muted)"} /></div>
-              <div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{ev.name}</span>
-                  {ev._count?.files > 0 && <Paperclip size={12} title={`${ev._count.files} adjunto${ev._count.files !== 1 ? "s" : ""}`} style={{ color: "var(--text-label)" }} />}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{ev.name}</span>
+                  {ev._count?.files > 0 && <Paperclip size={12} title={`${ev._count.files} adjunto${ev._count.files !== 1 ? "s" : ""}`} style={{ color: "var(--text-label)", flexShrink: 0 }} />}
                   {ev._count?.eventGuests > 0 && (
-                    <span title={`${ev._count.eventGuests} invitados cargados`} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#8b5cf6", border: "1px solid rgba(139,92,246,0.3)", whiteSpace: "nowrap" }}>
+                    <span title={`${ev._count.eventGuests} invitados cargados`} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, fontWeight: 700, background: "rgba(139,92,246,0.15)", color: "#8b5cf6", border: "1px solid rgba(139,92,246,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
                       {ev._count.eventGuests} inv.
                     </span>
-                  )}
-                  {ev.paidGuestListUrl && (
-                    <FileCheck size={13} title={`Lista de pagados cargada${ev.paidGuestListCount ? `: ${ev.paidGuestListCount} personas` : ''}`} style={{ color: "var(--gold)", flexShrink: 0 }} />
                   )}
                   {isPastEvent(ev) && (
                     <span style={{
@@ -240,7 +237,7 @@ export default function Events() {
                       background: "rgba(239,68,68,0.15)", color: "#ef4444",
                       border: "1px solid rgba(239,68,68,0.3)",
                       animation: "pulse-past 1.5s ease-in-out infinite",
-                      whiteSpace: "nowrap",
+                      whiteSpace: "nowrap", flexShrink: 0,
                     }}>
                       ● Ya pasó
                     </span>
@@ -250,11 +247,16 @@ export default function Events() {
                     const w = weatherByDate[dateKey];
                     if (!w || w.error || !w.bad) return null;
                     return (
-                      <span title={w.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', whiteSpace: 'nowrap' }}>
+                      <span title={w.label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                         <CloudRain size={11} /> Mal clima
                       </span>
                     );
                   })()}
+                  {ev.paidGuestListUrl && (
+                    <span title={`Lista de pagados cargada${ev.paidGuestListCount ? `: ${ev.paidGuestListCount} personas` : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 700, background: 'rgba(249,115,22,0.12)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      <FileCheck size={11} />
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{ev.client?.name}</div>
