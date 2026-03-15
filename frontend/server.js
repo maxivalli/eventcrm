@@ -25,10 +25,11 @@ function escape(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 
-function ogPage({ title, description, url }) {
+function ogPage({ title, description, url, imageUrl }) {
   const t = escape(title)
   const d = escape(description)
   const u = escape(url)
+  const img = escape(imageUrl)
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -39,9 +40,13 @@ function ogPage({ title, description, url }) {
   <meta property="og:title"       content="${t}" />
   <meta property="og:description" content="${d}" />
   <meta property="og:url"         content="${u}" />
+  <meta property="og:image"       content="${img}" />
+  <meta property="og:image:width"  content="400" />
+  <meta property="og:image:height" content="400" />
   <meta name="twitter:card"        content="summary" />
   <meta name="twitter:title"       content="${t}" />
   <meta name="twitter:description" content="${d}" />
+  <meta name="twitter:image"       content="${img}" />
   <meta http-equiv="refresh" content="0;url=${u}" />
 </head>
 <body><a href="${u}">${t}</a></body>
@@ -49,6 +54,8 @@ function ogPage({ title, description, url }) {
 }
 
 const app = express()
+
+const logoUrl = (req) => `${req.protocol}://${req.get('host')}/haus-logo.png`
 
 // ── Portal del cliente (/portal/:token) ──────────────────────────────────────
 app.get('/portal/:token', async (req, res, next) => {
@@ -64,7 +71,7 @@ app.get('/portal/:token', async (req, res, next) => {
       event.date ? fmtDate(event.date) : null,
       event.venue || null,
     ].filter(Boolean).join(' · ')
-    res.send(ogPage({ title, description, url: `${req.protocol}://${req.get('host')}${req.originalUrl}` }))
+    res.send(ogPage({ title, description, url: `${req.protocol}://${req.get('host')}${req.originalUrl}`, imageUrl: logoUrl(req) }))
   } catch { next() }
 })
 
@@ -82,7 +89,7 @@ app.get('/evento/:token', async (req, res, next) => {
       event.venue || null,
       'Confirmá tu asistencia',
     ].filter(Boolean).join(' · ')
-    res.send(ogPage({ title, description, url: `${req.protocol}://${req.get('host')}${req.originalUrl}` }))
+    res.send(ogPage({ title, description, url: `${req.protocol}://${req.get('host')}${req.originalUrl}`, imageUrl: logoUrl(req) }))
   } catch { next() }
 })
 
