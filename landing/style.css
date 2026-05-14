@@ -947,23 +947,23 @@ h1, h2, h3, h4, .brand-font {
 
 .cta-content {
   flex: 1;
-  min-width: 300px;
+  min-width: min(300px, 100%);
 }
 
 .cta-content h2 {
-  font-size: 3rem;
+  font-size: clamp(1.8rem, 4vw, 3rem);
   margin-bottom: 1.5rem;
 }
 
 .cta-content p {
   color: var(--text-muted);
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   line-height: 1.8;
 }
 
 .cta-form {
   flex: 1;
-  min-width: 300px;
+  min-width: min(300px, 100%);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1267,10 +1267,21 @@ footer {
 
   .cta-container {
     padding: 3rem 2rem;
+    gap: 2.5rem;
+  }
+
+  .cta-content {
+    text-align: center;
   }
 
   .cta-content h2 {
     font-size: clamp(1.8rem, 5vw, 3rem);
+  }
+
+  /* centra logos dentro del cta en mobile */
+  .cta-content img {
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .footer-container {
@@ -1319,7 +1330,7 @@ footer {
   }
 
   .cta-container {
-    padding: 2rem 1.5rem;
+    padding: 2rem 1.2rem;
   }
 
   .section-title {
