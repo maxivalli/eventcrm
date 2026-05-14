@@ -7,6 +7,7 @@ export default defineConfig({
       input: {
         main:        resolve(__dirname, 'index.html'),
         foodandroll: resolve(__dirname, 'foodandroll.html'),
+        picasso:     resolve(__dirname, 'picasso.html'),
       }
     }
   }
