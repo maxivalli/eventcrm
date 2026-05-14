@@ -1,6 +1,43 @@
 import './style.css';
+import logoSrc from './src/assets/HAUS - LOGO VERSIONS (2).png';
+
+// ── Intro screen ─────────────────────────────────────
+// El div #intro-screen ya está en el HTML desde el primer render.
+// Aquí solo inyectamos el contenido y manejamos el timing.
+const introScreen   = document.getElementById('intro-screen');
+const introContent  = introScreen.querySelector('.intro-content');
+
+introContent.innerHTML = `
+  <img src="${logoSrc}" alt="Grupo Haus" class="intro-logo">
+  <div class="intro-divider"></div>
+  <p class="intro-tagline">Excelencia en Eventos</p>
+`;
+
+setTimeout(() => {
+  introScreen.classList.add('exit');
+  setTimeout(() => {
+    introScreen.remove();
+    document.body.classList.remove('intro-active');
+
+    const heroContent = document.getElementById('heroContent');
+    const heroVisuals = document.getElementById('heroVisuals');
+
+    setTimeout(() => {
+      if (heroContent) {
+        heroContent.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+        heroContent.style.opacity = '1';
+      }
+      if (heroVisuals) {
+        heroVisuals.style.transition = 'opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s';
+        heroVisuals.style.opacity = '1';
+      }
+    }, 3800);
+
+  }, 800);
+}, 2800);
 
 document.addEventListener('DOMContentLoaded', () => {
+  const navbar = document.getElementById('navbar');
   // Mobile Menu Toggle
   const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
   const navLinks = document.querySelector('.nav-links');
@@ -31,6 +68,17 @@ document.addEventListener('DOMContentLoaded', () => {
       spans[1].style.opacity = '1';
       spans[2].style.transform = 'none';
     });
+  });
+
+  // Close mobile menu on resize above breakpoint
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 1024) {
+      navLinks.classList.remove('active');
+      const spans = mobileMenuBtn.querySelectorAll('span');
+      spans[0].style.transform = 'none';
+      spans[1].style.opacity = '1';
+      spans[2].style.transform = 'none';
+    }
   });
 
   // Elementos principales

@@ -9,20 +9,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&family=Playfair+Display:ital,wght@0,600;0,800;1,600&display=swap" rel="stylesheet">
   </head>
-  <body>
+  <body class="intro-active">
+    <!-- Intro screen: presente desde el primer render, contenido inyectado por JS -->
+    <div id="intro-screen">
+      <div class="intro-content"></div>
+    </div>
+
     <div class="spotlight spot-1"></div>
     <div class="spotlight spot-2"></div>
     <div class="spotlight spot-3"></div>
 
-    <nav class="navbar reveal-nav" id="navbar">
+    <nav class="navbar" id="navbar">
       <div class="nav-container">
         <a href="#" class="logo">
           <span class="logo-text">GRUPO<span class="logo-highlight">HAUS</span></span>
         </a>
         <div class="nav-links">
           <a href="#inicio">Inicio</a>
-          <a href="#marcas">Nuestras Marcas</a>
-          <a href="#experiencia">Experiencia</a>
+          <a href="#quienes-somos">Quiénes somos</a>
+          <a href="#marcas">Marcas</a>
+          <a href="#resenas">Reseñas</a>
           <a href="#contacto" class="btn-primary-outline">Cotizar</a>
         </div>
         <button class="mobile-menu-btn" aria-label="Abrir menú">
@@ -36,7 +42,16 @@
     <main>
       <!-- Hero Section -->
       <section id="inicio" class="hero">
-        <div class="hero-content reveal">
+        <video class="hero-video-bg" autoplay muted loop playsinline>
+          <source src="/videos/haus-event-loop.mp4" type="video/mp4">
+        </video>
+        <!-- Frase animada de bienvenida (se muestra y desvanece antes del hero) -->
+        <div class="hero-phrase" id="heroPhrase">
+          <p>"Donde la planificación<br>se vuelve arte y cada<br>detalle una experiencia"</p>
+        </div>
+
+        <div class="hero-inner">
+        <div class="hero-content reveal" id="heroContent" style="opacity:0">
           <div class="badge">Celebraciones & Galas</div>
           <h1 class="hero-title">Creamos eventos<br>que <span>hacen historia</span></h1>
           <p class="hero-subtitle">
@@ -47,18 +62,58 @@
             <a href="#marcas" class="btn-secondary">Descubrir Marcas</a>
           </div>
         </div>
-        <div class="hero-visuals reveal delay-2">
+        <div class="hero-visuals reveal delay-2" id="heroVisuals" style="opacity:0">
           <div class="visual-card">
-            <div class="card-glass-glow"></div>
             <div class="visual-card-content">
               <h3>La Noche Perfecta</h3>
               <p>Múltiples servicios, un solo lugar.</p>
             </div>
             <div class="brand-tags">
-              <span class="tag tag-gold">Picasso</span>
-              <span class="tag tag-magenta">Food & Roll</span>
-              <span class="tag tag-cyan">Paradise</span>
-              <span class="tag tag-purple">ComunicARTE</span>
+              <div class="brand-row">
+                <img src="/picasso.png" alt="Picasso" class="brand-logo">
+              </div>
+              <div class="brand-row">
+                <img src="/foodandroll.png" alt="Food &amp; Roll" class="brand-logo">
+              </div>
+              <div class="brand-row">
+                <img src="/paradise.png" alt="Paradise" class="brand-logo">
+              </div>
+              <div class="brand-row">
+                <img src="/eventplanner.png" alt="EventPlanner" class="brand-logo">
+              </div>
+            </div>
+          </div>
+        </div>
+        </div> <!-- /hero-inner -->
+      </section>
+
+      <!-- Quiénes somos -->
+      <section id="quienes-somos" class="about-section">
+        <div class="about-container">
+          <div class="about-text reveal">
+            <div class="section-eyebrow">Quiénes somos</div>
+            <h2 class="section-title">Un evento no es solo<br>una celebración, es una<br><em>obra de arte</em></h2>
+            <p>En Grupo Haus entendemos que cada momento especial merece ser tratado como tal. Contamos con la visión de integrar cada arista bajo un mismo techo creativo: desde la elección del vestido que define tu identidad, hasta la precisión técnica y la calidez de la ambientación.</p>
+            <p>En nuestras formas reside la capacidad de transformar espacios en experiencias sensoriales que perduran en la memoria. Parte de nuestro trabajo es recomendar, coordinar y supervisar cada rubro involucrado, para que vos no tengas que preocuparte por nada.</p>
+            <a href="#contacto" class="btn-primary" style="margin-top:1.5rem; width:fit-content;">Cotizar mi evento</a>
+          </div>
+
+          <div class="about-stats reveal delay-2">
+            <div class="stat-card">
+              <span class="stat-number">+20</span>
+              <span class="stat-label">Años de trayectoria</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">4</span>
+              <span class="stat-label">Marcas especializadas</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">1</span>
+              <span class="stat-label">Solo coordinador para todo</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">∞</span>
+              <span class="stat-label">Momentos únicos creados</span>
             </div>
           </div>
         </div>
@@ -75,42 +130,170 @@
           <!-- Picasso -->
           <div class="service-card glass-panel block-picasso reveal">
             <div class="card-border"></div>
-            <div class="icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21h14"/><path d="M12 3v18"/><path d="m19 10-7-7-7 7"/><path d="m19 15-7-7-7 7"/></svg>
-            </div>
-            <h3>Picasso</h3>
+            <img src="/picasso.png" alt="Picasso" class="service-logo-main">
             <p>Un salón de fiestas imponente. Arquitectura vanguardista, iluminación dinámica y una atmósfera diseñada para vibrar.</p>
           </div>
 
           <!-- Food and Roll -->
-          <div class="service-card glass-panel block-food reveal delay-1">
+          <div class="service-card glass-panel block-food reveal delay-1" onclick="location.href='/foodandroll.html'" style="cursor:pointer;">
             <div class="card-border"></div>
-            <div class="icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 14-4-4"/><path d="M21.5 5.5a2.12 2.12 0 0 0-3 0L3 21"/><path d="M11 11.5 15 11l.5.5-2 2Z"/><path d="m5.5 21.5 6-6"/></svg>
-            </div>
-            <h3>Food and Roll</h3>
+            <img src="/foodandroll.png" alt="Food &amp; Roll" class="service-logo-main service-logo-main--food">
             <p>Gastronomía que desafía los sentidos. Catering premium y propuestas innovadoras para deleitar a cada invitado.</p>
           </div>
 
           <!-- Paradise -->
           <div class="service-card glass-panel block-paradise reveal delay-2">
             <div class="card-border"></div>
-            <div class="icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m20.2 7.8-.8-2.3a2 2 0 0 0-1.8-1.4L4.8 4a2 2 0 0 0-2.3 2.5l2 6.1a2 2 0 0 0 1.9 1.4h9.3a2 2 0 0 0 1.9-1.4l1.2-3.6Z"/><path d="m19.3 11.5 1.5-1.5a2 2 0 0 0 0-2.8l-1.5-1.5"/><path d="M12 14v6"/><path d="M9 20h6"/></svg>
-            </div>
-            <h3>Paradise</h3>
+            <img src="/paradise.png" alt="Paradise" class="service-logo-main">
             <p>Diseño boutique y alta costura. Viste la ocasión con colecciones exclusivas y asesoría de imagen de vanguardia.</p>
           </div>
 
-          <!-- ComunicARTE -->
-          <div class="service-card glass-panel block-comunicarte reveal delay-3">
+          <!-- EventPlanner -->
+          <div class="service-card glass-panel block-eventplanner reveal delay-3">
             <div class="card-border"></div>
-            <div class="icon-wrapper">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-            </div>
-            <h3>ComunicARTE</h3>
-            <p>El equipo creativo audiovisual. Contenido cinematográfico, fotografía espectacular y producciones memorables.</p>
+            <img src="/eventplanner.png" alt="EventPlanner" class="service-logo-main">
+            <p>Coordinación integral de cada arista de tu evento. Gestionamos cada rubro para que vos solo te preocupes por disfrutar.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- Rubros -->
+      <section class="rubros-section">
+        <div class="section-header reveal">
+          <h2 class="section-title">Todo lo que tu evento necesita</h2>
+          <p class="section-desc">Coordinamos cada rubro para que cada pieza encaje a la perfección.</p>
+        </div>
+        <div class="rubros-grid">
+
+          <div class="rubro-card reveal" style="--rubro-color: var(--eventplanner)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h4>Timing y Coordinación</h4>
+            <p>Planificación minuciosa y coordinación en tiempo real de cada momento del evento.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-1" style="--rubro-color: var(--food-roll)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"/><path d="M12 11v11"/><path d="M17.5 7.5A5.5 5.5 0 0 1 6.6 5H5a2 2 0 0 0 0 4h.09A5.5 5.5 0 0 1 12 13a5.5 5.5 0 0 1 6.91-4H19a2 2 0 0 0 0-4h-1.6a5.52 5.52 0 0 1 .1 1Z"/></svg>
+            </div>
+            <h4>Barra y Coctelería</h4>
+            <p>Propuestas de autor con bartenders profesionales. Tragos clásicos, signatures y opciones sin alcohol.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-2" style="--rubro-color: var(--paradise)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h4>Maquillaje y Estilismo</h4>
+            <p>Equipo de profesionales para que cada detalle de tu imagen esté a la altura de la ocasión.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-3" style="--rubro-color: var(--eventplanner)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a9 9 0 0 0 9-9"/><path d="M12 22a9 9 0 0 1-9-9"/><path d="M12 22V2"/><path d="M3 13a9 9 0 0 1 9-9"/><path d="M21 13a9 9 0 0 0-9-9"/></svg>
+            </div>
+            <h4>Ambientación y Decoración</h4>
+            <p>Transformamos cada espacio en una escenografía única que refleja tu estilo.</p>
+          </div>
+
+          <div class="rubro-card reveal" style="--rubro-color: var(--picasso)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M19 3v4"/><path d="M21 5h-4"/></svg>
+            </div>
+            <h4>Iluminación y Sonido</h4>
+            <p>Técnica audiovisual de primer nivel para crear la atmósfera perfecta en cada instante.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-1" style="--rubro-color: var(--picasso)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </div>
+            <h4>DJs y Conducción</h4>
+            <p>Música y animación a cargo de profesionales que leen la energía del momento.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-2" style="--rubro-color: var(--primary)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            </div>
+            <h4>Fotografía y Video</h4>
+            <p>Capturamos cada detalle y emoción para que los recuerdos duren toda la vida.</p>
+          </div>
+
+          <div class="rubro-card reveal delay-3" style="--rubro-color: var(--primary)">
+            <div class="rubro-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <h4>Shows y Entretenimiento</h4>
+            <p>Artistas, performances y sorpresas que elevan la experiencia a otro nivel.</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Reseñas -->
+      <section id="resenas" class="testimonials-section">
+        <div class="section-header reveal">
+          <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+          <p class="section-desc">Cada evento es una historia. Estas son algunas de las nuestras.</p>
+        </div>
+        <div class="testimonials-grid">
+
+          <div class="testimonial-card glass-panel reveal">
+            <div class="testimonial-stars">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="testimonial-text">"Desde el primer encuentro hasta el último baile, Haus hizo que todo fluyera perfecto. No tuve que preocuparme por absolutamente nada. El salón, la comida, el servicio — todo fue increíble."</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">M</div>
+              <div>
+                <strong>Martina G.</strong>
+                <span>Fiesta de 15 años</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card glass-panel reveal delay-1">
+            <div class="testimonial-stars">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="testimonial-text">"El catering de Food and Roll fue la estrella de la noche. Cada plato fue una sorpresa, los invitados no paraban de preguntar quién había hecho la comida. Volveríamos a contratarlos sin dudarlo."</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">R</div>
+              <div>
+                <strong>Rodrigo y Florencia</strong>
+                <span>Casamiento</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="testimonial-card glass-panel reveal delay-2">
+            <div class="testimonial-stars">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="var(--food-roll)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <p class="testimonial-text">"Paradise me encontró el vestido de mis sueños en una sola visita. La atención fue personalísima y el resultado superó todo lo que imaginé. Me sentí única esa noche."</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">V</div>
+              <div>
+                <strong>Valentina S.</strong>
+                <span>Fiesta de egresadas</span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -135,7 +318,7 @@
                 <option value="picasso">Salón Picasso</option>
                 <option value="food">Catering Food & Roll</option>
                 <option value="paradise">Boutique Paradise</option>
-                <option value="comunicarte">Producción ComunicARTE</option>
+                <option value="eventplanner">Organización de Eventos</option>
               </select>
             </div>
             <button type="submit" class="btn-primary submit-btn">
@@ -155,10 +338,18 @@
         </div>
         <div class="links-col">
           <h4>Ecosistema</h4>
-          <a href="#">Picasso</a>
-          <a href="#">Food and Roll</a>
-          <a href="#">Paradise</a>
-          <a href="#">ComunicARTE</a>
+          <a href="#marcas" class="footer-brand-link">
+            <img src="/picasso.png" alt="Picasso" class="footer-brand-logo">
+          </a>
+          <a href="#marcas" class="footer-brand-link">
+            <img src="/foodandroll.png" alt="Food &amp; Roll" class="footer-brand-logo">
+          </a>
+          <a href="#marcas" class="footer-brand-link">
+            <img src="/paradise.png" alt="Paradise" class="footer-brand-logo">
+          </a>
+          <a href="#marcas" class="footer-brand-link">
+            <img src="/eventplanner.png" alt="EventPlanner" class="footer-brand-logo">
+          </a>
         </div>
         <div class="links-col">
           <h4>Contacto</h4>
@@ -170,6 +361,17 @@
         <p>&copy; 2024 Grupo Haus. Elevando estándares.</p>
       </div>
     </footer>
+
+    <!-- WhatsApp flotante -->
+    <a href="https://wa.me/5493492674826?text=Hola%2C%20me%20gustar%C3%ADa%20consultar%20sobre%20un%20evento"
+       class="whatsapp-fab"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="Contactar por WhatsApp">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+      </svg>
+    </a>
 
     <script type="module" src="/main.js"></script>
   </body>

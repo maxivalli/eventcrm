@@ -39,6 +39,7 @@ const { publicRouter: guestPublic, protectedRouter: guestProtected } = require('
 const { publicRouter: portalQueriesPublic, protectedRouter: portalQueriesProtected } = require('./routes/portalQueries')
 const { publicRouter: guestPortalPublic, protectedRouter: guestPortalProtected } = require('./routes/guestPortal')
 const scheduleRoutes       = require('./routes/schedule')
+const landingRoutes    = require('./routes/landing')
 const cron             = require('./services/cron')
 
 const app = express();
@@ -49,9 +50,16 @@ app.set('trust proxy', 1)
 // Seguridad — headers HTTP
 app.use(helmet())
 
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(',').map(o => o.trim())
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: (origin, cb) => {
+      // permitir requests sin origin (curl, Postman, SSR) y orígenes en la lista
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+      cb(new Error('Not allowed by CORS'))
+    },
     credentials: true,
   }),
 );
@@ -86,6 +94,7 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth/login", loginLimiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/portal", portalLimiter)
+app.use('/api/public', landingRoutes);  // rutas públicas para la landing
 app.use("/api", portalPublic);   // GET /api/portal/:token — sin auth
 app.use('/api', guestPublic);         // GET /api/checkin/:token + PATCH .../ingreso — sin auth
 app.use('/api', guestPortalPublic);   // GET /api/guest-portal/:token + POST .../rsvp — sin auth
