@@ -1,6 +1,55 @@
 import './style.css';
 import logoSrc from './src/assets/HAUS - LOGO VERSIONS (2).png';
 
+const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')
+
+async function cargarProximosEventos() {
+  const lista = document.getElementById('proximosEventosList')
+  if (!lista) return
+  try {
+    const res = await fetch(`${API_URL}/api/public/eventos`)
+    if (!res.ok) throw new Error()
+    const eventos = await res.json()
+
+    if (!eventos.length) {
+      lista.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem">No hay eventos próximos publicados.</p>'
+      return
+    }
+
+    lista.innerHTML = eventos.map((ev, i) => {
+      const fecha = new Date(ev.date)
+      const dia = fecha.getDate().toString().padStart(2, '0')
+      const mes = MESES[fecha.getMonth()]
+      const hora = ev.time ? ` · ${ev.time}` : ''
+      const delay = i > 0 ? ` delay-${Math.min(i, 3)}` : ''
+      return `
+        <div class="pe-item reveal${delay}">
+          <div class="pe-fecha">
+            <span class="pe-dia">${dia}</span>
+            <span class="pe-mes">${mes}</span>
+          </div>
+          <div class="pe-info">
+            <h4>${ev.name}</h4>
+            <p>${ev.type}${hora} · ${ev.venue} · ${ev.guests} invitados</p>
+          </div>
+          <span class="pe-badge">Confirmado</span>
+        </div>`
+    }).join('')
+
+    lista.querySelectorAll('.reveal').forEach(el => {
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('active'); obs.unobserve(e.target) } })
+      }, { threshold: 0.1 })
+      obs.observe(el)
+    })
+  } catch {
+    lista.innerHTML = ''
+  }
+}
+
+cargarProximosEventos()
+
 // ── Intro screen ─────────────────────────────────────
 // El div #intro-screen ya está en el HTML desde el primer render.
 // Aquí solo inyectamos el contenido y manejamos el timing.
