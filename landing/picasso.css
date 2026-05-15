@@ -351,6 +351,95 @@
   box-shadow: 0 0 24px rgba(24, 119, 242, 0.4);
 }
 
+/* Tickets */
+.pc-tickets {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 2rem 2rem 8rem;
+}
+
+.pc-tickets-inner {
+  text-align: center;
+}
+
+.pc-tickets-inner p {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  margin-bottom: 3rem;
+}
+
+.pc-tickets-inner .section-title em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  background: linear-gradient(135deg, var(--pc-accent), #ff8fa3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pc-tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.pc-ticket-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2rem 2.5rem;
+  text-align: left;
+  border-top: 1px solid rgba(221, 46, 73, 0.25);
+}
+
+.pc-ticket-info h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.pc-ticket-info p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.pc-ticket-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.8rem;
+  border-radius: 999px;
+  background: var(--pc-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.pc-ticket-btn:hover {
+  box-shadow: 0 0 28px rgba(221, 46, 73, 0.5);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+  .pc-ticket-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.2rem;
+    padding: 1.5rem;
+  }
+  .pc-ticket-btn { width: 100%; justify-content: center; }
+}
+
 /* Mapa */
 .pc-ubicacion {
   max-width: var(--max-width);
