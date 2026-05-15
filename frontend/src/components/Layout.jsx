@@ -175,7 +175,7 @@ export default function Layout() {
           }}
         >
           <img
-            src="/haus-logo.svg"
+            src="/haus-logo-icon.png"
             alt="Haus"
             style={{
               width: open ? 80 : 44,
