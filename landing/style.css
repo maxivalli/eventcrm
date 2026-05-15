@@ -8,10 +8,11 @@
   --primary-hover: #f3c93e;
 
   /* Colores oficiales por marca */
-  --picasso:      #dd2e49;
-  --food-roll:    #f5bb47;
-  --paradise:     #fc7cb6;
-  --eventplanner: #5c916d;
+  --picasso:          #dd2e49;
+  --food-roll:        #f5bb47;
+  --paradise:         #fc7cb6;
+  --eventplanner:     #5c916d;
+  --contentcreator:   #3ea5cb;
 
   /* Alias legacy (usados en spotlights y hero gradient) */
   --gold:    #d4af37;
@@ -499,12 +500,12 @@ h1, h2, h3, h4, .brand-font {
 
 .services-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.5rem;
 }
 
 .service-card {
-  padding: 3rem 2rem;
+  padding: 2.5rem 1.5rem;
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease, border-color 0.4s ease;
   background: rgba(15, 12, 22, 0.6);
 }
@@ -515,10 +516,11 @@ h1, h2, h3, h4, .brand-font {
 
 .card-border { display: none; }
 
-.block-picasso:hover      { box-shadow: 0 0 32px rgba(221, 46,  73,  0.25), 0 0 8px rgba(221, 46,  73,  0.12); border-color: rgba(221, 46,  73,  0.2); }
-.block-food:hover         { box-shadow: 0 0 32px rgba(245, 187, 71,  0.25), 0 0 8px rgba(245, 187, 71,  0.12); border-color: rgba(245, 187, 71,  0.2); }
-.block-paradise:hover     { box-shadow: 0 0 32px rgba(252, 124, 182, 0.25), 0 0 8px rgba(252, 124, 182, 0.12); border-color: rgba(252, 124, 182, 0.2); }
-.block-eventplanner:hover { box-shadow: 0 0 32px rgba(92,  145, 109, 0.25), 0 0 8px rgba(92,  145, 109, 0.12); border-color: rgba(92,  145, 109, 0.2); }
+.block-picasso:hover         { box-shadow: 0 0 32px rgba(221, 46,  73,  0.25), 0 0 8px rgba(221, 46,  73,  0.12); border-color: rgba(221, 46,  73,  0.2); }
+.block-food:hover            { box-shadow: 0 0 32px rgba(245, 187, 71,  0.25), 0 0 8px rgba(245, 187, 71,  0.12); border-color: rgba(245, 187, 71,  0.2); }
+.block-paradise:hover        { box-shadow: 0 0 32px rgba(252, 124, 182, 0.25), 0 0 8px rgba(252, 124, 182, 0.12); border-color: rgba(252, 124, 182, 0.2); }
+.block-eventplanner:hover    { box-shadow: 0 0 32px rgba(92,  145, 109, 0.25), 0 0 8px rgba(92,  145, 109, 0.12); border-color: rgba(92,  145, 109, 0.2); }
+.block-contentcreator:hover  { box-shadow: 0 0 32px rgba(62,  165, 203, 0.25), 0 0 8px rgba(62,  165, 203, 0.12); border-color: rgba(62,  165, 203, 0.2); }
 
 .icon-wrapper {
   width: 60px;
@@ -546,10 +548,11 @@ h1, h2, h3, h4, .brand-font {
   transform: scale(1.1) rotate(5deg);
 }
 
-.block-picasso .icon-wrapper      { color: var(--picasso);      border: 1px solid rgba(221, 46,  73,  0.25); }
-.block-food .icon-wrapper         { color: var(--food-roll);    border: 1px solid rgba(245, 187, 71,  0.25); }
-.block-paradise .icon-wrapper     { color: var(--paradise);     border: 1px solid rgba(252, 124, 182, 0.25); }
-.block-eventplanner .icon-wrapper { color: var(--eventplanner); border: 1px solid rgba(92,  145, 109, 0.25); }
+.block-picasso .icon-wrapper        { color: var(--picasso);        border: 1px solid rgba(221, 46,  73,  0.25); }
+.block-food .icon-wrapper           { color: var(--food-roll);      border: 1px solid rgba(245, 187, 71,  0.25); }
+.block-paradise .icon-wrapper       { color: var(--paradise);       border: 1px solid rgba(252, 124, 182, 0.25); }
+.block-eventplanner .icon-wrapper   { color: var(--eventplanner);   border: 1px solid rgba(92,  145, 109, 0.25); }
+.block-contentcreator .icon-wrapper { color: var(--contentcreator); border: 1px solid rgba(62,  165, 203, 0.25); }
 
 .service-logo-main {
   display: block;
@@ -559,7 +562,7 @@ h1, h2, h3, h4, .brand-font {
   object-fit: contain;
   filter: brightness(0) invert(1);
   opacity: 0.9;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem;
 }
 
 .service-logo-main--food {
@@ -569,8 +572,9 @@ h1, h2, h3, h4, .brand-font {
 
 .service-card p {
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   line-height: 1.8;
+  text-align: center;
 }
 
 /* ── Quiénes somos ────────────────────────────────── */
@@ -1233,6 +1237,10 @@ footer {
 
 /* Tablet */
 @media (max-width: 900px) {
+  .services-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
   .hero-inner {
     flex-direction: column;
     text-align: center;
@@ -1306,7 +1314,7 @@ footer {
   }
 
   .services-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .whatsapp-fab {
