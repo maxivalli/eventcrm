@@ -122,14 +122,14 @@ export default function Login() {
           {/* Logo — sin margin inferior, pegado a la card */}
           <div
             className="login-logo"
-            style={{ textAlign: "center", marginBottom: -50, marginTop: -100}}
+            style={{ textAlign: "center", marginBottom: 8, marginTop: 0 }}
           >
             <img
-              src="/haus-logo.svg"
+              src="/haus-logo-icon.png"
               alt="Haus logo"
               style={{
-                width: 350,
-                height: 350,
+                width: 100,
+                height: 100,
                 objectFit: "contain",
                 display: "block",
                 margin: "0 auto",
