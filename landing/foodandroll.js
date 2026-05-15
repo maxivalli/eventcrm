@@ -1,8 +1,14 @@
 // Navbar scroll
 const navbar = document.getElementById('navbar')
+let rafPending = false
 window.addEventListener('scroll', () => {
-  navbar.classList.toggle('scrolled', window.scrollY > 60)
-})
+  if (rafPending) return
+  rafPending = true
+  requestAnimationFrame(() => {
+    navbar.classList.toggle('scrolled', window.scrollY > 60)
+    rafPending = false
+  })
+}, { passive: true })
 
 // Próximos eventos desde el CRM
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/$/, '')

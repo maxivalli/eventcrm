@@ -136,9 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rafPending) return
     rafPending = true
     requestAnimationFrame(() => {
-      const scrollY = window.scrollY
-      document.documentElement.style.setProperty('--scroll-y', `${scrollY}px`)
-      navbar.classList.toggle('scrolled', scrollY > 50)
+      navbar.classList.toggle('scrolled', window.scrollY > 50)
       rafPending = false
     })
   }, { passive: true });
