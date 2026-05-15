@@ -130,20 +130,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Elementos principales
+  // Scroll handler con requestAnimationFrame para no bloquear el hilo principal
+  let rafPending = false
   window.addEventListener('scroll', () => {
-    const scrollY = window.scrollY;
-    
-    // Inyectamos el scroll en el root de la app para animar puros con CSS Variable
-    document.documentElement.style.setProperty('--scroll-y', `${scrollY}px`);
-    
-    // Navbar effect
-    if (scrollY > 50) {
-      navbar.classList.add('scrolled');
-    } else {
-      navbar.classList.remove('scrolled');
-    }
-  });
+    if (rafPending) return
+    rafPending = true
+    requestAnimationFrame(() => {
+      const scrollY = window.scrollY
+      document.documentElement.style.setProperty('--scroll-y', `${scrollY}px`)
+      navbar.classList.toggle('scrolled', scrollY > 50)
+      rafPending = false
+    })
+  }, { passive: true });
 
   // Intersection Observer for Reveal Animations (Apariciones suaves automáticas)
   const observerOptions = {

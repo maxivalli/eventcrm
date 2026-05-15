@@ -77,11 +77,10 @@ h1, h2, h3, h4, .brand-font {
   z-index: -1;
   opacity: 0.35;
   pointer-events: none;
+  will-change: transform;
   animation: floatLight 12s ease-in-out infinite alternate;
-  margin-top: calc(var(--scroll-y, 0px) * var(--parallax-speed, 0));
-  /* Evita que generen scroll horizontal */
+  transform: translateY(calc(var(--scroll-y, 0px) * var(--parallax-speed, 0)));
   max-width: 100vw;
-  overflow: hidden;
 }
 
 .spot-1 {
